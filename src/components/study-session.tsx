@@ -226,7 +226,7 @@ export function StudySession() {
             </AnimatePresence>
 
             {/* Top Bar */}
-            <div className="flex justify-between items-center mb-4 max-w-2xl mx-auto w-full">
+            <div className="relative flex justify-between items-center mb-4 max-w-2xl mx-auto w-full">
                 <Button variant="ghost" size="icon" onClick={closeDeck}>
                     <X className="w-5 h-5" />
                 </Button>
@@ -236,7 +236,7 @@ export function StudySession() {
                         setShowGotoModal(true);
                         setGotoInput("");
                     }}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    className="absolute left-1/2 -translate-x-1/2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     title="Go to question (G)"
                 >
                     Card {playIndex + 1} / {currentDeck.cards.length}
