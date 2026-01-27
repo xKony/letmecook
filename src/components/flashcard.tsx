@@ -7,6 +7,7 @@ import { Volume2, VolumeX } from "lucide-react";
 
 interface FlashcardProps {
     card: FlashcardType;
+    deckName: string;
     isRevealed: boolean;
     onReveal: () => void;
     onRate: (level: CardLevel) => void;
@@ -17,6 +18,7 @@ interface FlashcardProps {
 
 export function FlashcardComponent({
     card,
+    deckName,
     isRevealed,
     onReveal,
     onRate,
@@ -30,6 +32,14 @@ export function FlashcardComponent({
         "W miarę": "text-amber-500",
         "Umiem": "text-emerald-500",
         "Opanowane 100%": "text-cyan-500",
+    };
+
+    const levelDotColors: Record<CardLevel, string> = {
+        "Nowe": "bg-muted-foreground",
+        "Nie umiem": "bg-rose-500",
+        "W miarę": "bg-amber-500",
+        "Umiem": "bg-emerald-500",
+        "Opanowane 100%": "bg-cyan-500",
     };
 
     const ratingStyles: Record<CardLevel, string> = {
@@ -51,8 +61,15 @@ export function FlashcardComponent({
         >
             {/* Card Container */}
             <div className="relative bg-card rounded-3xl border border-border shadow-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] dark:border-white/5 min-h-[400px] flex flex-col p-8 md:p-12">
-                {/* Status Label */}
-                <div className="flex justify-between items-center mb-4">
+                {/* Deck Name Indicator */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2">
+                    <span className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">
+                        {deckName}
+                    </span>
+                </div>
+
+                {/* Status Label with Color Dot */}
+                <div className="flex justify-between items-center mb-4 mt-2">
                     <button
                         onClick={onTTSToggle}
                         className="p-2 rounded-full hover:bg-muted transition-colors"
@@ -64,9 +81,12 @@ export function FlashcardComponent({
                             <VolumeX className="w-5 h-5 text-muted-foreground" />
                         )}
                     </button>
-                    <span className={`text-sm font-medium ${levelColors[card.level]}`}>
-                        Status: {card.level}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className={`w-3 h-3 rounded-full ${levelDotColors[card.level]}`} />
+                        <span className={`text-sm font-medium ${levelColors[card.level]}`}>
+                            {card.level}
+                        </span>
+                    </div>
                 </div>
 
                 {/* Question */}

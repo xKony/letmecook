@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { useTTS } from "@/hooks/use-tts";
 import { FlashcardComponent } from "@/components/flashcard";
@@ -13,6 +13,7 @@ import {
     Shuffle,
     RotateCcw,
     X,
+    Hash,
 } from "lucide-react";
 
 export function StudySession() {
@@ -23,6 +24,8 @@ export function StudySession() {
     const [playOrder, setPlayOrder] = useState<number[]>([]);
     const [isShuffled, setIsShuffled] = useState(false);
     const [isRevealed, setIsRevealed] = useState(false);
+    const [showGotoModal, setShowGotoModal] = useState(false);
+    const [gotoInput, setGotoInput] = useState("");
 
     // Initialize play order
     useEffect(() => {
@@ -50,6 +53,9 @@ export function StudySession() {
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't handle shortcuts when goto modal is open
+            if (showGotoModal) return;
+
             if (e.key === " " || e.code === "Space") {
                 e.preventDefault();
                 if (!isRevealed) {
@@ -59,6 +65,10 @@ export function StudySession() {
                 handlePrev();
             } else if (e.key === "ArrowRight") {
                 handleNext();
+            } else if (e.key === "g" || e.key === "G") {
+                // Open goto modal with 'g' key
+                setShowGotoModal(true);
+                setGotoInput("");
             } else if (isRevealed) {
                 if (e.key === "1") handleRate("Nie umiem");
                 else if (e.key === "2") handleRate("W miarę");
@@ -69,7 +79,7 @@ export function StudySession() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isRevealed, playIndex, playOrder]);
+    }, [isRevealed, playIndex, playOrder, showGotoModal]);
 
     const handleReveal = useCallback(() => {
         setIsRevealed(true);
@@ -132,6 +142,39 @@ export function StudySession() {
         }
     }, [resetCurrentDeck]);
 
+    const handleGoto = useCallback(() => {
+        if (!currentDeck) return;
+
+        const targetNum = parseInt(gotoInput, 10);
+        if (isNaN(targetNum) || targetNum < 1 || targetNum > currentDeck.cards.length) {
+            return;
+        }
+
+        // Find the index in playOrder that corresponds to the target card
+        const targetIndex = targetNum - 1;
+        const playOrderIndex = playOrder.indexOf(targetIndex);
+
+        if (playOrderIndex !== -1) {
+            setPlayIndex(playOrderIndex);
+        } else {
+            // If shuffled and card not at expected position, just go to that index in order
+            setPlayIndex(Math.min(targetIndex, playOrder.length - 1));
+        }
+
+        setIsRevealed(false);
+        setShowGotoModal(false);
+        setGotoInput("");
+    }, [currentDeck, gotoInput, playOrder]);
+
+    const handleGotoKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter") {
+            handleGoto();
+        } else if (e.key === "Escape") {
+            setShowGotoModal(false);
+            setGotoInput("");
+        }
+    };
+
     if (!currentDeck || !currentCard) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -142,17 +185,75 @@ export function StudySession() {
 
     return (
         <div className="min-h-screen flex flex-col p-4 md:p-8">
+            {/* Go to Question Modal */}
+            <AnimatePresence>
+                {showGotoModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+                        onClick={() => setShowGotoModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-card border border-border rounded-2xl p-6 shadow-xl w-full max-w-sm mx-4"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h3 className="text-lg font-semibold mb-4">Go to Question</h3>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={currentDeck.cards.length}
+                                    value={gotoInput}
+                                    onChange={(e) => setGotoInput(e.target.value)}
+                                    onKeyDown={handleGotoKeyDown}
+                                    placeholder={`1 - ${currentDeck.cards.length}`}
+                                    autoFocus
+                                    className="flex-1 p-3 rounded-lg bg-background border border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                />
+                                <Button onClick={handleGoto}>Go</Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-3">
+                                Press Enter to go, Escape to cancel
+                            </p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Top Bar */}
             <div className="flex justify-between items-center mb-4 max-w-2xl mx-auto w-full">
                 <Button variant="ghost" size="icon" onClick={closeDeck}>
                     <X className="w-5 h-5" />
                 </Button>
 
-                <span className="text-sm text-muted-foreground">
+                <button
+                    onClick={() => {
+                        setShowGotoModal(true);
+                        setGotoInput("");
+                    }}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    title="Go to question (G)"
+                >
                     Card {playIndex + 1} / {currentDeck.cards.length}
-                </span>
+                </button>
 
                 <div className="flex gap-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                            setShowGotoModal(true);
+                            setGotoInput("");
+                        }}
+                        title="Go to question (G)"
+                    >
+                        <Hash className="w-4 h-4" />
+                    </Button>
                     <Button
                         variant="ghost"
                         size="icon"
@@ -192,6 +293,7 @@ export function StudySession() {
                     <FlashcardComponent
                         key={currentCard.id}
                         card={currentCard}
+                        deckName={currentDeck.name}
                         isRevealed={isRevealed}
                         onReveal={handleReveal}
                         onRate={handleRate}

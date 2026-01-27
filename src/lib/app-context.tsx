@@ -36,6 +36,7 @@ interface AppContextType {
     selectDeck: (deckId: string) => void;
     closeDeck: () => void;
     deleteDeck: (deckId: string) => void;
+    renameDeck: (deckId: string, newName: string) => void;
     resetCurrentDeck: () => void;
 
     // Card actions
@@ -171,6 +172,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
     }, [state.currentUserId, currentDeckId]);
 
+    // Rename a deck
+    const renameDeck = useCallback((deckId: string, newName: string) => {
+        if (!state.currentUserId || !newName.trim()) return;
+
+        setState((prev) => {
+            const userDecks = prev.decks[prev.currentUserId!] || [];
+            return {
+                ...prev,
+                decks: {
+                    ...prev.decks,
+                    [prev.currentUserId!]: userDecks.map((d) =>
+                        d.id === deckId ? { ...d, name: newName.trim(), updatedAt: Date.now() } : d
+                    ),
+                },
+            };
+        });
+    }, [state.currentUserId]);
+
     // Reset current deck progress
     const resetCurrentDeck = useCallback(() => {
         if (!state.currentUserId || !currentDeckId) return;
@@ -227,6 +246,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         selectDeck,
         closeDeck,
         deleteDeck,
+        renameDeck,
         resetCurrentDeck,
         updateCardLevel,
     };
