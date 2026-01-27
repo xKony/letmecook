@@ -5,38 +5,79 @@ export async function GET() {
         // Option 1: Fetch from a URL (e.g., Raw Gist of "questions.txt")
         const dataUrl = process.env.GLOBAL_DECKS_URL;
 
-        let allDecks = [];
+        let allDecks: { name: string; cards: { question: string; answer: string }[] }[] = [];
 
         if (dataUrl) {
             const res = await fetch(dataUrl);
             if (!res.ok) throw new Error("Failed to fetch decks");
             const text = await res.text();
 
-            // Parse raw text: Question | Answer
-            const cards = [];
-            const lines = text.split("\n");
+            const lines = text.split("\n").map(l => l.trim()).filter(l => l);
 
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed) continue;
-                const parts = trimmed.split("|");
-                if (parts.length >= 2) {
-                    cards.push({
-                        question: parts[0].trim(),
-                        answer: parts.slice(1).join("|").trim()
+            // Detect if this is a Master Index (DeckName | URL) or a Single Deck (Question | Answer)
+            // Heuristic: If the second part starts with http, it's an index.
+            const isIndex = lines.some(line => {
+                const parts = line.split("|");
+                return parts.length >= 2 && parts[1].trim().startsWith("http");
+            });
+
+            if (isIndex) {
+                // MASTER INDEX MODE
+                const promises = lines.map(async (line) => {
+                    const parts = line.split("|");
+                    if (parts.length < 2) return null;
+
+                    const deckName = parts[0].trim();
+                    const deckUrl = parts[1].trim();
+
+                    try {
+                        const deckRes = await fetch(deckUrl);
+                        if (!deckRes.ok) return null;
+                        const deckText = await deckRes.text();
+
+                        const cards = [];
+                        const deckLines = deckText.split("\n");
+                        for (const dLine of deckLines) {
+                            const dParts = dLine.trim().split("|");
+                            if (dParts.length >= 2) {
+                                cards.push({
+                                    question: dParts[0].trim(),
+                                    answer: dParts.slice(1).join("|").trim()
+                                });
+                            }
+                        }
+
+                        if (cards.length > 0) {
+                            return { name: deckName, cards };
+                        }
+                    } catch (e) {
+                        console.error(`Failed to load deck: ${deckName}`, e);
+                    }
+                    return null;
+                });
+
+                const results = await Promise.all(promises);
+                allDecks = results.filter((d): d is { name: string; cards: { question: string; answer: string }[] } => d !== null);
+
+            } else {
+                // SINGLE DECK MODE (Backward Compatibility)
+                const cards = [];
+                for (const line of lines) {
+                    const parts = line.split("|");
+                    if (parts.length >= 2) {
+                        cards.push({
+                            question: parts[0].trim(),
+                            answer: parts.slice(1).join("|").trim()
+                        });
+                    }
+                }
+
+                if (cards.length > 0) {
+                    allDecks.push({
+                        name: "Global Library (Imported)",
+                        cards: cards
                     });
                 }
-            }
-
-            if (cards.length > 0) {
-                // In this simple global model, we wrap the whole file into one deck
-                // If you want multiple decks from multiple files, the logic would need to change
-                // or the file format needs to support delimiters. 
-                // For now: One file = One Global Deck.
-                allDecks.push({
-                    name: "Global Library (Imported)",
-                    cards: cards
-                });
             }
         }
 
