@@ -14,27 +14,75 @@ import {
     RotateCcw,
     X,
     Hash,
+    BarChart3,
 } from "lucide-react";
+
+const ALL_LEVELS: CardLevel[] = ["Nowe", "Nie umiem", "W miarę", "Umiem", "Opanowane 100%"];
+
+const levelColors: Record<CardLevel, { bg: string; text: string; bar: string }> = {
+    "Nowe": { bg: "bg-slate-500/20", text: "text-slate-400", bar: "bg-slate-400" },
+    "Nie umiem": { bg: "bg-rose-500/20", text: "text-rose-500", bar: "bg-rose-500" },
+    "W miarę": { bg: "bg-amber-500/20", text: "text-amber-500", bar: "bg-amber-500" },
+    "Umiem": { bg: "bg-emerald-500/20", text: "text-emerald-500", bar: "bg-emerald-500" },
+    "Opanowane 100%": { bg: "bg-cyan-500/20", text: "text-cyan-500", bar: "bg-cyan-500" },
+};
 
 export function StudySession() {
     const { currentDeck, closeDeck, resetCurrentDeck, updateCardLevel } = useApp();
     const { enabled: ttsEnabled, speak, toggle: toggleTTS } = useTTS();
 
     const [playIndex, setPlayIndex] = useState(0);
-    const [playOrder, setPlayOrder] = useState<number[]>([]);
     const [isShuffled, setIsShuffled] = useState(false);
     const [isRevealed, setIsRevealed] = useState(false);
     const [showGotoModal, setShowGotoModal] = useState(false);
+    const [showStatsModal, setShowStatsModal] = useState(false);
     const [gotoInput, setGotoInput] = useState("");
+    const [activeFilter, setActiveFilter] = useState<CardLevel | null>(null);
 
-    // Initialize play order
-    useEffect(() => {
-        if (currentDeck) {
-            setPlayOrder(currentDeck.cards.map((_, i) => i));
-            setPlayIndex(0);
-            setIsRevealed(false);
+    // Calculate stats
+    const stats = useMemo((): Record<CardLevel, number> => {
+        const counts: Record<CardLevel, number> = {
+            "Nowe": 0,
+            "Nie umiem": 0,
+            "W miarę": 0,
+            "Umiem": 0,
+            "Opanowane 100%": 0,
+        };
+        if (!currentDeck) return counts;
+        currentDeck.cards.forEach((card) => {
+            counts[card.level]++;
+        });
+        return counts;
+    }, [currentDeck]);
+
+    const maxCount = useMemo(() => {
+        return Math.max(...Object.values(stats), 1);
+    }, [stats]);
+
+    // Play order based on filter
+    const playOrder = useMemo(() => {
+        if (!currentDeck) return [];
+
+        let indices = currentDeck.cards.map((_, i) => i);
+
+        // Apply filter
+        if (activeFilter) {
+            indices = indices.filter((i) => currentDeck.cards[i].level === activeFilter);
         }
-    }, [currentDeck?.id]);
+
+        // Apply shuffle
+        if (isShuffled) {
+            indices = [...indices].sort(() => Math.random() - 0.5);
+        }
+
+        return indices;
+    }, [currentDeck, activeFilter, isShuffled]);
+
+    // Reset play index when filter or shuffle changes
+    useEffect(() => {
+        setPlayIndex(0);
+        setIsRevealed(false);
+    }, [activeFilter, isShuffled]);
 
     // Current card
     const currentCard = useMemo(() => {
@@ -53,8 +101,8 @@ export function StudySession() {
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Don't handle shortcuts when goto modal is open
-            if (showGotoModal) return;
+            // Don't handle shortcuts when modals are open
+            if (showGotoModal || showStatsModal) return;
 
             if (e.key === " " || e.code === "Space") {
                 e.preventDefault();
@@ -66,7 +114,6 @@ export function StudySession() {
             } else if (e.key === "ArrowRight") {
                 handleNext();
             } else if (e.key === "g" || e.key === "G") {
-                // Open goto modal with 'g' key
                 setShowGotoModal(true);
                 setGotoInput("");
             } else if (isRevealed) {
@@ -79,7 +126,7 @@ export function StudySession() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isRevealed, playIndex, playOrder, showGotoModal]);
+    }, [isRevealed, playIndex, playOrder, showGotoModal, showStatsModal]);
 
     const handleReveal = useCallback(() => {
         setIsRevealed(true);
@@ -96,23 +143,18 @@ export function StudySession() {
     }, [currentCard, updateCardLevel]);
 
     const handleNext = useCallback(() => {
-        if (!currentDeck) return;
+        if (!currentDeck || playOrder.length === 0) return;
 
         if (playIndex < playOrder.length - 1) {
             setPlayIndex((prev) => prev + 1);
             setIsRevealed(false);
         } else {
-            // End of deck
             if (confirm("End of deck. Restart?")) {
-                if (isShuffled) {
-                    const shuffled = [...playOrder].sort(() => Math.random() - 0.5);
-                    setPlayOrder(shuffled);
-                }
                 setPlayIndex(0);
                 setIsRevealed(false);
             }
         }
-    }, [currentDeck, playIndex, playOrder, isShuffled]);
+    }, [currentDeck, playIndex, playOrder]);
 
     const handlePrev = useCallback(() => {
         if (playIndex > 0) {
@@ -122,19 +164,8 @@ export function StudySession() {
     }, [playIndex]);
 
     const handleShuffle = useCallback(() => {
-        if (!currentDeck) return;
-
         setIsShuffled((prev) => !prev);
-
-        if (!isShuffled) {
-            const shuffled = [...playOrder].sort(() => Math.random() - 0.5);
-            setPlayOrder(shuffled);
-        } else {
-            setPlayOrder(currentDeck.cards.map((_, i) => i));
-        }
-        setPlayIndex(0);
-        setIsRevealed(false);
-    }, [currentDeck, isShuffled, playOrder]);
+    }, []);
 
     const handleReset = useCallback(() => {
         if (confirm("Reset all progress to 'New'?")) {
@@ -146,21 +177,11 @@ export function StudySession() {
         if (!currentDeck) return;
 
         const targetNum = parseInt(gotoInput, 10);
-        if (isNaN(targetNum) || targetNum < 1 || targetNum > currentDeck.cards.length) {
+        if (isNaN(targetNum) || targetNum < 1 || targetNum > playOrder.length) {
             return;
         }
 
-        // Find the index in playOrder that corresponds to the target card
-        const targetIndex = targetNum - 1;
-        const playOrderIndex = playOrder.indexOf(targetIndex);
-
-        if (playOrderIndex !== -1) {
-            setPlayIndex(playOrderIndex);
-        } else {
-            // If shuffled and card not at expected position, just go to that index in order
-            setPlayIndex(Math.min(targetIndex, playOrder.length - 1));
-        }
-
+        setPlayIndex(targetNum - 1);
         setIsRevealed(false);
         setShowGotoModal(false);
         setGotoInput("");
@@ -175,7 +196,12 @@ export function StudySession() {
         }
     };
 
-    if (!currentDeck || !currentCard) {
+    const handleFilterSelect = (level: CardLevel | null) => {
+        setActiveFilter(level);
+        setShowStatsModal(false);
+    };
+
+    if (!currentDeck) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <p className="text-muted-foreground">No deck selected</p>
@@ -183,8 +209,102 @@ export function StudySession() {
         );
     }
 
+    if (playOrder.length === 0) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
+                <p className="text-muted-foreground text-center">
+                    No cards match the filter "{activeFilter}"
+                </p>
+                <Button onClick={() => setActiveFilter(null)}>Show All Cards</Button>
+                <Button variant="ghost" onClick={closeDeck}>Back to Dashboard</Button>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen flex flex-col p-4 md:p-8">
+            {/* Stats Modal */}
+            <AnimatePresence>
+                {showStatsModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+                        onClick={() => setShowStatsModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-card border border-border rounded-2xl p-6 shadow-xl w-full max-w-md mx-4"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-lg font-semibold flex items-center gap-2">
+                                    <BarChart3 className="w-5 h-5" />
+                                    Deck Stats
+                                </h3>
+                                <Button variant="ghost" size="icon" onClick={() => setShowStatsModal(false)}>
+                                    <X className="w-4 h-4" />
+                                </Button>
+                            </div>
+
+                            {/* Stats Bars */}
+                            <div className="space-y-3 mb-6">
+                                {ALL_LEVELS.map((level) => {
+                                    const count = stats[level] || 0;
+                                    const percentage = (count / maxCount) * 100;
+                                    const isActive = activeFilter === level;
+
+                                    return (
+                                        <button
+                                            key={level}
+                                            onClick={() => handleFilterSelect(level)}
+                                            className={`w-full text-left p-3 rounded-xl transition-all ${isActive
+                                                ? `${levelColors[level].bg} ring-2 ring-offset-2 ring-offset-background ${levelColors[level].text.replace('text-', 'ring-')}`
+                                                : 'hover:bg-muted/50'
+                                                }`}
+                                        >
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className={`text-sm font-medium ${levelColors[level].text}`}>
+                                                    {level}
+                                                </span>
+                                                <span className="text-sm text-muted-foreground">
+                                                    {count} cards
+                                                </span>
+                                            </div>
+                                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${percentage}%` }}
+                                                    transition={{ duration: 0.5, delay: 0.1 }}
+                                                    className={`h-full rounded-full ${levelColors[level].bar}`}
+                                                />
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Filter Info */}
+                            <div className="border-t border-border pt-4">
+                                <p className="text-xs text-muted-foreground mb-3">
+                                    Click a level to filter cards
+                                </p>
+                                <Button
+                                    variant={activeFilter === null ? "default" : "outline"}
+                                    className="w-full"
+                                    onClick={() => handleFilterSelect(null)}
+                                >
+                                    Show All Cards ({currentDeck.cards.length})
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Go to Question Modal */}
             <AnimatePresence>
                 {showGotoModal && (
@@ -207,11 +327,11 @@ export function StudySession() {
                                 <input
                                     type="number"
                                     min={1}
-                                    max={currentDeck.cards.length}
+                                    max={playOrder.length}
                                     value={gotoInput}
                                     onChange={(e) => setGotoInput(e.target.value)}
                                     onKeyDown={handleGotoKeyDown}
-                                    placeholder={`1 - ${currentDeck.cards.length}`}
+                                    placeholder={`1 - ${playOrder.length}`}
                                     autoFocus
                                     className="flex-1 p-3 rounded-lg bg-background border border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                                 />
@@ -232,14 +352,16 @@ export function StudySession() {
                 </Button>
 
                 <button
-                    onClick={() => {
-                        setShowGotoModal(true);
-                        setGotoInput("");
-                    }}
-                    className="absolute left-1/2 -translate-x-1/2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    title="Go to question (G)"
+                    onClick={() => setShowStatsModal(true)}
+                    className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    title="View stats and filter"
                 >
-                    Card {playIndex + 1} / {currentDeck.cards.length}
+                    {activeFilter && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${levelColors[activeFilter].bg} ${levelColors[activeFilter].text}`}>
+                            {activeFilter}
+                        </span>
+                    )}
+                    <span>Card {playIndex + 1} / {playOrder.length}</span>
                 </button>
 
                 <div className="flex gap-1">
@@ -281,7 +403,7 @@ export function StudySession() {
                     <div
                         className="h-full bg-gradient-to-r from-blue-400 to-purple-500 rounded-full transition-all"
                         style={{
-                            width: `${((playIndex + 1) / currentDeck.cards.length) * 100}%`,
+                            width: `${((playIndex + 1) / playOrder.length) * 100}%`,
                         }}
                     />
                 </div>
@@ -290,17 +412,19 @@ export function StudySession() {
             {/* Card Area */}
             <div className="flex-1 flex items-center justify-center">
                 <AnimatePresence mode="wait">
-                    <FlashcardComponent
-                        key={currentCard.id}
-                        card={currentCard}
-                        deckName={currentDeck.name}
-                        isRevealed={isRevealed}
-                        onReveal={handleReveal}
-                        onRate={handleRate}
-                        ttsEnabled={ttsEnabled}
-                        onTTSToggle={toggleTTS}
-                        onSpeak={speak}
-                    />
+                    {currentCard && (
+                        <FlashcardComponent
+                            key={currentCard.id}
+                            card={currentCard}
+                            deckName={currentDeck.name}
+                            isRevealed={isRevealed}
+                            onReveal={handleReveal}
+                            onRate={handleRate}
+                            ttsEnabled={ttsEnabled}
+                            onTTSToggle={toggleTTS}
+                            onSpeak={speak}
+                        />
+                    )}
                 </AnimatePresence>
             </div>
 
