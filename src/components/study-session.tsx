@@ -33,7 +33,9 @@ export function StudySession() {
     const { currentDeck, closeDeck, resetCurrentDeck, updateCardLevel, updateCard } = useApp();
     const { enabled: ttsEnabled, speak, toggle: toggleTTS } = useTTS();
 
-    const [playIndex, setPlayIndex] = useState(0);
+    // Session state
+    const [playIndex, setPlayIndex] = useState(0);  // Pointer/index within shuffled order
+    const [shuffledOrder, setShuffledOrder] = useState<number[]>([]);  // Persistent shuffled indices
     const [isShuffled, setIsShuffled] = useState(false);
     const [isRevealed, setIsRevealed] = useState(false);
     const [showGotoModal, setShowGotoModal] = useState(false);
@@ -41,10 +43,53 @@ export function StudySession() {
     const [gotoInput, setGotoInput] = useState("");
     const [activeFilter, setActiveFilter] = useState<CardLevel | null>(null);
 
-    // Session time
+    // Session timer state
     const [sessionSeconds, setSessionSeconds] = useState(0);
     const [showBreakModal, setShowBreakModal] = useState(false);
     const [lastBreakTime, setLastBreakTime] = useState(0);
+
+    // Fisher-Yates shuffle algorithm - deterministic, in-place shuffle
+    const fisherYatesShuffle = useCallback(<T,>(array: T[]): T[] => {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }, []);
+
+    // Get filtered indices based on active filter
+    const getFilteredIndices = useCallback((): number[] => {
+        if (!currentDeck) return [];
+        let indices = currentDeck.cards.map((_, i) => i);
+        if (activeFilter) {
+            indices = indices.filter((i) => currentDeck.cards[i].level === activeFilter);
+        }
+        return indices;
+    }, [currentDeck, activeFilter]);
+
+    // Initialize or reset the play order
+    const initializePlayOrder = useCallback((shuffle: boolean) => {
+        const indices = getFilteredIndices();
+        const order = shuffle ? fisherYatesShuffle(indices) : indices;
+        setShuffledOrder(order);
+        setPlayIndex(0);
+        setIsRevealed(false);
+    }, [getFilteredIndices, fisherYatesShuffle]);
+
+    // Initialize on deck change
+    useEffect(() => {
+        if (currentDeck) {
+            initializePlayOrder(isShuffled);
+        }
+    }, [currentDeck?.id]);
+
+    // Reinitialize when filter changes (but preserve shuffle state)
+    useEffect(() => {
+        if (currentDeck) {
+            initializePlayOrder(isShuffled);
+        }
+    }, [activeFilter]);
 
     // Calculate stats
     const stats = useMemo((): Record<CardLevel, number> => {
@@ -66,32 +111,10 @@ export function StudySession() {
         return Math.max(...Object.values(stats), 1);
     }, [stats]);
 
-    // Play order based on filter
-    const playOrder = useMemo(() => {
-        if (!currentDeck) return [];
+    // The play order is now the persistent shuffledOrder state
+    const playOrder = shuffledOrder;
 
-        let indices = currentDeck.cards.map((_, i) => i);
-
-        // Apply filter
-        if (activeFilter) {
-            indices = indices.filter((i) => currentDeck.cards[i].level === activeFilter);
-        }
-
-        // Apply shuffle
-        if (isShuffled) {
-            indices = [...indices].sort(() => Math.random() - 0.5);
-        }
-
-        return indices;
-    }, [currentDeck, activeFilter, isShuffled]);
-
-    // Reset play index when filter or shuffle changes
-    useEffect(() => {
-        setPlayIndex(0);
-        setIsRevealed(false);
-    }, [activeFilter, isShuffled]);
-
-    // Current card
+    // Current card based on pointer index
     const currentCard = useMemo(() => {
         if (!currentDeck || playOrder.length === 0) return null;
         const realIndex = playOrder[playIndex];
@@ -183,15 +206,17 @@ export function StudySession() {
         if (!currentDeck || playOrder.length === 0) return;
 
         if (playIndex < playOrder.length - 1) {
+            // Increment pointer to next card in shuffled order
             setPlayIndex((prev) => prev + 1);
             setIsRevealed(false);
         } else {
+            // End of deck cycle - offer to restart (optionally re-shuffle)
             if (confirm("End of deck. Restart?")) {
-                setPlayIndex(0);
-                setIsRevealed(false);
+                // Re-initialize with same shuffle state - creates new random order if shuffled
+                initializePlayOrder(isShuffled);
             }
         }
-    }, [currentDeck, playIndex, playOrder]);
+    }, [currentDeck, playIndex, playOrder, isShuffled, initializePlayOrder]);
 
     const handlePrev = useCallback(() => {
         if (playIndex > 0) {
@@ -201,8 +226,11 @@ export function StudySession() {
     }, [playIndex]);
 
     const handleShuffle = useCallback(() => {
-        setIsShuffled((prev) => !prev);
-    }, []);
+        const newShuffleState = !isShuffled;
+        setIsShuffled(newShuffleState);
+        // Re-initialize order with new shuffle state (creates new random order or resets to sequential)
+        initializePlayOrder(newShuffleState);
+    }, [isShuffled, initializePlayOrder]);
 
     const handleReset = useCallback(() => {
         if (confirm("Reset all progress to 'New'?")) {
