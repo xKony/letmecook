@@ -162,13 +162,10 @@ export function Dashboard() {
                         </div>
                     ) : (
                         <div className="grid gap-4">
-                            {decks.map((deck, index) => (
-                                <motion.div
+                            {decks.map((deck) => (
+                                <div
                                     key={deck.id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="group bg-card rounded-xl p-4 border border-border hover:border-primary/30 transition-all cursor-pointer"
+                                    className="deck-card-animate group bg-card rounded-xl p-4 border border-border hover:border-primary/30 transition-all cursor-pointer"
                                     onClick={() => editingDeckId !== deck.id && selectDeck(deck.id)}
                                 >
                                     <div className="flex justify-between items-start">
@@ -263,7 +260,7 @@ export function Dashboard() {
                                             }}
                                         />
                                     </div>
-                                </motion.div>
+                                </div>
                             ))}
                         </div>
                     )}
