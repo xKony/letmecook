@@ -15,6 +15,8 @@ import {
     X,
     Hash,
     BarChart3,
+    Clock,
+    Coffee,
 } from "lucide-react";
 
 const ALL_LEVELS: CardLevel[] = ["Nowe", "Nie umiem", "W miarę", "Umiem", "Opanowane 100%"];
@@ -38,6 +40,11 @@ export function StudySession() {
     const [showStatsModal, setShowStatsModal] = useState(false);
     const [gotoInput, setGotoInput] = useState("");
     const [activeFilter, setActiveFilter] = useState<CardLevel | null>(null);
+
+    // Session time
+    const [sessionSeconds, setSessionSeconds] = useState(0);
+    const [showBreakModal, setShowBreakModal] = useState(false);
+    const [lastBreakTime, setLastBreakTime] = useState(0);
 
     // Calculate stats
     const stats = useMemo((): Record<CardLevel, number> => {
@@ -97,6 +104,36 @@ export function StudySession() {
             speak(currentCard.question);
         }
     }, [currentCard?.id, ttsEnabled]);
+
+    // Session timer
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setSessionSeconds((prev) => {
+                const newSeconds = prev + 1;
+                // Check for 30-minute break reminder
+                const BREAK_INTERVAL = 30 * 60; // 30 minutes in seconds
+                if (newSeconds > 0 && newSeconds % BREAK_INTERVAL === 0 && newSeconds !== lastBreakTime) {
+                    setShowBreakModal(true);
+                    setLastBreakTime(newSeconds);
+                }
+                return newSeconds;
+            });
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [lastBreakTime]);
+
+    // Format time as MM:SS or HH:MM:SS
+    const formatTime = (seconds: number): string => {
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+
+        if (hrs > 0) {
+            return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -345,15 +382,70 @@ export function StudySession() {
                 )}
             </AnimatePresence>
 
-            {/* Top Bar */}
-            <div className="relative flex justify-between items-center mb-4 max-w-2xl mx-auto w-full">
-                <Button variant="ghost" size="icon" onClick={closeDeck}>
-                    <X className="w-5 h-5" />
-                </Button>
+            {/* Break Reminder Modal */}
+            <AnimatePresence>
+                {showBreakModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+                        onClick={() => setShowBreakModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-card border border-border rounded-2xl p-8 shadow-xl w-full max-w-sm mx-4 text-center"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                <Coffee className="w-8 h-8 text-amber-500" />
+                            </div>
+                            <h3 className="text-xl font-semibold mb-2">Time for a Break! ☕</h3>
+                            <p className="text-muted-foreground mb-6">
+                                You&apos;ve been studying for {formatTime(sessionSeconds)}.
+                                Taking a short break helps your brain consolidate what you&apos;ve learned.
+                            </p>
+                            <div className="flex flex-col gap-2">
+                                <Button
+                                    onClick={() => setShowBreakModal(false)}
+                                    className="w-full"
+                                >
+                                    Continue Studying
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        setShowBreakModal(false);
+                                        closeDeck();
+                                    }}
+                                >
+                                    Take a Break
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
+            {/* Top Bar */}
+            <div className="flex justify-between items-center mb-4 max-w-2xl mx-auto w-full h-10">
+                {/* Left: Close + Timer */}
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={closeDeck} className="h-10 w-10">
+                        <X className="w-5 h-5" />
+                    </Button>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Session time">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span className="tabular-nums">{formatTime(sessionSeconds)}</span>
+                    </div>
+                </div>
+
+                {/* Center: Card counter */}
                 <button
                     onClick={() => setShowStatsModal(true)}
-                    className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     title="View stats and filter"
                 >
                     {activeFilter && (
@@ -364,7 +456,8 @@ export function StudySession() {
                     <span>Card {playIndex + 1} / {playOrder.length}</span>
                 </button>
 
-                <div className="flex gap-1">
+                {/* Right: Action buttons */}
+                <div className="flex items-center gap-1">
                     <Button
                         variant="ghost"
                         size="icon"
