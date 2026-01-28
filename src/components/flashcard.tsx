@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard as FlashcardType, CardLevel, RATINGS } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Volume2, VolumeX, Pencil, Check, X } from "lucide-react";
+import { Volume2, VolumeX, Pencil, Check, X, ImageOff, ZoomIn } from "lucide-react";
 
 interface FlashcardProps {
     card: FlashcardType;
@@ -34,6 +34,8 @@ export function FlashcardComponent({
     const [editQuestion, setEditQuestion] = useState(card.question);
     const [editAnswer, setEditAnswer] = useState(card.answer);
     const [showEditHint, setShowEditHint] = useState<"question" | "answer" | null>(null);
+    const [imageError, setImageError] = useState(false);
+    const [isImageExpanded, setIsImageExpanded] = useState(false);
 
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const LONG_PRESS_DURATION = 1000; // ms (1 second)
@@ -61,6 +63,12 @@ export function FlashcardComponent({
         "Opanowane 100%": "border-cyan-500/20 bg-cyan-500/10 hover:bg-cyan-500 hover:text-white text-cyan-500",
         "Nowe": "",
     };
+
+    // Reset image error state when card changes
+    useEffect(() => {
+        setImageError(false);
+        setIsImageExpanded(false);
+    }, [card.id]);
 
     // Handle long press for mobile
     const handleTouchStart = useCallback((type: "question" | "answer") => {
@@ -301,7 +309,7 @@ export function FlashcardComponent({
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
-                                        className="relative"
+                                        className="relative w-full"
                                     >
                                         <p
                                             className="text-xl md:text-2xl font-medium text-center text-muted-foreground"
@@ -309,6 +317,41 @@ export function FlashcardComponent({
                                         >
                                             {card.answer || "(Mental Answer)"}
                                         </p>
+
+                                        {/* Image Display */}
+                                        {card.imageUrl && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.2 }}
+                                                className="mt-4 flex justify-center"
+                                            >
+                                                {imageError ? (
+                                                    <div className="flex flex-col items-center gap-2 p-6 bg-muted/50 rounded-xl border border-dashed border-border">
+                                                        <ImageOff className="w-8 h-8 text-muted-foreground" />
+                                                        <p className="text-sm text-muted-foreground text-center">
+                                                            Image unavailable (offline or broken link)
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setIsImageExpanded(true)}
+                                                        className="relative group cursor-zoom-in"
+                                                    >
+                                                        <img
+                                                            src={card.imageUrl}
+                                                            alt="Flashcard visual aid"
+                                                            onError={() => setImageError(true)}
+                                                            className="max-h-48 rounded-xl border border-border shadow-md object-contain transition-transform group-hover:scale-[1.02]"
+                                                        />
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 rounded-xl transition-colors">
+                                                            <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        </div>
+                                                    </button>
+                                                )}
+                                            </motion.div>
+                                        )}
+
                                         {/* Edit button - Desktop hover */}
                                         <AnimatePresence>
                                             {showEditHint === "answer" && onUpdateCard && (
@@ -331,6 +374,35 @@ export function FlashcardComponent({
                                     </motion.div>
                                 )}
                             </AnimatePresence>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Image Expand Modal */}
+                <AnimatePresence>
+                    {isImageExpanded && card.imageUrl && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+                            onClick={() => setIsImageExpanded(false)}
+                        >
+                            <motion.img
+                                initial={{ scale: 0.8 }}
+                                animate={{ scale: 1 }}
+                                exit={{ scale: 0.8 }}
+                                src={card.imageUrl}
+                                alt="Flashcard visual aid (expanded)"
+                                className="max-w-full max-h-full object-contain rounded-xl"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                            <button
+                                onClick={() => setIsImageExpanded(false)}
+                                className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
                         </motion.div>
                     )}
                 </AnimatePresence>

@@ -42,7 +42,7 @@ export function saveAppState(state: AppState): void {
     }
 }
 
-// Parse questions.txt format: "Question | Answer"
+// Parse questions.txt format: "Question | Answer" or "Question | Answer | ImageURL"
 export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "level">[] {
     const lines = content.split("\n");
     const cards: Omit<Flashcard, "id" | "level">[] = [];
@@ -54,9 +54,10 @@ export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "lev
         const parts = trimmed.split("|");
         const question = parts[0]?.trim() || "";
         const answer = parts[1]?.trim() || "";
+        const imageUrl = parts[2]?.trim() || undefined; // Optional third field
 
         if (question) {
-            cards.push({ question, answer });
+            cards.push({ question, answer, imageUrl });
         }
     }
 
