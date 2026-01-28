@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard as FlashcardType, CardLevel, RATINGS } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Volume2, VolumeX } from "lucide-react";
+import { Volume2, VolumeX, Pencil, Check, X } from "lucide-react";
 
 interface FlashcardProps {
     card: FlashcardType;
@@ -11,6 +12,7 @@ interface FlashcardProps {
     isRevealed: boolean;
     onReveal: () => void;
     onRate: (level: CardLevel) => void;
+    onUpdateCard?: (cardId: string, question: string, answer: string) => void;
     ttsEnabled: boolean;
     onTTSToggle: () => void;
     onSpeak: (text: string) => void;
@@ -22,10 +24,20 @@ export function FlashcardComponent({
     isRevealed,
     onReveal,
     onRate,
+    onUpdateCard,
     ttsEnabled,
     onTTSToggle,
     onSpeak,
 }: FlashcardProps) {
+    const [isEditingQuestion, setIsEditingQuestion] = useState(false);
+    const [isEditingAnswer, setIsEditingAnswer] = useState(false);
+    const [editQuestion, setEditQuestion] = useState(card.question);
+    const [editAnswer, setEditAnswer] = useState(card.answer);
+    const [showEditHint, setShowEditHint] = useState<"question" | "answer" | null>(null);
+
+    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const LONG_PRESS_DURATION = 500; // ms
+
     const levelColors: Record<CardLevel, string> = {
         "Nowe": "text-muted-foreground",
         "Nie umiem": "text-rose-500",
@@ -48,6 +60,63 @@ export function FlashcardComponent({
         "Umiem": "border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-500",
         "Opanowane 100%": "border-cyan-500/20 bg-cyan-500/10 hover:bg-cyan-500 hover:text-white text-cyan-500",
         "Nowe": "",
+    };
+
+    // Handle long press for mobile
+    const handleTouchStart = useCallback((type: "question" | "answer") => {
+        longPressTimerRef.current = setTimeout(() => {
+            if (type === "question") {
+                setEditQuestion(card.question);
+                setIsEditingQuestion(true);
+            } else {
+                setEditAnswer(card.answer);
+                setIsEditingAnswer(true);
+            }
+        }, LONG_PRESS_DURATION);
+    }, [card.question, card.answer]);
+
+    const handleTouchEnd = useCallback(() => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+    }, []);
+
+    const handleSaveQuestion = () => {
+        if (onUpdateCard && editQuestion.trim()) {
+            onUpdateCard(card.id, editQuestion.trim(), card.answer);
+        }
+        setIsEditingQuestion(false);
+    };
+
+    const handleSaveAnswer = () => {
+        if (onUpdateCard) {
+            onUpdateCard(card.id, card.question, editAnswer);
+        }
+        setIsEditingAnswer(false);
+    };
+
+    const handleCancelEdit = (type: "question" | "answer") => {
+        if (type === "question") {
+            setEditQuestion(card.question);
+            setIsEditingQuestion(false);
+        } else {
+            setEditAnswer(card.answer);
+            setIsEditingAnswer(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent, type: "question" | "answer") => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            if (type === "question") {
+                handleSaveQuestion();
+            } else {
+                handleSaveAnswer();
+            }
+        } else if (e.key === "Escape") {
+            handleCancelEdit(type);
+        }
     };
 
     return (
@@ -93,11 +162,88 @@ export function FlashcardComponent({
                 <motion.div
                     animate={{ y: isRevealed ? -10 : 0 }}
                     transition={{ duration: 0.3 }}
-                    className="flex-1 flex items-center justify-center"
+                    className="flex-1 flex items-center justify-center relative group"
+                    onMouseEnter={() => !isEditingQuestion && setShowEditHint("question")}
+                    onMouseLeave={() => setShowEditHint(null)}
+                    onTouchStart={() => handleTouchStart("question")}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchCancel={handleTouchEnd}
                 >
-                    <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight text-foreground">
-                        {card.question}
-                    </h2>
+                    <AnimatePresence mode="wait">
+                        {isEditingQuestion ? (
+                            <motion.div
+                                key="edit-question"
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.2 }}
+                                className="w-full flex flex-col gap-3"
+                            >
+                                <textarea
+                                    value={editQuestion}
+                                    onChange={(e) => setEditQuestion(e.target.value)}
+                                    onKeyDown={(e) => handleKeyDown(e, "question")}
+                                    autoFocus
+                                    className="w-full p-4 text-xl md:text-2xl font-bold text-center bg-background border border-input rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[100px]"
+                                    placeholder="Enter question..."
+                                />
+                                <div className="flex justify-center gap-2">
+                                    <Button
+                                        size="sm"
+                                        onClick={handleSaveQuestion}
+                                        className="gap-1"
+                                    >
+                                        <Check className="w-4 h-4" />
+                                        Save
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleCancelEdit("question")}
+                                        className="gap-1"
+                                    >
+                                        <X className="w-4 h-4" />
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="display-question"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="relative"
+                            >
+                                <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight text-foreground">
+                                    {card.question}
+                                </h2>
+                                {/* Edit button - Desktop hover */}
+                                <AnimatePresence>
+                                    {showEditHint === "question" && onUpdateCard && (
+                                        <motion.button
+                                            initial={{ opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.8 }}
+                                            transition={{ duration: 0.15 }}
+                                            onClick={() => {
+                                                setEditQuestion(card.question);
+                                                setIsEditingQuestion(true);
+                                            }}
+                                            className="absolute -right-10 top-1/2 -translate-y-1/2 p-2 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors hidden md:flex"
+                                            title="Edit question"
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                        </motion.button>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    {/* Mobile hint */}
+                    <p className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground/50 md:hidden">
+                        Hold to edit
+                    </p>
                 </motion.div>
 
                 {/* Answer */}
@@ -108,13 +254,90 @@ export function FlashcardComponent({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 20 }}
                             transition={{ duration: 0.3, delay: 0.1 }}
-                            className="flex-1 flex items-center justify-center border-t border-border pt-6"
+                            className="flex-1 flex items-center justify-center border-t border-border pt-6 relative group"
+                            onMouseEnter={() => !isEditingAnswer && setShowEditHint("answer")}
+                            onMouseLeave={() => setShowEditHint(null)}
+                            onTouchStart={() => handleTouchStart("answer")}
+                            onTouchEnd={handleTouchEnd}
+                            onTouchCancel={handleTouchEnd}
                         >
-                            <p
-                                className="text-xl md:text-2xl font-medium text-center text-muted-foreground"
-                                aria-live="polite"
-                            >
-                                {card.answer || "(Mental Answer)"}
+                            <AnimatePresence mode="wait">
+                                {isEditingAnswer ? (
+                                    <motion.div
+                                        key="edit-answer"
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="w-full flex flex-col gap-3"
+                                    >
+                                        <textarea
+                                            value={editAnswer}
+                                            onChange={(e) => setEditAnswer(e.target.value)}
+                                            onKeyDown={(e) => handleKeyDown(e, "answer")}
+                                            autoFocus
+                                            className="w-full p-4 text-lg md:text-xl font-medium text-center bg-background border border-input rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[80px]"
+                                            placeholder="Enter answer..."
+                                        />
+                                        <div className="flex justify-center gap-2">
+                                            <Button
+                                                size="sm"
+                                                onClick={handleSaveAnswer}
+                                                className="gap-1"
+                                            >
+                                                <Check className="w-4 h-4" />
+                                                Save
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => handleCancelEdit("answer")}
+                                                className="gap-1"
+                                            >
+                                                <X className="w-4 h-4" />
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    </motion.div>
+                                ) : (
+                                    <motion.div
+                                        key="display-answer"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="relative"
+                                    >
+                                        <p
+                                            className="text-xl md:text-2xl font-medium text-center text-muted-foreground"
+                                            aria-live="polite"
+                                        >
+                                            {card.answer || "(Mental Answer)"}
+                                        </p>
+                                        {/* Edit button - Desktop hover */}
+                                        <AnimatePresence>
+                                            {showEditHint === "answer" && onUpdateCard && (
+                                                <motion.button
+                                                    initial={{ opacity: 0, scale: 0.8 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.8 }}
+                                                    transition={{ duration: 0.15 }}
+                                                    onClick={() => {
+                                                        setEditAnswer(card.answer);
+                                                        setIsEditingAnswer(true);
+                                                    }}
+                                                    className="absolute -right-10 top-1/2 -translate-y-1/2 p-2 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors hidden md:flex"
+                                                    title="Edit answer"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </motion.button>
+                                            )}
+                                        </AnimatePresence>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                            {/* Mobile hint */}
+                            <p className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground/50 md:hidden">
+                                Hold to edit
                             </p>
                         </motion.div>
                     )}

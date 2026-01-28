@@ -41,6 +41,7 @@ interface AppContextType {
 
     // Card actions
     updateCardLevel: (cardId: string, level: CardLevel) => void;
+    updateCard: (cardId: string, question: string, answer: string) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -233,6 +234,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
     }, [state.currentUserId, currentDeckId]);
 
+    // Update card content (question/answer)
+    const updateCard = useCallback((cardId: string, question: string, answer: string) => {
+        if (!state.currentUserId || !currentDeckId) return;
+
+        setState((prev) => {
+            const userDecks = prev.decks[prev.currentUserId!] || [];
+            return {
+                ...prev,
+                decks: {
+                    ...prev.decks,
+                    [prev.currentUserId!]: userDecks.map((deck) => {
+                        if (deck.id !== currentDeckId) return deck;
+                        return {
+                            ...deck,
+                            cards: deck.cards.map((card) =>
+                                card.id === cardId ? { ...card, question, answer } : card
+                            ),
+                            updatedAt: Date.now(),
+                        };
+                    }),
+                },
+            };
+        });
+    }, [state.currentUserId, currentDeckId]);
+
     const value: AppContextType = {
         state,
         currentUser,
@@ -249,6 +275,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         renameDeck,
         resetCurrentDeck,
         updateCardLevel,
+        updateCard,
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

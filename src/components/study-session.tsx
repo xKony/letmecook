@@ -30,7 +30,7 @@ const levelColors: Record<CardLevel, { bg: string; text: string; bar: string }> 
 };
 
 export function StudySession() {
-    const { currentDeck, closeDeck, resetCurrentDeck, updateCardLevel } = useApp();
+    const { currentDeck, closeDeck, resetCurrentDeck, updateCardLevel, updateCard } = useApp();
     const { enabled: ttsEnabled, speak, toggle: toggleTTS } = useTTS();
 
     const [playIndex, setPlayIndex] = useState(0);
@@ -430,9 +430,9 @@ export function StudySession() {
             </AnimatePresence>
 
             {/* Top Bar */}
-            <div className="flex justify-between items-center mb-4 max-w-2xl mx-auto w-full h-10">
+            <div className="relative flex justify-between items-center mb-4 max-w-2xl mx-auto w-full h-10">
                 {/* Left: Close + Timer */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 z-10">
                     <Button variant="ghost" size="icon" onClick={closeDeck} className="h-10 w-10">
                         <X className="w-5 h-5" />
                     </Button>
@@ -442,10 +442,10 @@ export function StudySession() {
                     </div>
                 </div>
 
-                {/* Center: Card counter */}
+                {/* Center: Card counter - absolutely positioned for true centering */}
                 <button
                     onClick={() => setShowStatsModal(true)}
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     title="View stats and filter"
                 >
                     {activeFilter && (
@@ -513,6 +513,7 @@ export function StudySession() {
                             isRevealed={isRevealed}
                             onReveal={handleReveal}
                             onRate={handleRate}
+                            onUpdateCard={updateCard}
                             ttsEnabled={ttsEnabled}
                             onTTSToggle={toggleTTS}
                             onSpeak={speak}
