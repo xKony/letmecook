@@ -501,7 +501,7 @@ export function StudySession() {
                         variant="ghost"
                         size="icon"
                         onClick={handleShuffle}
-                        className={isShuffled ? "text-primary" : ""}
+                        className={isShuffled ? "text-primary bg-primary/20" : ""}
                         title={`Shuffle: ${isShuffled ? "ON" : "OFF"}`}
                     >
                         <Shuffle className="w-4 h-4" />

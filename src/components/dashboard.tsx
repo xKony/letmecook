@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X } from "lucide-react";
+import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download } from "lucide-react";
 import { GlobalDecksModal } from "@/components/global-decks-modal";
+import { Deck } from "@/lib/types";
 
 export function Dashboard() {
     const { currentUser, getUserDecks, addDeck, selectDeck, deleteDeck, renameDeck, logout } = useApp();
@@ -13,7 +14,11 @@ export function Dashboard() {
     const [deckName, setDeckName] = useState("");
     const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState("");
+    const [contextMenuDeck, setContextMenuDeck] = useState<Deck | null>(null);
+    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const LONG_PRESS_DURATION = 500;
 
     const decks = getUserDecks();
 
@@ -78,6 +83,44 @@ export function Dashboard() {
             cancelEditing();
         }
     };
+
+    // Export deck to txt file (QUESTION | ANSWER format)
+    const exportDeck = useCallback((deck: Deck) => {
+        const content = deck.cards
+            .map((card) => `${card.question} | ${card.answer}`)
+            .join("\n");
+
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${deck.name}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setContextMenuDeck(null);
+    }, []);
+
+    // Long press handlers for mobile context menu
+    const handleTouchStart = useCallback((deck: Deck, e: React.TouchEvent) => {
+        const touch = e.touches[0];
+        longPressTimerRef.current = setTimeout(() => {
+            setContextMenuDeck(deck);
+            setContextMenuPosition({ x: touch.clientX, y: touch.clientY });
+        }, LONG_PRESS_DURATION);
+    }, []);
+
+    const handleTouchEnd = useCallback(() => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+    }, []);
+
+    const closeContextMenu = useCallback(() => {
+        setContextMenuDeck(null);
+    }, []);
 
     return (
         <div className="min-h-screen p-4 md:p-8">
@@ -166,7 +209,10 @@ export function Dashboard() {
                                 <div
                                     key={deck.id}
                                     className="deck-card-animate group bg-card rounded-xl p-4 border border-border hover:border-primary/30 transition-all cursor-pointer"
-                                    onClick={() => editingDeckId !== deck.id && selectDeck(deck.id)}
+                                    onClick={() => editingDeckId !== deck.id && contextMenuDeck === null && selectDeck(deck.id)}
+                                    onTouchStart={(e) => handleTouchStart(deck, e)}
+                                    onTouchEnd={handleTouchEnd}
+                                    onTouchCancel={handleTouchEnd}
                                 >
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1 min-w-0">
@@ -233,19 +279,33 @@ export function Dashboard() {
                                             </AnimatePresence>
                                         </div>
                                         {editingDeckId !== deck.id && (
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (confirm("Delete this deck?")) {
-                                                        deleteDeck(deck.id);
-                                                    }
-                                                }}
-                                                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        exportDeck(deck);
+                                                    }}
+                                                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                                                    title="Export deck"
+                                                >
+                                                    <Download className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm("Delete this deck?")) {
+                                                            deleteDeck(deck.id);
+                                                        }
+                                                    }}
+                                                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
                                         )}
                                     </div>
                                     {/* Progress bar */}
@@ -266,6 +326,72 @@ export function Dashboard() {
                     )}
                 </div>
             </div>
+
+            {/* Mobile Context Menu */}
+            <AnimatePresence>
+                {contextMenuDeck && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm md:hidden"
+                        onClick={closeContextMenu}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                            className="absolute left-4 right-4 bottom-8 bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-4 border-b border-border">
+                                <h3 className="font-semibold truncate">{contextMenuDeck.name}</h3>
+                                <p className="text-sm text-muted-foreground">{contextMenuDeck.cards.length} cards</p>
+                            </div>
+                            <div className="p-2">
+                                <button
+                                    onClick={() => {
+                                        setEditingDeckId(contextMenuDeck.id);
+                                        setEditingName(contextMenuDeck.name);
+                                        closeContextMenu();
+                                    }}
+                                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left"
+                                >
+                                    <Pencil className="w-5 h-5 text-muted-foreground" />
+                                    <span>Rename</span>
+                                </button>
+                                <button
+                                    onClick={() => exportDeck(contextMenuDeck)}
+                                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left"
+                                >
+                                    <Download className="w-5 h-5 text-muted-foreground" />
+                                    <span>Export to .txt</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (confirm("Delete this deck?")) {
+                                            deleteDeck(contextMenuDeck.id);
+                                            closeContextMenu();
+                                        }
+                                    }}
+                                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left text-destructive"
+                                >
+                                    <Trash2 className="w-5 h-5" />
+                                    <span>Delete</span>
+                                </button>
+                            </div>
+                            <button
+                                onClick={closeContextMenu}
+                                className="w-full p-4 text-center text-muted-foreground hover:bg-muted transition-colors border-t border-border"
+                            >
+                                Cancel
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
