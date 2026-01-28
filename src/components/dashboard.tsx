@@ -223,7 +223,7 @@ export function Dashboard() {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={(e) => startEditing(deck.id, deck.name, e)}
-                                                                className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                                                                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-6 w-6"
                                                             >
                                                                 <Pencil className="w-3 h-3" />
                                                             </Button>
@@ -245,7 +245,7 @@ export function Dashboard() {
                                                         deleteDeck(deck.id);
                                                     }
                                                 }}
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                                                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
