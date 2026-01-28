@@ -36,7 +36,7 @@ export function FlashcardComponent({
     const [showEditHint, setShowEditHint] = useState<"question" | "answer" | null>(null);
 
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const LONG_PRESS_DURATION = 500; // ms
+    const LONG_PRESS_DURATION = 1000; // ms (1 second)
 
     const levelColors: Record<CardLevel, string> = {
         "Nowe": "text-muted-foreground",
@@ -240,10 +240,6 @@ export function FlashcardComponent({
                             </motion.div>
                         )}
                     </AnimatePresence>
-                    {/* Mobile hint */}
-                    <p className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground/50 md:hidden">
-                        Hold to edit
-                    </p>
                 </motion.div>
 
                 {/* Answer */}
@@ -335,10 +331,6 @@ export function FlashcardComponent({
                                     </motion.div>
                                 )}
                             </AnimatePresence>
-                            {/* Mobile hint */}
-                            <p className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground/50 md:hidden">
-                                Hold to edit
-                            </p>
                         </motion.div>
                     )}
                 </AnimatePresence>
