@@ -258,8 +258,8 @@ export function Dashboard() {
                                                         animate={{ opacity: 1 }}
                                                         exit={{ opacity: 0 }}
                                                     >
-                                                        <div className="flex items-center gap-2">
-                                                            <h3 className="text-lg font-semibold group-hover:text-primary transition-colors truncate">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <h3 className="text-lg font-semibold group-hover:text-primary transition-colors truncate max-w-[200px] sm:max-w-none">
                                                                 {deck.name}
                                                             </h3>
                                                             <Button
@@ -279,7 +279,7 @@ export function Dashboard() {
                                             </AnimatePresence>
                                         </div>
                                         {editingDeckId !== deck.id && (
-                                            <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
