@@ -6,7 +6,6 @@ export interface Flashcard {
     id: string;
     question: string;
     answer: string;
-    imageUrl?: string; // Optional image URL for visual aids
     level: CardLevel;
 }
 

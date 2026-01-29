@@ -5,7 +5,7 @@ export async function GET() {
         // Option 1: Fetch from a URL (e.g., Raw Gist of "questions.txt")
         const dataUrl = process.env.GLOBAL_DECKS_URL;
 
-        let allDecks: { name: string; cards: { question: string; answer: string; imageUrl?: string }[] }[] = [];
+        let allDecks: { name: string; cards: { question: string; answer: string }[] }[] = [];
 
         if (dataUrl) {
             const res = await fetch(dataUrl);
@@ -35,15 +35,14 @@ export async function GET() {
                         if (!deckRes.ok) return null;
                         const deckText = await deckRes.text();
 
-                        const cards: { question: string; answer: string; imageUrl?: string }[] = [];
+                        const cards: { question: string; answer: string }[] = [];
                         const deckLines = deckText.split("\n");
                         for (const dLine of deckLines) {
                             const dParts = dLine.trim().split("|");
                             if (dParts.length >= 2) {
                                 cards.push({
                                     question: dParts[0].trim(),
-                                    answer: dParts[1].trim(),
-                                    imageUrl: dParts[2]?.trim() || undefined
+                                    answer: dParts.slice(1).join("|").trim()
                                 });
                             }
                         }
@@ -58,18 +57,17 @@ export async function GET() {
                 });
 
                 const results = await Promise.all(promises);
-                allDecks = results.filter((d): d is { name: string; cards: { question: string; answer: string; imageUrl?: string }[] } => d !== null);
+                allDecks = results.filter((d): d is { name: string; cards: { question: string; answer: string }[] } => d !== null);
 
             } else {
                 // SINGLE DECK MODE (Backward Compatibility)
-                const cards: { question: string; answer: string; imageUrl?: string }[] = [];
+                const cards: { question: string; answer: string }[] = [];
                 for (const line of lines) {
                     const parts = line.split("|");
                     if (parts.length >= 2) {
                         cards.push({
                             question: parts[0].trim(),
-                            answer: parts[1].trim(),
-                            imageUrl: parts[2]?.trim() || undefined
+                            answer: parts.slice(1).join("|").trim()
                         });
                     }
                 }
@@ -91,3 +89,4 @@ export async function GET() {
         return NextResponse.json({ error: "Failed to load global decks" }, { status: 500 });
     }
 }
+
