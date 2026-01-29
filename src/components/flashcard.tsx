@@ -34,8 +34,8 @@ export function FlashcardComponent({
     const [editQuestion, setEditQuestion] = useState(card.question);
     const [editAnswer, setEditAnswer] = useState(card.answer);
     const [showEditHint, setShowEditHint] = useState<"question" | "answer" | null>(null);
-    const [imageError, setImageError] = useState(false);
-    const [isImageExpanded, setIsImageExpanded] = useState(false);
+    const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+    const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const LONG_PRESS_DURATION = 1000; // ms (1 second)
@@ -64,11 +64,75 @@ export function FlashcardComponent({
         "Nowe": "",
     };
 
-    // Reset image error state when card changes
+    // Reset image states when card changes
     useEffect(() => {
-        setImageError(false);
-        setIsImageExpanded(false);
+        setImageErrors(new Set());
+        setZoomedImage(null);
     }, [card.id]);
+
+    // Close zoom modal on Escape key
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && zoomedImage) {
+                setZoomedImage(null);
+            }
+        };
+        window.addEventListener("keydown", handleEscape);
+        return () => window.removeEventListener("keydown", handleEscape);
+    }, [zoomedImage]);
+
+    // Parse [img:URL] syntax and render content with inline images
+    const renderContent = useCallback((text: string, isLarge: boolean = false) => {
+        if (!text) return null;
+
+        // Split by [img:...] pattern, keeping the delimiters
+        const parts = text.split(/(\[img:.*?\])/g);
+
+        return (
+            <div className={`flex flex-col items-center gap-3 ${isLarge ? '' : ''}`}>
+                {parts.map((part, index) => {
+                    const imgMatch = part.match(/\[img:(.*?)\]/);
+                    if (imgMatch) {
+                        const imageUrl = imgMatch[1];
+                        const hasError = imageErrors.has(imageUrl);
+
+                        if (hasError) {
+                            return (
+                                <div key={index} className="flex items-center gap-2 text-muted-foreground text-sm">
+                                    <ImageOff className="w-4 h-4" />
+                                    <span>Image failed to load</span>
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div key={index} className="relative group/img">
+                                <img
+                                    src={imageUrl}
+                                    alt="Flashcard image"
+                                    className={`rounded-lg cursor-zoom-in shadow-md hover:shadow-lg transition-shadow ${isLarge ? 'max-h-48' : 'max-h-32'}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setZoomedImage(imageUrl);
+                                    }}
+                                    onError={() => setImageErrors(prev => new Set(prev).add(imageUrl))}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/20 rounded-lg pointer-events-none">
+                                    <ZoomIn className="w-6 h-6 text-white drop-shadow-lg" />
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    // Regular text part
+                    if (part.trim()) {
+                        return <span key={index}>{part}</span>;
+                    }
+                    return null;
+                })}
+            </div>
+        );
+    }, [imageErrors]);
 
     // Handle long press for mobile
     const handleTouchStart = useCallback((type: "question" | "answer") => {
@@ -224,7 +288,7 @@ export function FlashcardComponent({
                                 className="relative"
                             >
                                 <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight text-foreground">
-                                    {card.question}
+                                    {renderContent(card.question, true)}
                                 </h2>
                                 {/* Edit button - Desktop hover */}
                                 <AnimatePresence>
@@ -311,46 +375,12 @@ export function FlashcardComponent({
                                         exit={{ opacity: 0 }}
                                         className="relative w-full"
                                     >
-                                        <p
+                                        <div
                                             className="text-xl md:text-2xl font-medium text-center text-muted-foreground"
                                             aria-live="polite"
                                         >
-                                            {card.answer || "(Mental Answer)"}
-                                        </p>
-
-                                        {/* Image Display */}
-                                        {card.imageUrl && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: 0.2 }}
-                                                className="mt-4 flex justify-center"
-                                            >
-                                                {imageError ? (
-                                                    <div className="flex flex-col items-center gap-2 p-6 bg-muted/50 rounded-xl border border-dashed border-border">
-                                                        <ImageOff className="w-8 h-8 text-muted-foreground" />
-                                                        <p className="text-sm text-muted-foreground text-center">
-                                                            Image unavailable (offline or broken link)
-                                                        </p>
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => setIsImageExpanded(true)}
-                                                        className="relative group cursor-zoom-in"
-                                                    >
-                                                        <img
-                                                            src={card.imageUrl}
-                                                            alt="Flashcard visual aid"
-                                                            onError={() => setImageError(true)}
-                                                            className="max-h-48 rounded-xl border border-border shadow-md object-contain transition-transform group-hover:scale-[1.02]"
-                                                        />
-                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 rounded-xl transition-colors">
-                                                            <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                        </div>
-                                                    </button>
-                                                )}
-                                            </motion.div>
-                                        )}
+                                            {renderContent(card.answer, false) || "(Mental Answer)"}
+                                        </div>
 
                                         {/* Edit button - Desktop hover */}
                                         <AnimatePresence>
@@ -374,35 +404,6 @@ export function FlashcardComponent({
                                     </motion.div>
                                 )}
                             </AnimatePresence>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Image Expand Modal */}
-                <AnimatePresence>
-                    {isImageExpanded && card.imageUrl && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-                            onClick={() => setIsImageExpanded(false)}
-                        >
-                            <motion.img
-                                initial={{ scale: 0.8 }}
-                                animate={{ scale: 1 }}
-                                exit={{ scale: 0.8 }}
-                                src={card.imageUrl}
-                                alt="Flashcard visual aid (expanded)"
-                                className="max-w-full max-h-full object-contain rounded-xl"
-                                onClick={(e) => e.stopPropagation()}
-                            />
-                            <button
-                                onClick={() => setIsImageExpanded(false)}
-                                className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -447,6 +448,40 @@ export function FlashcardComponent({
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Image Zoom Modal */}
+            <AnimatePresence>
+                {zoomedImage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+                        onClick={() => setZoomedImage(null)}
+                    >
+                        <motion.img
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.8, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                            src={zoomedImage}
+                            alt="Zoomed flashcard image"
+                            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                        <button
+                            onClick={() => setZoomedImage(null)}
+                            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                        <p className="absolute bottom-4 text-white/50 text-sm">
+                            Click anywhere or press Escape to close
+                        </p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }
