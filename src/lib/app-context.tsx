@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
     AppState,
     Deck,
@@ -15,8 +15,8 @@ import {
     createDeck,
     parseQuestionsFile,
     resetDeckProgress,
-    generateId,
 } from "@/lib/storage";
+import { LOCALSTORAGE_SAVE_DEBOUNCE_MS, MAX_DECKS_PER_USER } from "@/lib/constants";
 
 interface AppContextType {
     // State
@@ -62,11 +62,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
     }, []);
 
-    // Save state to localStorage whenever it changes
+    // Debounced save to localStorage whenever state changes
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     useEffect(() => {
         if (!isLoading) {
-            saveAppState(state);
+            // Clear any pending save
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+            // Debounce saves to reduce write frequency
+            saveTimeoutRef.current = setTimeout(() => {
+                saveAppState(state);
+            }, LOCALSTORAGE_SAVE_DEBOUNCE_MS);
         }
+
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
     }, [state, isLoading]);
 
     // Get current user
@@ -128,9 +143,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         setState((prev) => {
             const userDecks = prev.decks[prev.currentUserId!] || [];
-            // Limit to 5 decks per user
-            if (userDecks.length >= 5) {
-                alert("Maximum 5 decks per user reached.");
+            // Limit decks per user
+            if (userDecks.length >= MAX_DECKS_PER_USER) {
+                alert(`Maximum ${MAX_DECKS_PER_USER} decks per user reached.`);
                 return prev;
             }
             return {

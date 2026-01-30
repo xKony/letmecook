@@ -4,7 +4,7 @@ const STORAGE_KEY = "letmecook_app_state";
 
 // Generate unique ID
 export function generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 // Get initial empty state
@@ -16,6 +16,33 @@ function getInitialState(): AppState {
     };
 }
 
+// Validate AppState structure at runtime to protect against malformed data
+function isValidAppState(data: unknown): data is AppState {
+    if (typeof data !== "object" || data === null) return false;
+
+    const obj = data as Record<string, unknown>;
+
+    // Validate currentUserId
+    if (obj.currentUserId !== null && typeof obj.currentUserId !== "string") {
+        return false;
+    }
+
+    // Validate users array
+    if (!Array.isArray(obj.users)) return false;
+    for (const user of obj.users) {
+        if (typeof user !== "object" || user === null) return false;
+        const u = user as Record<string, unknown>;
+        if (typeof u.id !== "string" || typeof u.name !== "string" || typeof u.createdAt !== "number") {
+            return false;
+        }
+    }
+
+    // Validate decks record
+    if (typeof obj.decks !== "object" || obj.decks === null) return false;
+
+    return true;
+}
+
 // Load state from localStorage
 export function loadAppState(): AppState {
     if (typeof window === "undefined") return getInitialState();
@@ -23,7 +50,11 @@ export function loadAppState(): AppState {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
-            return JSON.parse(stored) as AppState;
+            const parsed = JSON.parse(stored);
+            if (isValidAppState(parsed)) {
+                return parsed;
+            }
+            console.warn("Invalid app state structure, resetting to defaults");
         }
     } catch (e) {
         console.error("Failed to load app state:", e);

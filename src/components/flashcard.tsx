@@ -3,6 +3,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard as FlashcardType, CardLevel, RATINGS } from "@/lib/types";
+import { LEVEL_COLORS, RATING_STYLES } from "@/lib/level-styles";
+import { FLASHCARD_LONG_PRESS_MS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Volume2, VolumeX, Pencil, Check, X, ImageOff, ZoomIn } from "lucide-react";
 
@@ -38,31 +40,6 @@ export function FlashcardComponent({
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const LONG_PRESS_DURATION = 1000; // ms (1 second)
-
-    const levelColors: Record<CardLevel, string> = {
-        "Nowe": "text-muted-foreground",
-        "Nie umiem": "text-rose-500",
-        "W miarę": "text-amber-500",
-        "Umiem": "text-emerald-500",
-        "Opanowane 100%": "text-cyan-500",
-    };
-
-    const levelDotColors: Record<CardLevel, string> = {
-        "Nowe": "bg-muted-foreground",
-        "Nie umiem": "bg-rose-500",
-        "W miarę": "bg-amber-500",
-        "Umiem": "bg-emerald-500",
-        "Opanowane 100%": "bg-cyan-500",
-    };
-
-    const ratingStyles: Record<CardLevel, string> = {
-        "Nie umiem": "border-rose-500/20 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500",
-        "W miarę": "border-amber-500/20 bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-500",
-        "Umiem": "border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-500",
-        "Opanowane 100%": "border-cyan-500/20 bg-cyan-500/10 hover:bg-cyan-500 hover:text-white text-cyan-500",
-        "Nowe": "",
-    };
 
     // Reset image states when card changes
     useEffect(() => {
@@ -144,7 +121,7 @@ export function FlashcardComponent({
                 setEditAnswer(card.answer);
                 setIsEditingAnswer(true);
             }
-        }, LONG_PRESS_DURATION);
+        }, FLASHCARD_LONG_PRESS_MS);
     }, [card.question, card.answer]);
 
     const handleTouchEnd = useCallback(() => {
@@ -223,8 +200,8 @@ export function FlashcardComponent({
                         )}
                     </button>
                     <div className="flex items-center gap-2">
-                        <span className={`w-3 h-3 rounded-full ${levelDotColors[card.level]}`} />
-                        <span className={`text-sm font-medium ${levelColors[card.level]}`}>
+                        <span className={`w-3 h-3 rounded-full ${LEVEL_COLORS[card.level].dot}`} />
+                        <span className={`text-sm font-medium ${LEVEL_COLORS[card.level].text}`}>
                             {card.level}
                         </span>
                     </div>
@@ -439,7 +416,7 @@ export function FlashcardComponent({
                                     key={rating.value}
                                     onClick={() => onRate(rating.value)}
                                     variant="outline"
-                                    className={`h-16 rounded-xl border-2 transition-all font-medium ${ratingStyles[rating.value]}`}
+                                    className={`h-16 rounded-xl border-2 transition-all font-medium ${RATING_STYLES[rating.value]}`}
                                 >
                                     {rating.label}
                                 </Button>

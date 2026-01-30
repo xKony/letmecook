@@ -7,6 +7,8 @@ import { useTTS } from "@/hooks/use-tts";
 import { FlashcardComponent } from "@/components/flashcard";
 import { Button } from "@/components/ui/button";
 import { CardLevel } from "@/lib/types";
+import { LEVEL_COLORS, ALL_LEVELS } from "@/lib/level-styles";
+import { BREAK_REMINDER_INTERVAL_SECONDS } from "@/lib/constants";
 import {
     ArrowLeft,
     ArrowRight,
@@ -18,16 +20,6 @@ import {
     Clock,
     Coffee,
 } from "lucide-react";
-
-const ALL_LEVELS: CardLevel[] = ["Nowe", "Nie umiem", "W miarę", "Umiem", "Opanowane 100%"];
-
-const levelColors: Record<CardLevel, { bg: string; text: string; bar: string }> = {
-    "Nowe": { bg: "bg-slate-500/20", text: "text-slate-400", bar: "bg-slate-400" },
-    "Nie umiem": { bg: "bg-rose-500/20", text: "text-rose-500", bar: "bg-rose-500" },
-    "W miarę": { bg: "bg-amber-500/20", text: "text-amber-500", bar: "bg-amber-500" },
-    "Umiem": { bg: "bg-emerald-500/20", text: "text-emerald-500", bar: "bg-emerald-500" },
-    "Opanowane 100%": { bg: "bg-cyan-500/20", text: "text-cyan-500", bar: "bg-cyan-500" },
-};
 
 export function StudySession() {
     const { currentDeck, closeDeck, resetCurrentDeck, updateCardLevel, updateCard } = useApp();
@@ -82,14 +74,16 @@ export function StudySession() {
         if (currentDeck) {
             initializePlayOrder(isShuffled);
         }
-    }, [currentDeck?.id]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentDeck?.id]); // Only re-run on deck change, not on every isShuffled change
 
     // Reinitialize when filter changes (but preserve shuffle state)
     useEffect(() => {
         if (currentDeck) {
             initializePlayOrder(isShuffled);
         }
-    }, [activeFilter]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeFilter]); // Only re-run on filter change
 
     // Calculate stats
     const stats = useMemo((): Record<CardLevel, number> => {
@@ -133,9 +127,8 @@ export function StudySession() {
         const interval = setInterval(() => {
             setSessionSeconds((prev) => {
                 const newSeconds = prev + 1;
-                // Check for 30-minute break reminder
-                const BREAK_INTERVAL = 30 * 60; // 30 minutes in seconds
-                if (newSeconds > 0 && newSeconds % BREAK_INTERVAL === 0 && newSeconds !== lastBreakTime) {
+                // Check for break reminder
+                if (newSeconds > 0 && newSeconds % BREAK_REMINDER_INTERVAL_SECONDS === 0 && newSeconds !== lastBreakTime) {
                     setShowBreakModal(true);
                     setLastBreakTime(newSeconds);
                 }
@@ -327,12 +320,12 @@ export function StudySession() {
                                             key={level}
                                             onClick={() => handleFilterSelect(level)}
                                             className={`w-full text-left p-3 rounded-xl transition-all ${isActive
-                                                ? `${levelColors[level].bg} ring-2 ring-offset-2 ring-offset-background ${levelColors[level].text.replace('text-', 'ring-')}`
+                                                ? `${LEVEL_COLORS[level].bg} ring-2 ring-offset-2 ring-offset-background ${LEVEL_COLORS[level].text.replace('text-', 'ring-')}`
                                                 : 'hover:bg-muted/50'
                                                 }`}
                                         >
                                             <div className="flex justify-between items-center mb-2">
-                                                <span className={`text-sm font-medium ${levelColors[level].text}`}>
+                                                <span className={`text-sm font-medium ${LEVEL_COLORS[level].text}`}>
                                                     {level}
                                                 </span>
                                                 <span className="text-sm text-muted-foreground">
@@ -344,7 +337,7 @@ export function StudySession() {
                                                     initial={{ width: 0 }}
                                                     animate={{ width: `${percentage}%` }}
                                                     transition={{ duration: 0.5, delay: 0.1 }}
-                                                    className={`h-full rounded-full ${levelColors[level].bar}`}
+                                                    className={`h-full rounded-full ${LEVEL_COLORS[level].bar}`}
                                                 />
                                             </div>
                                         </button>
@@ -477,7 +470,7 @@ export function StudySession() {
                     title="View stats and filter"
                 >
                     {activeFilter && (
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${levelColors[activeFilter].bg} ${levelColors[activeFilter].text}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${LEVEL_COLORS[activeFilter].bg} ${LEVEL_COLORS[activeFilter].text}`}>
                             {activeFilter}
                         </span>
                     )}

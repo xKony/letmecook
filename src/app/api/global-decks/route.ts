@@ -1,5 +1,44 @@
 import { NextResponse } from "next/server";
 
+// URL validation to prevent SSRF attacks
+function isValidExternalUrl(urlString: string): boolean {
+    try {
+        const url = new URL(urlString);
+
+        // Only allow HTTPS
+        if (url.protocol !== "https:") {
+            return false;
+        }
+
+        // Block localhost and private IPs
+        const hostname = url.hostname.toLowerCase();
+        const blockedPatterns = [
+            "localhost",
+            "127.0.0.1",
+            "0.0.0.0",
+            "::1",
+            /^10\./,
+            /^172\.(1[6-9]|2[0-9]|3[01])\./,
+            /^192\.168\./,
+            /^169\.254\./,
+        ];
+
+        for (const pattern of blockedPatterns) {
+            if (typeof pattern === "string") {
+                if (hostname === pattern || hostname.endsWith(`.${pattern}`)) {
+                    return false;
+                }
+            } else if (pattern.test(hostname)) {
+                return false;
+            }
+        }
+
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export async function GET() {
     try {
         // Option 1: Fetch from a URL (e.g., Raw Gist of "questions.txt")
@@ -7,7 +46,7 @@ export async function GET() {
 
         let allDecks: { name: string; cards: { question: string; answer: string }[] }[] = [];
 
-        if (dataUrl) {
+        if (dataUrl && isValidExternalUrl(dataUrl)) {
             const res = await fetch(dataUrl);
             if (!res.ok) throw new Error("Failed to fetch decks");
             const text = await res.text();
@@ -29,6 +68,12 @@ export async function GET() {
 
                     const deckName = parts[0].trim();
                     const deckUrl = parts[1].trim();
+
+                    // Validate URL before fetching
+                    if (!isValidExternalUrl(deckUrl)) {
+                        console.warn(`Skipping invalid URL for deck: ${deckName}`);
+                        return null;
+                    }
 
                     try {
                         const deckRes = await fetch(deckUrl);

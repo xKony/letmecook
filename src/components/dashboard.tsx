@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download } from "lucide-react";
 import { GlobalDecksModal } from "@/components/global-decks-modal";
 import { Deck } from "@/lib/types";
+import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
 
 export function Dashboard() {
     const { currentUser, getUserDecks, addDeck, selectDeck, deleteDeck, renameDeck, logout } = useApp();
@@ -18,7 +19,6 @@ export function Dashboard() {
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const LONG_PRESS_DURATION = 500;
 
     const decks = getUserDecks();
 
@@ -108,7 +108,7 @@ export function Dashboard() {
         longPressTimerRef.current = setTimeout(() => {
             setContextMenuDeck(deck);
             setContextMenuPosition({ x: touch.clientX, y: touch.clientY });
-        }, LONG_PRESS_DURATION);
+        }, DASHBOARD_LONG_PRESS_MS);
     }, []);
 
     const handleTouchEnd = useCallback(() => {
