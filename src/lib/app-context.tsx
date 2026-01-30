@@ -1,18 +1,11 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
+import { GuestState, Deck, CardLevel } from "@/lib/types";
 import {
-    AppState,
-    Deck,
-    Flashcard,
-    UserProfile,
-    CardLevel,
-} from "@/lib/types";
-import {
-    loadAppState,
-    saveAppState,
-    createUser,
+    loadGuestState,
+    saveGuestState,
     createDeck,
     parseQuestionsFile,
     resetDeckProgress,
@@ -20,23 +13,22 @@ import {
 import { LOCALSTORAGE_SAVE_DEBOUNCE_MS, MAX_DECKS_PER_USER } from "@/lib/constants";
 
 interface AppContextType {
-    // State
-    state: AppState;
-    currentUser: UserProfile | null;
+    // Auth state
+    isAuthenticated: boolean;
+    isGuest: boolean;
+    isAdmin: boolean;
+    authUser: { id: string; email: string; name?: string | null } | null;
+    authLoading: boolean;
+
+    // App state
+    decks: Deck[];
     currentDeck: Deck | null;
     isLoading: boolean;
 
-    // Auth state (for hybrid mode)
-    isAuthenticated: boolean;
-    authUser: { id: string; email: string; name?: string | null } | null;
-
-    // User actions
-    addUser: (name: string) => void;
-    selectUser: (userId: string) => void;
-    logout: () => void;
+    // Auth actions
+    handleSignOut: () => void;
 
     // Deck actions
-    getUserDecks: () => Deck[];
     addDeck: (name: string, fileContent: string) => void;
     selectDeck: (deckId: string) => void;
     closeDeck: () => void;
@@ -53,41 +45,40 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
     const { data: session, status } = useSession();
-    const [state, setState] = useState<AppState>(() => ({
-        currentUserId: null,
-        users: [],
-        decks: {},
-    }));
+    const [guestState, setGuestState] = useState<GuestState>({ decks: [] });
     const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     // Auth state derived from session
+    const authLoading = status === "loading";
     const isAuthenticated = status === "authenticated" && !!session?.user;
+    const isGuest = !isAuthenticated;
+    const isAdmin = (session?.user as { isAdmin?: boolean } | undefined)?.isAdmin ?? false;
     const authUser = session?.user ? {
         id: session.user.id || "",
         email: session.user.email || "",
         name: session.user.name,
     } : null;
 
-    // Load state from localStorage on mount
+    // Load guest state from localStorage on mount
     useEffect(() => {
-        const loaded = loadAppState();
-        setState(loaded);
+        const loaded = loadGuestState();
+        setGuestState(loaded);
         setIsLoading(false);
     }, []);
 
-    // Debounced save to localStorage whenever state changes
+    // Debounced save to localStorage whenever guest state changes
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        if (!isLoading) {
+        if (!isLoading && isGuest) {
             // Clear any pending save
             if (saveTimeoutRef.current) {
                 clearTimeout(saveTimeoutRef.current);
             }
             // Debounce saves to reduce write frequency
             saveTimeoutRef.current = setTimeout(() => {
-                saveAppState(state);
+                saveGuestState(guestState);
             }, LOCALSTORAGE_SAVE_DEBOUNCE_MS);
         }
 
@@ -96,81 +87,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 clearTimeout(saveTimeoutRef.current);
             }
         };
-    }, [state, isLoading]);
+    }, [guestState, isLoading, isGuest]);
 
-    // Get current user
-    const currentUser = useMemo(() => {
-        if (!state.currentUserId) return null;
-        return state.users.find((u) => u.id === state.currentUserId) || null;
-    }, [state.currentUserId, state.users]);
+    // Get decks (guest mode uses localStorage, authenticated would use DB)
+    const decks = useMemo(() => {
+        // For now, always use guest state decks
+        // TODO: Fetch from DB when authenticated
+        return guestState.decks;
+    }, [guestState.decks]);
 
     // Get current deck
     const currentDeck = useMemo(() => {
-        if (!currentDeckId || !state.currentUserId) return null;
-        const userDecks = state.decks[state.currentUserId] || [];
-        return userDecks.find((d) => d.id === currentDeckId) || null;
-    }, [currentDeckId, state.currentUserId, state.decks]);
+        if (!currentDeckId) return null;
+        return decks.find((d) => d.id === currentDeckId) || null;
+    }, [currentDeckId, decks]);
 
-    // Add a new user
-    const addUser = useCallback((name: string) => {
-        const user = createUser(name);
-        setState((prev) => ({
-            ...prev,
-            users: [...prev.users, user],
-            currentUserId: user.id,
-            decks: { ...prev.decks, [user.id]: [] },
-        }));
+    // Sign out handler
+    const handleSignOut = useCallback(() => {
+        signOut({ callbackUrl: "/" });
     }, []);
-
-    // Select a user
-    const selectUser = useCallback((userId: string) => {
-        setState((prev) => ({
-            ...prev,
-            currentUserId: userId,
-        }));
-        setCurrentDeckId(null);
-    }, []);
-
-    // Logout
-    const logout = useCallback(() => {
-        setState((prev) => ({
-            ...prev,
-            currentUserId: null,
-        }));
-        setCurrentDeckId(null);
-    }, []);
-
-    // Get decks for current user
-    const getUserDecks = useCallback(() => {
-        if (!state.currentUserId) return [];
-        return state.decks[state.currentUserId] || [];
-    }, [state.currentUserId, state.decks]);
 
     // Add a new deck
     const addDeck = useCallback((name: string, fileContent: string) => {
-        if (!state.currentUserId) return;
-
         const parsedCards = parseQuestionsFile(fileContent);
         if (parsedCards.length === 0) return;
 
         const deck = createDeck(name, parsedCards);
 
-        setState((prev) => {
-            const userDecks = prev.decks[prev.currentUserId!] || [];
-            // Limit decks per user
-            if (userDecks.length >= MAX_DECKS_PER_USER) {
-                alert(`Maximum ${MAX_DECKS_PER_USER} decks per user reached.`);
+        setGuestState((prev) => {
+            if (prev.decks.length >= MAX_DECKS_PER_USER) {
+                alert(`Maximum ${MAX_DECKS_PER_USER} decks reached.`);
                 return prev;
             }
             return {
                 ...prev,
-                decks: {
-                    ...prev.decks,
-                    [prev.currentUserId!]: [...userDecks, deck],
-                },
+                decks: [...prev.decks, deck],
             };
         });
-    }, [state.currentUserId]);
+    }, []);
 
     // Select a deck
     const selectDeck = useCallback((deckId: string) => {
@@ -184,121 +138,75 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     // Delete a deck
     const deleteDeck = useCallback((deckId: string) => {
-        if (!state.currentUserId) return;
-
-        setState((prev) => {
-            const userDecks = prev.decks[prev.currentUserId!] || [];
-            return {
-                ...prev,
-                decks: {
-                    ...prev.decks,
-                    [prev.currentUserId!]: userDecks.filter((d) => d.id !== deckId),
-                },
-            };
-        });
-
+        setGuestState((prev) => ({
+            ...prev,
+            decks: prev.decks.filter((d) => d.id !== deckId),
+        }));
         if (currentDeckId === deckId) {
             setCurrentDeckId(null);
         }
-    }, [state.currentUserId, currentDeckId]);
+    }, [currentDeckId]);
 
     // Rename a deck
     const renameDeck = useCallback((deckId: string, newName: string) => {
-        if (!state.currentUserId || !newName.trim()) return;
-
-        setState((prev) => {
-            const userDecks = prev.decks[prev.currentUserId!] || [];
-            return {
-                ...prev,
-                decks: {
-                    ...prev.decks,
-                    [prev.currentUserId!]: userDecks.map((d) =>
-                        d.id === deckId ? { ...d, name: newName.trim(), updatedAt: Date.now() } : d
-                    ),
-                },
-            };
-        });
-    }, [state.currentUserId]);
+        setGuestState((prev) => ({
+            ...prev,
+            decks: prev.decks.map((d) =>
+                d.id === deckId ? { ...d, name: newName, updatedAt: Date.now() } : d
+            ),
+        }));
+    }, []);
 
     // Reset current deck progress
     const resetCurrentDeck = useCallback(() => {
-        if (!state.currentUserId || !currentDeckId) return;
+        if (!currentDeckId) return;
 
-        setState((prev) => {
-            const userDecks = prev.decks[prev.currentUserId!] || [];
-            return {
-                ...prev,
-                decks: {
-                    ...prev.decks,
-                    [prev.currentUserId!]: userDecks.map((d) =>
-                        d.id === currentDeckId ? resetDeckProgress(d) : d
-                    ),
-                },
-            };
-        });
-    }, [state.currentUserId, currentDeckId]);
+        setGuestState((prev) => ({
+            ...prev,
+            decks: prev.decks.map((d) =>
+                d.id === currentDeckId ? resetDeckProgress(d) : d
+            ),
+        }));
+    }, [currentDeckId]);
 
-    // Update card level
+    // Update a single card's level
     const updateCardLevel = useCallback((cardId: string, level: CardLevel) => {
-        if (!state.currentUserId || !currentDeckId) return;
+        setGuestState((prev) => ({
+            ...prev,
+            decks: prev.decks.map((deck) => ({
+                ...deck,
+                cards: deck.cards.map((card) =>
+                    card.id === cardId ? { ...card, level } : card
+                ),
+                updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
+            })),
+        }));
+    }, []);
 
-        setState((prev) => {
-            const userDecks = prev.decks[prev.currentUserId!] || [];
-            return {
-                ...prev,
-                decks: {
-                    ...prev.decks,
-                    [prev.currentUserId!]: userDecks.map((deck) => {
-                        if (deck.id !== currentDeckId) return deck;
-                        return {
-                            ...deck,
-                            cards: deck.cards.map((card) =>
-                                card.id === cardId ? { ...card, level } : card
-                            ),
-                            updatedAt: Date.now(),
-                        };
-                    }),
-                },
-            };
-        });
-    }, [state.currentUserId, currentDeckId]);
-
-    // Update card content (question/answer)
+    // Update a single card's question and answer
     const updateCard = useCallback((cardId: string, question: string, answer: string) => {
-        if (!state.currentUserId || !currentDeckId) return;
-
-        setState((prev) => {
-            const userDecks = prev.decks[prev.currentUserId!] || [];
-            return {
-                ...prev,
-                decks: {
-                    ...prev.decks,
-                    [prev.currentUserId!]: userDecks.map((deck) => {
-                        if (deck.id !== currentDeckId) return deck;
-                        return {
-                            ...deck,
-                            cards: deck.cards.map((card) =>
-                                card.id === cardId ? { ...card, question, answer } : card
-                            ),
-                            updatedAt: Date.now(),
-                        };
-                    }),
-                },
-            };
-        });
-    }, [state.currentUserId, currentDeckId]);
+        setGuestState((prev) => ({
+            ...prev,
+            decks: prev.decks.map((deck) => ({
+                ...deck,
+                cards: deck.cards.map((card) =>
+                    card.id === cardId ? { ...card, question, answer } : card
+                ),
+                updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
+            })),
+        }));
+    }, []);
 
     const value: AppContextType = {
-        state,
-        currentUser,
+        isAuthenticated,
+        isGuest,
+        isAdmin,
+        authUser,
+        authLoading,
+        decks,
         currentDeck,
         isLoading,
-        isAuthenticated,
-        authUser,
-        addUser,
-        selectUser,
-        logout,
-        getUserDecks,
+        handleSignOut,
         addDeck,
         selectDeck,
         closeDeck,

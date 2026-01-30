@@ -18,18 +18,11 @@ export interface Deck {
     updatedAt: number;
 }
 
-// User profile (for multi-user local support)
-export interface UserProfile {
-    id: string;
-    name: string;
-    createdAt: number;
-}
-
-// App state stored in localStorage
-export interface AppState {
-    currentUserId: string | null;
-    users: UserProfile[];
-    decks: Record<string, Deck[]>; // userId -> decks
+// Simplified app state - no more profile abstraction
+// Guest mode: decks stored directly in localStorage
+// Authenticated mode: decks fetched from database
+export interface GuestState {
+    decks: Deck[];
 }
 
 // Rating options for buttons

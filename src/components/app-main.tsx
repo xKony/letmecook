@@ -1,15 +1,15 @@
 "use client";
 
 import { useApp } from "@/lib/app-context";
-import { LoginScreen } from "@/components/login-screen";
 import { Dashboard } from "@/components/dashboard";
 import { StudySession } from "@/components/study-session";
 import { GuestModeBanner } from "@/components/guest-mode-banner";
 
 export function AppMain() {
-    const { currentUser, currentDeck, isLoading, isAuthenticated } = useApp();
+    const { currentDeck, isLoading, authLoading, isGuest } = useApp();
 
-    if (isLoading) {
+    // Show loading while auth is checking or localStorage is loading
+    if (isLoading || authLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -17,17 +17,11 @@ export function AppMain() {
         );
     }
 
-    // No user logged in (local profile)
-    if (!currentUser) {
-        return <LoginScreen />;
-    }
-
-    // Render with guest banner for non-authenticated users
+    // Direct to Dashboard or StudySession (no more profile selector)
     return (
         <>
-            {!isAuthenticated && <GuestModeBanner />}
+            {isGuest && <GuestModeBanner />}
             {currentDeck ? <StudySession /> : <Dashboard />}
         </>
     );
 }
-

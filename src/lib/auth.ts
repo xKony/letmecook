@@ -13,7 +13,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     pages: {
         signIn: "/login",
-        // signUp: "/register", // Custom pages
     },
     providers: [
         Credentials({
@@ -36,7 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 });
 
                 if (!user || !user.password) {
-                    return null; // User not found or no password (OAuth user)
+                    return null;
                 }
 
                 // Verify password
@@ -51,23 +50,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     email: user.email,
                     name: user.name,
                     image: user.image,
+                    isAdmin: user.isAdmin,
                 };
             },
         }),
-        // Add more providers here (Google, GitHub, etc.)
     ],
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
                 token.id = user.id;
+                token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
             }
             return token;
         },
         async session({ session, token }) {
             if (session.user && token.id) {
                 session.user.id = token.id as string;
+                (session.user as { isAdmin?: boolean }).isAdmin = token.isAdmin as boolean;
             }
             return session;
         },
     },
 });
+

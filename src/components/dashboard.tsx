@@ -1,26 +1,37 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download } from "lucide-react";
+import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download, LogIn, User, Shield } from "lucide-react";
 import { GlobalDecksModal } from "@/components/global-decks-modal";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
 
 export function Dashboard() {
-    const { currentUser, getUserDecks, addDeck, selectDeck, deleteDeck, renameDeck, logout } = useApp();
+    const router = useRouter();
+    const {
+        decks,
+        addDeck,
+        selectDeck,
+        deleteDeck,
+        renameDeck,
+        handleSignOut,
+        isAuthenticated,
+        isGuest,
+        isAdmin,
+        authUser
+    } = useApp();
+
     const [isImporting, setIsImporting] = useState(false);
     const [deckName, setDeckName] = useState("");
     const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState("");
     const [contextMenuDeck, setContextMenuDeck] = useState<Deck | null>(null);
-    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const decks = getUserDecks();
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -84,7 +95,7 @@ export function Dashboard() {
         }
     };
 
-    // Export deck to txt file (QUESTION | ANSWER format)
+    // Export deck to txt file
     const exportDeck = useCallback((deck: Deck) => {
         const content = deck.cards
             .map((card) => `${card.question} | ${card.answer}`)
@@ -102,12 +113,11 @@ export function Dashboard() {
         setContextMenuDeck(null);
     }, []);
 
-    // Long press handlers for mobile context menu
+    // Long press handlers for mobile
     const handleTouchStart = useCallback((deck: Deck, e: React.TouchEvent) => {
         const touch = e.touches[0];
         longPressTimerRef.current = setTimeout(() => {
             setContextMenuDeck(deck);
-            setContextMenuPosition({ x: touch.clientX, y: touch.clientY });
         }, DASHBOARD_LONG_PRESS_MS);
     }, []);
 
@@ -122,6 +132,11 @@ export function Dashboard() {
         setContextMenuDeck(null);
     }, []);
 
+    // Get display name
+    const displayName = isAuthenticated
+        ? (authUser?.name || authUser?.email?.split("@")[0] || "User")
+        : "Guest";
+
     return (
         <div className="min-h-screen p-4 md:p-8">
             <div className="max-w-4xl mx-auto">
@@ -129,12 +144,52 @@ export function Dashboard() {
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">LetMeCook 🍳</h1>
-                        <p className="text-muted-foreground">Welcome, {currentUser?.name}</p>
+                        <p className="text-muted-foreground flex items-center gap-2">
+                            {isGuest ? (
+                                <>
+                                    <User className="w-4 h-4" />
+                                    Guest Mode
+                                </>
+                            ) : (
+                                <>
+                                    <User className="w-4 h-4" />
+                                    {displayName}
+                                </>
+                            )}
+                        </p>
                     </div>
-                    <Button variant="ghost" onClick={logout} className="gap-2">
-                        <LogOut className="w-4 h-4" />
-                        Logout
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        {isAdmin && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => router.push("/admin")}
+                                className="gap-2"
+                            >
+                                <Shield className="w-4 h-4" />
+                                Admin
+                            </Button>
+                        )}
+                        {isGuest ? (
+                            <Button
+                                variant="outline"
+                                onClick={() => router.push("/login")}
+                                className="gap-2"
+                            >
+                                <LogIn className="w-4 h-4" />
+                                Sign In
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="ghost"
+                                onClick={handleSignOut}
+                                className="gap-2"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Sign Out
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Drop Zone */}
@@ -188,7 +243,9 @@ export function Dashboard() {
                 {/* Deck List */}
                 <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                        <h2 className="text-xl font-semibold">Your Decks ({decks.length}/5)</h2>
+                        <h2 className="text-xl font-semibold">
+                            {isGuest ? "Your Decks (Local)" : "Your Decks"} ({decks.length}/5)
+                        </h2>
                         <div className="flex gap-2">
                             <GlobalDecksModal />
                             <Button onClick={() => setIsImporting(true)} className="gap-2">
@@ -313,10 +370,9 @@ export function Dashboard() {
                                         <div
                                             className="h-full bg-gradient-to-r from-blue-400 to-purple-500 rounded-full transition-all"
                                             style={{
-                                                width: `${(deck.cards.filter((c) => c.level !== "Nowe").length /
-                                                    deck.cards.length) *
-                                                    100
-                                                    }%`,
+                                                width: `${deck.cards.length > 0
+                                                    ? (deck.cards.filter((c) => c.level !== "Nowe").length / deck.cards.length) * 100
+                                                    : 0}%`,
                                             }}
                                         />
                                     </div>

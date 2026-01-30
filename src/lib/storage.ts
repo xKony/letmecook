@@ -1,6 +1,7 @@
-import { AppState, Deck, Flashcard, UserProfile, CardLevel } from "./types";
+import { GuestState, Deck, Flashcard, CardLevel } from "./types";
 
-const STORAGE_KEY = "letmecook_app_state";
+const STORAGE_KEY = "letmecook_guest_state";
+const LEGACY_KEY = "letmecook_app_state"; // Old profile-based storage
 
 // Generate unique ID
 export function generateId(): string {
@@ -8,68 +9,95 @@ export function generateId(): string {
 }
 
 // Get initial empty state
-function getInitialState(): AppState {
+function getInitialState(): GuestState {
     return {
-        currentUserId: null,
-        users: [],
-        decks: {},
+        decks: [],
     };
 }
 
-// Validate AppState structure at runtime to protect against malformed data
-function isValidAppState(data: unknown): data is AppState {
+// Validate GuestState structure at runtime
+function isValidGuestState(data: unknown): data is GuestState {
     if (typeof data !== "object" || data === null) return false;
 
     const obj = data as Record<string, unknown>;
 
-    // Validate currentUserId
-    if (obj.currentUserId !== null && typeof obj.currentUserId !== "string") {
-        return false;
-    }
-
-    // Validate users array
-    if (!Array.isArray(obj.users)) return false;
-    for (const user of obj.users) {
-        if (typeof user !== "object" || user === null) return false;
-        const u = user as Record<string, unknown>;
-        if (typeof u.id !== "string" || typeof u.name !== "string" || typeof u.createdAt !== "number") {
-            return false;
-        }
-    }
-
-    // Validate decks record
-    if (typeof obj.decks !== "object" || obj.decks === null) return false;
+    // Validate decks array
+    if (!Array.isArray(obj.decks)) return false;
 
     return true;
 }
 
-// Load state from localStorage
-export function loadAppState(): AppState {
+// Migrate from legacy profile-based storage to new flat structure
+function migrateLegacyStorage(): GuestState | null {
+    if (typeof window === "undefined") return null;
+
+    try {
+        const legacyData = localStorage.getItem(LEGACY_KEY);
+        if (!legacyData) return null;
+
+        const parsed = JSON.parse(legacyData);
+
+        // Check if it's the old profile-based format
+        if (parsed.users && parsed.decks && typeof parsed.decks === "object") {
+            // Flatten all decks from all profiles into one array
+            const allDecks: Deck[] = [];
+            for (const userId of Object.keys(parsed.decks)) {
+                const userDecks = parsed.decks[userId];
+                if (Array.isArray(userDecks)) {
+                    allDecks.push(...userDecks);
+                }
+            }
+
+            console.log(`Migrated ${allDecks.length} decks from legacy storage`);
+
+            // Remove legacy storage after migration
+            localStorage.removeItem(LEGACY_KEY);
+
+            return { decks: allDecks };
+        }
+    } catch (e) {
+        console.error("Failed to migrate legacy storage:", e);
+    }
+
+    return null;
+}
+
+// Load guest state from localStorage
+export function loadGuestState(): GuestState {
     if (typeof window === "undefined") return getInitialState();
 
     try {
+        // First, check for existing new format
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
             const parsed = JSON.parse(stored);
-            if (isValidAppState(parsed)) {
+            if (isValidGuestState(parsed)) {
                 return parsed;
             }
-            console.warn("Invalid app state structure, resetting to defaults");
+            console.warn("Invalid guest state structure, checking for legacy data");
+        }
+
+        // Try to migrate from legacy format
+        const migrated = migrateLegacyStorage();
+        if (migrated) {
+            saveGuestState(migrated);
+            return migrated;
         }
     } catch (e) {
-        console.error("Failed to load app state:", e);
+        console.error("Failed to load guest state:", e);
     }
+
     return getInitialState();
 }
 
-// Save state to localStorage
-export function saveAppState(state: AppState): void {
+// Save guest state to localStorage
+export function saveGuestState(state: GuestState): void {
     if (typeof window === "undefined") return;
 
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
-        console.error("Failed to save app state:", e);
+        console.error("Failed to save guest state:", e);
     }
 }
 
@@ -109,15 +137,6 @@ export function createDeck(name: string, parsedCards: Omit<Flashcard, "id" | "le
         cards,
         createdAt: now,
         updatedAt: now,
-    };
-}
-
-// Create a new user profile
-export function createUser(name: string): UserProfile {
-    return {
-        id: generateId(),
-        name,
-        createdAt: Date.now(),
     };
 }
 
