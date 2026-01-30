@@ -6,6 +6,7 @@ import { Flashcard as FlashcardType, CardLevel, RATINGS } from "@/lib/types";
 import { LEVEL_COLORS, RATING_STYLES } from "@/lib/level-styles";
 import { FLASHCARD_LONG_PRESS_MS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { LatexRenderer } from "@/components/latex-renderer";
 import { Volume2, VolumeX, Pencil, Check, X, ImageOff, ZoomIn } from "lucide-react";
 
 interface FlashcardProps {
@@ -101,9 +102,9 @@ export function FlashcardComponent({
                         );
                     }
 
-                    // Regular text part
+                    // Regular text part - render with LaTeX support
                     if (part.trim()) {
-                        return <span key={index}>{part}</span>;
+                        return <LatexRenderer key={index} text={part} />;
                     }
                     return null;
                 })}
