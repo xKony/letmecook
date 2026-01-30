@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,7 +10,7 @@ import { registerUser } from "@/app/actions/auth-actions";
 import { signIn } from "next-auth/react";
 import { useApp } from "@/lib/app-context";
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { isAuthenticated, authLoading, authUser } = useApp();
@@ -40,7 +41,6 @@ export default function LoginPage() {
 
         try {
             if (isLogin) {
-                // Use client-side signIn for proper session handling
                 const result = await signIn("credentials", {
                     email,
                     password,
@@ -51,19 +51,16 @@ export default function LoginPage() {
                     setError("Invalid email or password");
                 } else {
                     setSuccess("Login successful! Redirecting...");
-                    // Force refresh to update session
                     router.refresh();
                     setTimeout(() => {
                         router.push("/");
                     }, 500);
                 }
             } else {
-                // Register user
                 const result = await registerUser(formData);
                 if (result?.error) {
                     setError(result.error);
                 } else if (result?.success) {
-                    // Auto-login after registration
                     const loginResult = await signIn("credentials", {
                         email,
                         password,
@@ -90,7 +87,6 @@ export default function LoginPage() {
         }
     }
 
-    // Show loading while checking auth
     if (authLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -99,7 +95,6 @@ export default function LoginPage() {
         );
     }
 
-    // Already logged in
     if (isAuthenticated) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -165,7 +160,6 @@ export default function LoginPage() {
                             />
                         </div>
 
-                        {/* Error message */}
                         <AnimatePresence>
                             {error && (
                                 <motion.div
@@ -179,7 +173,6 @@ export default function LoginPage() {
                             )}
                         </AnimatePresence>
 
-                        {/* Success message */}
                         <AnimatePresence>
                             {success && (
                                 <motion.div
@@ -241,5 +234,18 @@ export default function LoginPage() {
                 </div>
             </motion.div>
         </div>
+    );
+}
+
+// Wrap with Suspense for Next.js static generation compatibility
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
     );
 }
