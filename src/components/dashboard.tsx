@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download, LogIn, User, Shield } from "lucide-react";
+import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download, LogIn, User, Shield, Settings } from "lucide-react";
 import { GlobalDecksModal } from "@/components/global-decks-modal";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
@@ -180,14 +180,25 @@ export function Dashboard() {
                                 Sign In
                             </Button>
                         ) : (
-                            <Button
-                                variant="ghost"
-                                onClick={handleSignOut}
-                                className="gap-2"
-                            >
-                                <LogOut className="w-4 h-4" />
-                                Sign Out
-                            </Button>
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => router.push("/settings")}
+                                    className="gap-2"
+                                >
+                                    <Settings className="w-4 h-4" />
+                                    Settings
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    onClick={handleSignOut}
+                                    className="gap-2"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    Sign Out
+                                </Button>
+                            </>
                         )}
                     </div>
                 </div>
