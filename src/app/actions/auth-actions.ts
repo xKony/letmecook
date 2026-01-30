@@ -109,3 +109,31 @@ export async function changePassword(currentPassword: string, newPassword: strin
     }
 }
 
+export async function changeName(newName: string) {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+        return { error: "Not authenticated" };
+    }
+
+    const trimmedName = newName.trim();
+    if (!trimmedName) {
+        return { error: "Name cannot be empty" };
+    }
+
+    if (trimmedName.length > 50) {
+        return { error: "Name must be 50 characters or less" };
+    }
+
+    try {
+        await db.update(users)
+            .set({ name: trimmedName })
+            .where(eq(users.id, session.user.id));
+
+        return { success: true };
+    } catch (error) {
+        console.error("Name change error:", error);
+        return { error: "Failed to change name" };
+    }
+}
+
