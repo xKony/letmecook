@@ -4,9 +4,10 @@ import { useApp } from "@/lib/app-context";
 import { LoginScreen } from "@/components/login-screen";
 import { Dashboard } from "@/components/dashboard";
 import { StudySession } from "@/components/study-session";
+import { GuestModeBanner } from "@/components/guest-mode-banner";
 
 export function AppMain() {
-    const { currentUser, currentDeck, isLoading } = useApp();
+    const { currentUser, currentDeck, isLoading, isAuthenticated } = useApp();
 
     if (isLoading) {
         return (
@@ -16,16 +17,17 @@ export function AppMain() {
         );
     }
 
-    // No user logged in
+    // No user logged in (local profile)
     if (!currentUser) {
         return <LoginScreen />;
     }
 
-    // User logged in, deck selected
-    if (currentDeck) {
-        return <StudySession />;
-    }
-
-    // User logged in, no deck selected
-    return <Dashboard />;
+    // Render with guest banner for non-authenticated users
+    return (
+        <>
+            {!isAuthenticated && <GuestModeBanner />}
+            {currentDeck ? <StudySession /> : <Dashboard />}
+        </>
+    );
 }
+

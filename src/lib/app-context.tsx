@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useSession } from "next-auth/react";
 import {
     AppState,
     Deck,
@@ -25,6 +26,10 @@ interface AppContextType {
     currentDeck: Deck | null;
     isLoading: boolean;
 
+    // Auth state (for hybrid mode)
+    isAuthenticated: boolean;
+    authUser: { id: string; email: string; name?: string | null } | null;
+
     // User actions
     addUser: (name: string) => void;
     selectUser: (userId: string) => void;
@@ -47,6 +52,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+    const { data: session, status } = useSession();
     const [state, setState] = useState<AppState>(() => ({
         currentUserId: null,
         users: [],
@@ -54,6 +60,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
     const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Auth state derived from session
+    const isAuthenticated = status === "authenticated" && !!session?.user;
+    const authUser = session?.user ? {
+        id: session.user.id || "",
+        email: session.user.email || "",
+        name: session.user.name,
+    } : null;
 
     // Load state from localStorage on mount
     useEffect(() => {
@@ -279,6 +293,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         currentUser,
         currentDeck,
         isLoading,
+        isAuthenticated,
+        authUser,
         addUser,
         selectUser,
         logout,
