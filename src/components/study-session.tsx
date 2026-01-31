@@ -6,7 +6,7 @@ import { useApp } from "@/lib/app-context";
 import { useTTS } from "@/hooks/use-tts";
 import { FlashcardComponent } from "@/components/flashcard";
 import { Button } from "@/components/ui/button";
-import { CardLevel } from "@/lib/types";
+import { CardLevel, Flashcard } from "@/lib/types";
 import { LEVEL_COLORS, ALL_LEVELS } from "@/lib/level-styles";
 import { BREAK_REMINDER_INTERVAL_SECONDS } from "@/lib/constants";
 import {
@@ -25,9 +25,9 @@ export function StudySession() {
     const { currentDeck, closeDeck, resetCurrentDeck, updateCardLevel, updateCard } = useApp();
     const { enabled: ttsEnabled, speak, toggle: toggleTTS } = useTTS();
 
-    // Session state
-    const [playIndex, setPlayIndex] = useState(0);  // Pointer/index within shuffled order
-    const [shuffledOrder, setShuffledOrder] = useState<number[]>([]);  // Persistent shuffled indices
+    // Session state - NOW STORES CARD IDs, NOT INDICES
+    const [playIndex, setPlayIndex] = useState(0);  // Current position in playOrder
+    const [playOrder, setPlayOrder] = useState<string[]>([]);  // Array of card IDs in play order
     const [isShuffled, setIsShuffled] = useState(false);
     const [isRevealed, setIsRevealed] = useState(false);
     const [showGotoModal, setShowGotoModal] = useState(false);
@@ -40,12 +40,11 @@ export function StudySession() {
     const [showBreakModal, setShowBreakModal] = useState(false);
     const [lastBreakTime, setLastBreakTime] = useState(0);
 
-    // Stable reference to the initial card order (only changes when deck ID changes)
-    const initialCardIdsRef = useRef<string[]>([]);
+    // Track last initialized deck and filter to avoid unnecessary reinitializations
     const lastDeckIdRef = useRef<string | null>(null);
     const lastFilterRef = useRef<CardLevel | null>(null);
 
-    // Fisher-Yates shuffle algorithm - deterministic, in-place shuffle
+    // Fisher-Yates shuffle algorithm
     const fisherYatesShuffle = useCallback(<T,>(array: T[]): T[] => {
         const shuffled = [...array];
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -55,52 +54,53 @@ export function StudySession() {
         return shuffled;
     }, []);
 
-    // Initialize or reset the play order - uses stable card IDs, not current deck state
-    const initializePlayOrder = useCallback((cardCount: number, shuffle: boolean, filterLevel: CardLevel | null, forceRefresh = false) => {
+    // Build and set play order from current deck
+    const initializePlayOrder = useCallback((cards: Flashcard[], shuffle: boolean, filterLevel: CardLevel | null) => {
+        // Filter cards if needed
+        let filteredCards = cards;
+        if (filterLevel) {
+            filteredCards = cards.filter(c => c.level === filterLevel);
+        }
+
+        // Get card IDs in order
+        let cardIds = filteredCards.map(c => c.id);
+
+        // Shuffle if requested
+        if (shuffle) {
+            cardIds = fisherYatesShuffle(cardIds);
+        }
+
+        setPlayOrder(cardIds);
+        setPlayIndex(0);
+        setIsRevealed(false);
+    }, [fisherYatesShuffle]);
+
+    // Initialize when deck or filter changes
+    useEffect(() => {
         if (!currentDeck) return;
 
-        // Build indices based on filter
-        let indices: number[] = [];
-        for (let i = 0; i < cardCount; i++) {
-            // If we have initial cards, check filter against current card levels
-            if (filterLevel) {
-                const card = currentDeck.cards[i];
-                if (card && card.level === filterLevel) {
-                    indices.push(i);
-                }
-            } else {
-                indices.push(i);
-            }
-        }
+        const deckChanged = lastDeckIdRef.current !== currentDeck.id;
+        const filterChanged = lastFilterRef.current !== activeFilter;
 
-        const order = shuffle ? fisherYatesShuffle(indices) : indices;
-        setShuffledOrder(order);
-        if (forceRefresh) {
-            setPlayIndex(0);
-            setIsRevealed(false);
+        if (deckChanged || filterChanged) {
+            lastDeckIdRef.current = currentDeck.id;
+            lastFilterRef.current = activeFilter;
+            initializePlayOrder(currentDeck.cards, isShuffled, activeFilter);
         }
-    }, [currentDeck, fisherYatesShuffle]);
+    }, [currentDeck?.id, activeFilter]); // Only watch deck ID and filter
 
-    // Initialize when deck changes (NOT when card data changes)
-    useEffect(() => {
-        if (currentDeck) {
-            const deckChanged = lastDeckIdRef.current !== currentDeck.id;
-            const filterChanged = lastFilterRef.current !== activeFilter;
+    // Helper to find card by ID (stable lookup regardless of array order)
+    const getCardById = useCallback((cardId: string): Flashcard | null => {
+        if (!currentDeck) return null;
+        return currentDeck.cards.find(c => c.id === cardId) || null;
+    }, [currentDeck]);
 
-            if (deckChanged) {
-                // Store the initial card IDs when deck first loads
-                initialCardIdsRef.current = currentDeck.cards.map(c => c.id);
-                lastDeckIdRef.current = currentDeck.id;
-                lastFilterRef.current = activeFilter;
-                initializePlayOrder(currentDeck.cards.length, isShuffled, activeFilter, true);
-            } else if (filterChanged) {
-                // Only reinitialize if filter changed
-                lastFilterRef.current = activeFilter;
-                initializePlayOrder(currentDeck.cards.length, isShuffled, activeFilter, true);
-            }
-            // If neither changed, don't reinitialize - preserves card order
-        }
-    }, [currentDeck?.id, activeFilter]); // Only watch ID and filter, not entire deck object
+    // Current card based on ID lookup (NOT index)
+    const currentCard = useMemo(() => {
+        if (playOrder.length === 0) return null;
+        const cardId = playOrder[playIndex];
+        return getCardById(cardId);
+    }, [playOrder, playIndex, getCardById]);
 
     // Calculate stats
     const stats = useMemo((): Record<CardLevel, number> => {
@@ -121,16 +121,6 @@ export function StudySession() {
     const maxCount = useMemo(() => {
         return Math.max(...Object.values(stats), 1);
     }, [stats]);
-
-    // The play order is now the persistent shuffledOrder state
-    const playOrder = shuffledOrder;
-
-    // Current card based on pointer index
-    const currentCard = useMemo(() => {
-        if (!currentDeck || playOrder.length === 0) return null;
-        const realIndex = playOrder[playIndex];
-        return currentDeck.cards[realIndex] || null;
-    }, [currentDeck, playOrder, playIndex]);
 
     // TTS on card change
     useEffect(() => {
@@ -223,10 +213,10 @@ export function StudySession() {
             // End of deck cycle - offer to restart (optionally re-shuffle)
             if (confirm("End of deck. Restart?")) {
                 // Re-initialize with same shuffle state - creates new random order if shuffled
-                initializePlayOrder(currentDeck.cards.length, isShuffled, activeFilter, true);
+                initializePlayOrder(currentDeck.cards, isShuffled, activeFilter);
             }
         }
-    }, [currentDeck, playIndex, playOrder, isShuffled, initializePlayOrder]);
+    }, [currentDeck, playIndex, playOrder, isShuffled, activeFilter, initializePlayOrder]);
 
     const handlePrev = useCallback(() => {
         if (playIndex > 0) {
@@ -240,7 +230,7 @@ export function StudySession() {
         const newShuffleState = !isShuffled;
         setIsShuffled(newShuffleState);
         // Re-initialize order with new shuffle state (creates new random order or resets to sequential)
-        initializePlayOrder(currentDeck.cards.length, newShuffleState, activeFilter, true);
+        initializePlayOrder(currentDeck.cards, newShuffleState, activeFilter);
     }, [currentDeck, isShuffled, activeFilter, initializePlayOrder]);
 
     const handleReset = useCallback(() => {
