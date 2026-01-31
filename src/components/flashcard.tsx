@@ -134,14 +134,18 @@ export function FlashcardComponent({
 
     const handleSaveQuestion = () => {
         if (onUpdateCard && editQuestion.trim()) {
-            onUpdateCard(card.id, editQuestion.trim(), card.answer);
+            // Replace newlines with spaces to maintain file structure
+            const sanitizedQuestion = editQuestion.replace(/[\r\n]+/g, " ").trim();
+            onUpdateCard(card.id, sanitizedQuestion, card.answer);
         }
         setIsEditingQuestion(false);
     };
 
     const handleSaveAnswer = () => {
         if (onUpdateCard) {
-            onUpdateCard(card.id, card.question, editAnswer);
+            // Replace newlines with spaces to maintain file structure
+            const sanitizedAnswer = editAnswer.replace(/[\r\n]+/g, " ").trim();
+            onUpdateCard(card.id, card.question, sanitizedAnswer);
         }
         setIsEditingAnswer(false);
     };

@@ -169,6 +169,12 @@ export function StudySession() {
             // Don't handle shortcuts when modals are open
             if (showGotoModal || showStatsModal) return;
 
+            // Ignore shortcuts if the user is typing in an input field or textarea
+            const target = e.target as HTMLElement;
+            if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+                return;
+            }
+
             if (e.key === " " || e.code === "Space") {
                 e.preventDefault();
                 if (!isRevealed) {
