@@ -9,6 +9,7 @@ import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download, Log
 import { GlobalDecksModal } from "@/components/global-decks-modal";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 
 export function Dashboard() {
     const router = useRouter();
@@ -30,6 +31,7 @@ export function Dashboard() {
     const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState("");
     const [contextMenuDeck, setContextMenuDeck] = useState<Deck | null>(null);
+    const [deckToDelete, setDeckToDelete] = useState<Deck | null>(null);
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -139,6 +141,20 @@ export function Dashboard() {
 
     return (
         <div className="min-h-screen p-4 md:p-8">
+            <ConfirmationModal
+                isOpen={!!deckToDelete}
+                title="Delete Deck"
+                description={`Are you sure you want to delete "${deckToDelete?.name}"? This action cannot be undone.`}
+                confirmLabel="Delete"
+                variant="destructive"
+                onConfirm={() => {
+                    if (deckToDelete) {
+                        deleteDeck(deckToDelete.id);
+                        setDeckToDelete(null);
+                    }
+                }}
+                onCancel={() => setDeckToDelete(null)}
+            />
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
@@ -365,9 +381,7 @@ export function Dashboard() {
                                                     size="icon"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        if (confirm("Delete this deck?")) {
-                                                            deleteDeck(deck.id);
-                                                        }
+                                                        setDeckToDelete(deck);
                                                     }}
                                                     className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
                                                 >
@@ -438,10 +452,8 @@ export function Dashboard() {
                                 </button>
                                 <button
                                     onClick={() => {
-                                        if (confirm("Delete this deck?")) {
-                                            deleteDeck(contextMenuDeck.id);
-                                            closeContextMenu();
-                                        }
+                                        setDeckToDelete(contextMenuDeck);
+                                        closeContextMenu();
                                     }}
                                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left text-destructive"
                                 >

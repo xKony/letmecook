@@ -20,6 +20,7 @@ import {
     Clock,
     Coffee,
 } from "lucide-react";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 
 export function StudySession() {
     const { currentDeck, closeDeck, resetCurrentDeck, updateCardLevel, updateCard } = useApp();
@@ -39,6 +40,10 @@ export function StudySession() {
     const [sessionSeconds, setSessionSeconds] = useState(0);
     const [showBreakModal, setShowBreakModal] = useState(false);
     const [lastBreakTime, setLastBreakTime] = useState(0);
+
+    // Confirmation modals state
+    const [showRestartModal, setShowRestartModal] = useState(false);
+    const [showResetModal, setShowResetModal] = useState(false);
 
     // Track last initialized deck and filter to avoid unnecessary reinitializations
     const lastDeckIdRef = useRef<string | null>(null);
@@ -210,13 +215,10 @@ export function StudySession() {
             setPlayIndex((prev) => prev + 1);
             setIsRevealed(false);
         } else {
-            // End of deck cycle - offer to restart (optionally re-shuffle)
-            if (confirm("End of deck. Restart?")) {
-                // Re-initialize with same shuffle state - creates new random order if shuffled
-                initializePlayOrder(currentDeck.cards, isShuffled, activeFilter);
-            }
+            // End of deck cycle - offer to restart
+            setShowRestartModal(true);
         }
-    }, [currentDeck, playIndex, playOrder, isShuffled, activeFilter, initializePlayOrder]);
+    }, [currentDeck, playIndex, playOrder]);
 
     const handlePrev = useCallback(() => {
         if (playIndex > 0) {
@@ -234,10 +236,8 @@ export function StudySession() {
     }, [currentDeck, isShuffled, activeFilter, initializePlayOrder]);
 
     const handleReset = useCallback(() => {
-        if (confirm("Reset all progress to 'New'?")) {
-            resetCurrentDeck();
-        }
-    }, [resetCurrentDeck]);
+        setShowResetModal(true);
+    }, []);
 
     const handleGoto = useCallback(() => {
         if (!currentDeck) return;
@@ -289,6 +289,32 @@ export function StudySession() {
 
     return (
         <div className="min-h-screen flex flex-col p-4 md:p-8">
+            <ConfirmationModal
+                isOpen={showRestartModal}
+                title="End of Deck"
+                description="You've reached the end of this deck. Would you like to restart?"
+                confirmLabel="Restart"
+                onConfirm={() => {
+                    if (currentDeck) {
+                        initializePlayOrder(currentDeck.cards, isShuffled, activeFilter);
+                    }
+                    setShowRestartModal(false);
+                }}
+                onCancel={() => setShowRestartModal(false)}
+            />
+
+            <ConfirmationModal
+                isOpen={showResetModal}
+                title="Reset Progress"
+                description="Are you sure you want to reset all cards to 'New'? This cannot be undone."
+                confirmLabel="Reset"
+                variant="destructive"
+                onConfirm={() => {
+                    resetCurrentDeck();
+                    setShowResetModal(false);
+                }}
+                onCancel={() => setShowResetModal(false)}
+            />
             {/* Stats Modal */}
             <AnimatePresence>
                 {showStatsModal && (
