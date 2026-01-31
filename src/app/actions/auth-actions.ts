@@ -5,8 +5,33 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { signIn, auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+
+// Get client IP from request headers
+async function getClientIP(): Promise<string> {
+    const headersList = await headers();
+    // Check common headers for real IP (when behind proxy/load balancer)
+    const forwardedFor = headersList.get("x-forwarded-for");
+    if (forwardedFor) {
+        return forwardedFor.split(",")[0].trim();
+    }
+    const realIP = headersList.get("x-real-ip");
+    if (realIP) {
+        return realIP;
+    }
+    // Fallback - not ideal but prevents crashes
+    return "unknown";
+}
 
 export async function registerUser(formData: FormData) {
+    // Rate limiting
+    const ip = await getClientIP();
+    const rateLimit = await checkRateLimit(`register:${ip}`, RATE_LIMITS.register);
+    if (!rateLimit.success) {
+        return { error: `Too many registration attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.` };
+    }
+
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
@@ -43,6 +68,13 @@ export async function registerUser(formData: FormData) {
 }
 
 export async function loginUser(formData: FormData) {
+    // Rate limiting
+    const ip = await getClientIP();
+    const rateLimit = await checkRateLimit(`login:${ip}`, RATE_LIMITS.login);
+    if (!rateLimit.success) {
+        return { error: `Too many login attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.` };
+    }
+
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
@@ -67,6 +99,12 @@ export async function changePassword(currentPassword: string, newPassword: strin
 
     if (!session?.user?.id) {
         return { error: "Not authenticated" };
+    }
+
+    // Rate limiting (by user ID for authenticated users)
+    const rateLimit = await checkRateLimit(`password:${session.user.id}`, RATE_LIMITS.passwordChange);
+    if (!rateLimit.success) {
+        return { error: `Too many password change attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.` };
     }
 
     if (!currentPassword || !newPassword) {
