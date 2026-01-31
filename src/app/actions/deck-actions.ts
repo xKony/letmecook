@@ -144,39 +144,62 @@ export async function getSharedDecks() {
 // CREATE: New deck
 // ============================================
 
+// ============================================
+// CREATE: New deck
+// ============================================
+
 export async function createDeck(name: string, cards: { question: string; answer: string }[]) {
+    console.log(`[CREATE_DECK] Starting creation for deck: "${name}" with ${cards.length} cards`);
     const user = await requireAuth();
 
     // Validate input
     const validation = createDeckSchema.safeParse({ name, cards });
     if (!validation.success) {
+        console.error("[CREATE_DECK] Validation failed:", validation.error.flatten());
         throw new Error(validation.error.issues[0]?.message || "Invalid input");
     }
 
-    // Use transaction to ensure atomicity - if flashcard insert fails, deck is rolled back
-    const newDeck = await db.transaction(async (tx) => {
-        const [deck] = await tx.insert(decks).values({
+    try {
+        console.log("[CREATE_DECK] Transaction started (Manual Mode)");
+
+        // 1. Create Deck
+        const [deck] = await db.insert(decks).values({
             name: validation.data.name,
             ownerId: user.id,
             isPublic: false,
         }).returning();
 
-        if (validation.data.cards.length > 0) {
-            await tx.insert(flashcards).values(
-                validation.data.cards.map((card) => ({
-                    deckId: deck.id,
-                    question: card.question,
-                    answer: card.answer,
-                    level: "Nowe",
-                }))
-            );
+        console.log(`[CREATE_DECK] Deck inserted with ID: ${deck.id}`);
+
+        try {
+            // 2. Insert Flashcards
+            if (validation.data.cards.length > 0) {
+                await db.insert(flashcards).values(
+                    validation.data.cards.map((card) => ({
+                        deckId: deck.id,
+                        question: card.question,
+                        answer: card.answer,
+                        level: "Nowe",
+                    }))
+                );
+                console.log(`[CREATE_DECK] Inserted ${validation.data.cards.length} flashcards`);
+            }
+        } catch (insertError) {
+            console.error("[CREATE_DECK] Flashcard insertion failed, rolling back deck...", insertError);
+            // Manual Rollback: Delete the deck we just created
+            await db.delete(decks).where(eq(decks.id, deck.id));
+            console.log("[CREATE_DECK] Rollback successful: Deck deleted.");
+            throw insertError; // Re-throw to be caught by outer block
         }
 
+        console.log("[CREATE_DECK] Creation process completed successfully");
+        revalidatePath("/");
         return deck;
-    });
-
-    revalidatePath("/");
-    return newDeck;
+    } catch (error) {
+        console.error("[CREATE_DECK] Creation failed:", error);
+        // Throw a user-friendly error but log the raw one
+        throw new Error("Failed to create deck. Please try again or check your connection.");
+    }
 }
 
 // ============================================

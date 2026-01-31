@@ -20,8 +20,8 @@ async function getClientIP(): Promise<string> {
     if (realIP) {
         return realIP;
     }
-    // Fallback - not ideal but prevents crashes
-    return "unknown";
+    // Fallback for localhost/direct connection
+    return "localhost";
 }
 
 export async function registerUser(formData: FormData) {

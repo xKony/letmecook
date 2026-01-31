@@ -1,4 +1,4 @@
-"use server";
+
 
 // Simple in-memory rate limiter for server actions
 // For production at scale, consider using @upstash/ratelimit with Redis
@@ -88,26 +88,26 @@ export const RATE_LIMITS = {
     // Auth endpoints - strict to prevent brute force
     auth: {
         windowMs: 15 * 60 * 1000,  // 15 minutes
-        maxRequests: 5,  // 5 attempts per 15 min
+        maxRequests: 50,  // Increased from 5
     },
     // Login specifically - slightly more lenient
     login: {
         windowMs: 15 * 60 * 1000,  // 15 minutes
-        maxRequests: 10,  // 10 attempts per 15 min
+        maxRequests: 100,  // Increased from 10
     },
     // Registration - very strict to prevent spam
     register: {
         windowMs: 60 * 60 * 1000,  // 1 hour
-        maxRequests: 3,  // 3 registrations per hour
+        maxRequests: 50,  // Increased from 3
     },
     // Password change - strict
     passwordChange: {
         windowMs: 60 * 60 * 1000,  // 1 hour
-        maxRequests: 5,  // 5 attempts per hour
+        maxRequests: 20,  // Increased from 5
     },
     // General API - more lenient
     api: {
         windowMs: 60 * 1000,  // 1 minute
-        maxRequests: 60,  // 60 requests per minute
+        maxRequests: 200,  // Increased from 60
     },
 };

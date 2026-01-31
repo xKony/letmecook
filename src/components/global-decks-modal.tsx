@@ -38,9 +38,8 @@ export function GlobalDecksModal() {
     };
 
     const handleImport = (deck: PublicDeck) => {
-        // Create content string in "Question | Answer" format
-        const content = deck.flashcards.map(c => `${c.question} | ${c.answer}`).join("\n");
-        addDeck(deck.name, content);
+        // Pass flashcards directly as objects - robust against special characters
+        addDeck(deck.name, deck.flashcards);
         setDownloadedIds(prev => new Set(prev).add(deck.id));
     };
 
@@ -113,7 +112,7 @@ export function GlobalDecksModal() {
                                             </>
                                         ) : (
                                             <>
-                                                <Download className="w-4 h-4 mr-1" /> Import
+                                                <Download className="w-4 h-4 mr-1" /> Import Copy
                                             </>
                                         )}
                                     </Button>

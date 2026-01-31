@@ -33,7 +33,7 @@ interface AppContextType {
     handleSignOut: () => void;
 
     // Deck actions
-    addDeck: (name: string, fileContent: string) => void;
+    addDeck: (name: string, content: string | { question: string, answer: string }[]) => void;
     selectDeck: (deckId: string) => void;
     closeDeck: () => void;
     deleteDeck: (deckId: string) => void;
@@ -168,8 +168,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     // Add a new deck
-    const addDeck = useCallback(async (name: string, fileContent: string) => {
-        const parsedCards = parseQuestionsFile(fileContent);
+    const addDeck = useCallback(async (name: string, content: string | { question: string, answer: string }[]) => {
+        let parsedCards: { question: string; answer: string }[] = [];
+
+        if (typeof content === "string") {
+            parsedCards = parseQuestionsFile(content);
+        } else {
+            parsedCards = content;
+        }
+
         if (parsedCards.length === 0) return;
 
         if (isAuthenticated) {
@@ -179,7 +186,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 await refreshDecks();
             } catch (error) {
                 console.error("Failed to create deck:", error);
-                alert("Failed to create deck. Please try again.");
+                // Show specific error if available
+                alert(error instanceof Error ? error.message : "Failed to create deck. Please try again.");
             }
         } else {
             // Save to localStorage
