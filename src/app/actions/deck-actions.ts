@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
+import { createDeckSchema, updateDeckSchema } from "@/lib/validations";
 
 // ============================================
 // Helper: Get current user or throw
@@ -146,22 +147,33 @@ export async function getSharedDecks() {
 export async function createDeck(name: string, cards: { question: string; answer: string }[]) {
     const user = await requireAuth();
 
-    const [newDeck] = await db.insert(decks).values({
-        name,
-        ownerId: user.id,
-        isPublic: false,
-    }).returning();
-
-    if (cards.length > 0) {
-        await db.insert(flashcards).values(
-            cards.map((card) => ({
-                deckId: newDeck.id,
-                question: card.question,
-                answer: card.answer,
-                level: "Nowe",
-            }))
-        );
+    // Validate input
+    const validation = createDeckSchema.safeParse({ name, cards });
+    if (!validation.success) {
+        throw new Error(validation.error.issues[0]?.message || "Invalid input");
     }
+
+    // Use transaction to ensure atomicity - if flashcard insert fails, deck is rolled back
+    const newDeck = await db.transaction(async (tx) => {
+        const [deck] = await tx.insert(decks).values({
+            name: validation.data.name,
+            ownerId: user.id,
+            isPublic: false,
+        }).returning();
+
+        if (validation.data.cards.length > 0) {
+            await tx.insert(flashcards).values(
+                validation.data.cards.map((card) => ({
+                    deckId: deck.id,
+                    question: card.question,
+                    answer: card.answer,
+                    level: "Nowe",
+                }))
+            );
+        }
+
+        return deck;
+    });
 
     revalidatePath("/");
     return newDeck;
