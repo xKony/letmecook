@@ -13,9 +13,10 @@ import {
     AlertCircle,
     Globe,
     Lock,
-    ArrowLeft
+    ArrowLeft,
+    Users
 } from "lucide-react";
-import { createPublicDeck, getPublicDecks, toggleDeckPublic, checkIsAdmin } from "@/app/actions/admin-actions";
+import { createPublicDeck, getPublicDecks, toggleDeckPublic, checkIsAdmin, getAllUsers, updateUserMaxDecks } from "@/app/actions/admin-actions";
 import { parseQuestionsFile } from "@/lib/storage";
 
 interface PublicDeck {
@@ -25,15 +26,27 @@ interface PublicDeck {
     flashcards: { id: string }[];
 }
 
+interface AdminUser {
+    id: string;
+    email: string;
+    name: string | null;
+    isAdmin: boolean;
+    maxDecks: number;
+    deckCount: number;
+    createdAt: Date;
+}
+
 export default function AdminPage() {
     const router = useRouter();
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
     const [decks, setDecks] = useState<PublicDeck[]>([]);
+    const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [deckName, setDeckName] = useState("");
     const [fileContent, setFileContent] = useState("");
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [pendingMaxDecks, setPendingMaxDecks] = useState<Record<string, number>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -43,6 +56,8 @@ export default function AdminPage() {
             if (adminStatus) {
                 const publicDecks = await getPublicDecks();
                 setDecks(publicDecks as PublicDeck[]);
+                const users = await getAllUsers();
+                setAdminUsers(users as AdminUser[]);
             }
             setLoading(false);
         }
@@ -99,6 +114,16 @@ export default function AdminPage() {
         await toggleDeckPublic(deckId);
         const publicDecks = await getPublicDecks();
         setDecks(publicDecks as PublicDeck[]);
+    };
+
+    const handleMaxDecksChange = async (userId: string, newMax: number) => {
+        try {
+            await updateUserMaxDecks(userId, newMax);
+            const users = await getAllUsers();
+            setAdminUsers(users as AdminUser[]);
+        } catch (err) {
+            setMessage({ type: "error", text: err instanceof Error ? err.message : "Failed to update" });
+        }
     };
 
     if (loading) {
@@ -204,8 +229,8 @@ export default function AdminPage() {
 
                         {message && (
                             <div className={`flex items-center gap-2 p-3 rounded-lg ${message.type === "success"
-                                    ? "bg-emerald-500/10 text-emerald-400"
-                                    : "bg-rose-500/10 text-rose-400"
+                                ? "bg-emerald-500/10 text-emerald-400"
+                                : "bg-rose-500/10 text-rose-400"
                                 }`}>
                                 {message.type === "success" ? (
                                     <Check className="w-4 h-4" />
@@ -266,6 +291,73 @@ export default function AdminPage() {
                                     </Button>
                                 </div>
                             ))}
+                        </div>
+                    )}
+                </motion.div>
+
+                {/* Manage Users */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-card border border-border rounded-xl p-6 space-y-4"
+                >
+                    <h2 className="text-xl font-semibold flex items-center gap-2">
+                        <Users className="w-5 h-5" />
+                        Manage Users ({adminUsers.length})
+                    </h2>
+
+                    {adminUsers.length === 0 ? (
+                        <p className="text-muted-foreground text-center py-8">
+                            No users found.
+                        </p>
+                    ) : (
+                        <div className="space-y-2">
+                            {adminUsers.map((user) => {
+                                const pendingValue = pendingMaxDecks[user.id];
+                                const currentValue = pendingValue !== undefined ? pendingValue : user.maxDecks;
+                                const hasChanged = pendingValue !== undefined && pendingValue !== user.maxDecks;
+                                return (
+                                    <div
+                                        key={user.id}
+                                        className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                                    >
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium truncate">{user.email}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {user.deckCount} / {user.maxDecks} decks
+                                                {user.isAdmin && <span className="ml-2 text-emerald-500">• Admin</span>}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 ml-4">
+                                            <span className="text-sm text-muted-foreground">Max:</span>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={100}
+                                                value={currentValue}
+                                                onChange={(e) => setPendingMaxDecks((prev) => ({ ...prev, [user.id]: parseInt(e.target.value, 10) || 1 }))}
+                                                className="w-16 px-2 py-1 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                            />
+                                            {hasChanged && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        handleMaxDecksChange(user.id, currentValue);
+                                                        setPendingMaxDecks((prev) => {
+                                                            const next = { ...prev };
+                                                            delete next[user.id];
+                                                            return next;
+                                                        });
+                                                    }}
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </motion.div>

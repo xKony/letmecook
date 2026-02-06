@@ -113,3 +113,45 @@ export async function checkIsAdmin(): Promise<boolean> {
 
     return user?.isAdmin ?? false;
 }
+
+// ============================================
+// Admin: Get all users
+// ============================================
+
+export async function getAllUsers() {
+    await requireAdmin();
+
+    const allUsers = await db.query.users.findMany({
+        with: {
+            decks: true,
+        },
+    });
+
+    return allUsers.map((user) => ({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        isAdmin: user.isAdmin,
+        maxDecks: user.maxDecks,
+        deckCount: user.decks.length,
+        createdAt: user.createdAt,
+    }));
+}
+
+// ============================================
+// Admin: Update user's max decks
+// ============================================
+
+export async function updateUserMaxDecks(userId: string, maxDecks: number) {
+    await requireAdmin();
+
+    if (maxDecks < 1 || maxDecks > 100) {
+        throw new Error("Max decks must be between 1 and 100");
+    }
+
+    await db.update(users)
+        .set({ maxDecks })
+        .where(eq(users.id, userId));
+
+    revalidatePath("/admin");
+}

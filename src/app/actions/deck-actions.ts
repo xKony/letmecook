@@ -86,6 +86,20 @@ export async function getMyDecks() {
 }
 
 // ============================================
+// READ: Get user's max decks limit
+// ============================================
+
+export async function getUserMaxDecks(): Promise<number> {
+    const user = await requireAuth();
+
+    const dbUser = await db.query.users.findFirst({
+        where: eq(users.id, user.id),
+    });
+
+    return dbUser?.maxDecks ?? 5;
+}
+
+// ============================================
 // READ: Get single deck with cards
 // ============================================
 
@@ -157,6 +171,18 @@ export async function createDeck(name: string, cards: { question: string; answer
     if (!validation.success) {
         console.error("[CREATE_DECK] Validation failed:", validation.error.flatten());
         throw new Error(validation.error.issues[0]?.message || "Invalid input");
+    }
+
+    // Check deck limit for this user
+    const dbUser = await db.query.users.findFirst({
+        where: eq(users.id, user.id),
+    });
+    const userDecks = await db.query.decks.findMany({
+        where: eq(decks.ownerId, user.id),
+    });
+    const maxDecks = dbUser?.maxDecks ?? 5;
+    if (userDecks.length >= maxDecks) {
+        throw new Error(`Maximum ${maxDecks} decks reached. Contact admin for increase.`);
     }
 
     try {

@@ -23,7 +23,8 @@ export function Dashboard() {
         isAuthenticated,
         isGuest,
         isAdmin,
-        authUser
+        authUser,
+        maxDecks
     } = useApp();
 
     const [isImporting, setIsImporting] = useState(false);
@@ -271,7 +272,7 @@ export function Dashboard() {
                 <div className="space-y-4">
                     <div className="flex justify-between items-center">
                         <h2 className="text-xl font-semibold">
-                            {isGuest ? "Your Decks (Local)" : "Your Decks"} ({decks.length}/5)
+                            {isGuest ? "Your Decks (Local)" : "Your Decks"} ({decks.length}/{maxDecks})
                         </h2>
                         <div className="flex gap-2">
                             <GlobalDecksModal />

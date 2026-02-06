@@ -14,6 +14,7 @@ export const users = pgTable("users", {
     image: text("image"),
     password: text("password"), // Hashed password for credentials provider
     isAdmin: boolean("is_admin").default(false).notNull(), // Admin role for public deck management
+    maxDecks: integer("max_decks").default(5).notNull(), // Maximum decks per user, configurable by admin
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 

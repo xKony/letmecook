@@ -13,7 +13,7 @@ import {
 import { LOCALSTORAGE_SAVE_DEBOUNCE_MS, MAX_DECKS_PER_USER } from "@/lib/constants";
 
 // Server actions for authenticated users
-import { getMyDecks, createDeck as createDbDeck, deleteDeck as deleteDbDeck, updateDeck as updateDbDeck } from "@/app/actions/deck-actions";
+import { getMyDecks, getUserMaxDecks, createDeck as createDbDeck, deleteDeck as deleteDbDeck, updateDeck as updateDbDeck } from "@/app/actions/deck-actions";
 import { updateCardLevel as updateDbCardLevel, updateCard as updateDbCard, resetDeckProgress as resetDbDeckProgress } from "@/app/actions/card-actions";
 
 interface AppContextType {
@@ -28,6 +28,7 @@ interface AppContextType {
     decks: Deck[];
     currentDeck: Deck | null;
     isLoading: boolean;
+    maxDecks: number;
 
     // Auth actions
     handleSignOut: () => void;
@@ -81,6 +82,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const [dbDecks, setDbDecks] = useState<Deck[]>([]);
     const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [maxDecks, setMaxDecks] = useState(MAX_DECKS_PER_USER);
 
     // Auth state derived from session
     const authLoading = status === "loading";
@@ -102,10 +104,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                     // Fetch decks from database
                     const decks = await getMyDecks();
                     setDbDecks(decks.map(transformDbDeck));
+                    // Fetch user's max decks limit
+                    const userMaxDecks = await getUserMaxDecks();
+                    setMaxDecks(userMaxDecks);
                 } else if (!authLoading) {
                     // Load from localStorage for guests
                     const loaded = loadGuestState();
                     setGuestState(loaded);
+                    setMaxDecks(MAX_DECKS_PER_USER); // Default for guests
                 }
             } catch (error) {
                 console.error("Failed to load decks:", error);
@@ -193,8 +199,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             // Save to localStorage
             const deck = createLocalDeck(name, parsedCards);
             setGuestState((prev) => {
-                if (prev.decks.length >= MAX_DECKS_PER_USER) {
-                    alert(`Maximum ${MAX_DECKS_PER_USER} decks reached.`);
+                if (prev.decks.length >= maxDecks) {
+                    alert(`Maximum ${maxDecks} decks reached.`);
                     return prev;
                 }
                 return {
@@ -203,7 +209,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 };
             });
         }
-    }, [isAuthenticated, refreshDecks]);
+    }, [isAuthenticated, refreshDecks, maxDecks]);
 
     // Select a deck
     const selectDeck = useCallback((deckId: string) => {
@@ -355,6 +361,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         decks,
         currentDeck,
         isLoading,
+        maxDecks,
         handleSignOut,
         addDeck,
         selectDeck,
