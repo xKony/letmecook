@@ -90,9 +90,10 @@ export function StudySession() {
         if (deckChanged || filterChanged) {
             lastDeckIdRef.current = currentDeck.id;
             lastFilterRef.current = activeFilter;
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             initializePlayOrder(currentDeck.cards, isShuffled, activeFilter);
         }
-    }, [currentDeck?.id, activeFilter]); // Only watch deck ID and filter
+    }, [currentDeck, activeFilter, initializePlayOrder, isShuffled]); // Only watch deck ID and filter
 
     // Helper to find card by ID (stable lookup regardless of array order)
     const getCardById = useCallback((cardId: string): Flashcard | null => {
@@ -132,7 +133,7 @@ export function StudySession() {
         if (currentCard && ttsEnabled) {
             speak(currentCard.question);
         }
-    }, [currentCard?.id, ttsEnabled]);
+    }, [currentCard, ttsEnabled, speak]);
 
     // Session timer
     useEffect(() => {
@@ -162,6 +163,40 @@ export function StudySession() {
         }
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
+
+    const handleReveal = useCallback(() => {
+        setIsRevealed(true);
+        if (currentCard && ttsEnabled) {
+            speak(currentCard.answer);
+        }
+    }, [currentCard, ttsEnabled, speak]);
+
+    const handleNext = useCallback(() => {
+        if (!currentDeck || playOrder.length === 0) return;
+
+        if (playIndex < playOrder.length - 1) {
+            // Increment pointer to next card in shuffled order
+            setPlayIndex((prev) => prev + 1);
+            setIsRevealed(false);
+        } else {
+            // End of deck cycle - offer to restart
+            setShowRestartModal(true);
+        }
+    }, [currentDeck, playIndex, playOrder.length]);
+
+    const handleRate = useCallback((level: CardLevel) => {
+        if (currentCard) {
+            updateCardLevel(currentCard.id, level);
+        }
+        handleNext();
+    }, [currentCard, updateCardLevel, handleNext]);
+
+    const handlePrev = useCallback(() => {
+        if (playIndex > 0) {
+            setPlayIndex((prev) => prev - 1);
+            setIsRevealed(false);
+        }
+    }, [playIndex]);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -197,41 +232,7 @@ export function StudySession() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isRevealed, playIndex, playOrder, showGotoModal, showStatsModal]);
-
-    const handleReveal = useCallback(() => {
-        setIsRevealed(true);
-        if (currentCard && ttsEnabled) {
-            speak(currentCard.answer);
-        }
-    }, [currentCard, ttsEnabled, speak]);
-
-    const handleRate = useCallback((level: CardLevel) => {
-        if (currentCard) {
-            updateCardLevel(currentCard.id, level);
-        }
-        handleNext();
-    }, [currentCard, updateCardLevel]);
-
-    const handleNext = useCallback(() => {
-        if (!currentDeck || playOrder.length === 0) return;
-
-        if (playIndex < playOrder.length - 1) {
-            // Increment pointer to next card in shuffled order
-            setPlayIndex((prev) => prev + 1);
-            setIsRevealed(false);
-        } else {
-            // End of deck cycle - offer to restart
-            setShowRestartModal(true);
-        }
-    }, [currentDeck, playIndex, playOrder]);
-
-    const handlePrev = useCallback(() => {
-        if (playIndex > 0) {
-            setPlayIndex((prev) => prev - 1);
-            setIsRevealed(false);
-        }
-    }, [playIndex]);
+    }, [isRevealed, playIndex, playOrder, showGotoModal, showStatsModal, handleReveal, handlePrev, handleNext, handleRate]);
 
     const handleShuffle = useCallback(() => {
         if (!currentDeck) return;
@@ -285,7 +286,7 @@ export function StudySession() {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
                 <p className="text-muted-foreground text-center">
-                    No cards match the filter "{activeFilter}"
+                    No cards match the filter &quot;{activeFilter}&quot;
                 </p>
                 <Button onClick={() => setActiveFilter(null)}>Show All Cards</Button>
                 <Button variant="ghost" onClick={closeDeck}>Back to Dashboard</Button>
@@ -577,7 +578,6 @@ export function StudySession() {
                             onUpdateCard={updateCard}
                             ttsEnabled={ttsEnabled}
                             onTTSToggle={toggleTTS}
-                            onSpeak={speak}
                         />
                     )}
                 </AnimatePresence>

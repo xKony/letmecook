@@ -37,7 +37,7 @@ function LoginForm() {
         const formData = new FormData(e.currentTarget);
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
-        const name = formData.get("name") as string;
+
 
         try {
             if (isLogin) {

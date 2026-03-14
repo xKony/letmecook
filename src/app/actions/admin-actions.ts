@@ -79,7 +79,7 @@ export async function getPublicDecks() {
 // ============================================
 
 export async function toggleDeckPublic(deckId: string) {
-    const admin = await requireAdmin();
+    await requireAdmin();
 
     const deck = await db.query.decks.findFirst({
         where: eq(decks.id, deckId),

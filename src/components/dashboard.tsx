@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download, LogIn, User, Shield, Settings } from "lucide-react";
+import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download, LogIn, User, Shield, Settings, HelpCircle } from "lucide-react";
 import { GlobalDecksModal } from "@/components/global-decks-modal";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
@@ -117,8 +117,7 @@ export function Dashboard() {
     }, []);
 
     // Long press handlers for mobile
-    const handleTouchStart = useCallback((deck: Deck, e: React.TouchEvent) => {
-        const touch = e.touches[0];
+    const handleTouchStart = useCallback((deck: Deck) => {
         longPressTimerRef.current = setTimeout(() => {
             setContextMenuDeck(deck);
         }, DASHBOARD_LONG_PRESS_MS);
@@ -175,7 +174,16 @@ export function Dashboard() {
                             )}
                         </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => router.push("/faq")}
+                            className="gap-2"
+                        >
+                            <HelpCircle className="w-4 h-4" />
+                            <span className="hidden sm:inline">FAQ</span>
+                        </Button>
                         {isAdmin && (
                             <Button
                                 variant="ghost"
@@ -295,7 +303,7 @@ export function Dashboard() {
                                     key={deck.id}
                                     className="deck-card-animate group bg-card rounded-xl p-4 border border-border hover:border-primary/30 transition-all cursor-pointer"
                                     onClick={() => editingDeckId !== deck.id && contextMenuDeck === null && selectDeck(deck.id)}
-                                    onTouchStart={(e) => handleTouchStart(deck, e)}
+                                    onTouchStart={() => handleTouchStart(deck)}
                                     onTouchEnd={handleTouchEnd}
                                     onTouchCancel={handleTouchEnd}
                                 >

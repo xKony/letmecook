@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { GuestState, Deck, CardLevel, Flashcard } from "@/lib/types";
+import { GuestState, Deck, CardLevel } from "@/lib/types";
 import {
     loadGuestState,
     saveGuestState,

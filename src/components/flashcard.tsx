@@ -18,7 +18,6 @@ interface FlashcardProps {
     onUpdateCard?: (cardId: string, question: string, answer: string) => void;
     ttsEnabled: boolean;
     onTTSToggle: () => void;
-    onSpeak: (text: string) => void;
 }
 
 export function FlashcardComponent({
@@ -30,7 +29,6 @@ export function FlashcardComponent({
     onUpdateCard,
     ttsEnabled,
     onTTSToggle,
-    onSpeak,
 }: FlashcardProps) {
     const [isEditingQuestion, setIsEditingQuestion] = useState(false);
     const [isEditingAnswer, setIsEditingAnswer] = useState(false);
@@ -41,12 +39,6 @@ export function FlashcardComponent({
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Reset image states when card changes
-    useEffect(() => {
-        setImageErrors(new Set());
-        setZoomedImage(null);
-    }, [card.id]);
 
     // Close zoom modal on Escape key
     useEffect(() => {
@@ -85,6 +77,7 @@ export function FlashcardComponent({
 
                         return (
                             <div key={index} className="relative group/img">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                     src={imageUrl}
                                     alt="Flashcard image"

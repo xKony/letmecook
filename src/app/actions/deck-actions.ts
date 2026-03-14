@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
-import { createDeckSchema, updateDeckSchema } from "@/lib/validations";
+import { createDeckSchema } from "@/lib/validations";
 
 // ============================================
 // Helper: Get current user or throw

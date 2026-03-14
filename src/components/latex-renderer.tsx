@@ -20,15 +20,13 @@ export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
 
         // Split text by LaTeX delimiters, preserving the delimiters
         // Handle $$ first (display math), then $ (inline math)
-        const parts: { type: "text" | "inline" | "display"; content: string }[] = [];
 
         // Regex to match $$...$$ (display) and $...$ (inline) but not escaped \$ 
         // Process display math first to avoid conflicts
-        let remaining = text;
+        const remaining = text;
 
         // First pass: extract display math ($$...$$)
         const displayRegex = /\$\$([\s\S]*?)\$\$/g;
-        let lastIndex = 0;
         let match;
         const tempParts: { type: "text" | "display"; content: string; start: number; end: number }[] = [];
 
@@ -65,10 +63,6 @@ export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
         });
 
         // Now split by all placeholders and rebuild
-        const allPlaceholders = [
-            ...displayPlaceholders.map(p => ({ ...p, type: "display" as const })),
-            ...inlinePlaceholders.map(p => ({ ...p, type: "inline" as const }))
-        ];
 
         // Split text by placeholders
         const placeholderRegex = /(%%(DISPLAY|INLINE)_\d+%%)/g;
