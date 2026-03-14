@@ -18,7 +18,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "LetMeCook - Active Recall Flashcards",
-  description: "Learn smarter with active recall flashcards. Local-first, privacy-focused study app.",
+  description:
+    "Learn smarter with active recall flashcards. Local-first, privacy-focused study app.",
   keywords: ["flashcards", "active recall", "study", "learning", "education"],
 };
 
@@ -33,19 +34,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}
       >
         <AuthProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <AppProvider>
-              {children}
-            </AppProvider>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+            <AppProvider>{children}</AppProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>
     </html>
   );
 }
-

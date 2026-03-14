@@ -38,6 +38,8 @@ type ContentDict = {
   promptText: string;
   copyPromptBtn: string;
   copiedBtn: string;
+  showMoreBtn: string;
+  showLessBtn: string;
   sections: FAQSection[];
 };
 
@@ -46,6 +48,7 @@ export default function FAQPage() {
   const [language, setLanguage] = useState<Language>("en");
   const [openIndex, setOpenIndex] = useState<string | null>("sec-0-item-0");
   const [isCopied, setIsCopied] = useState(false);
+  const [isPromptExpanded, setIsPromptExpanded] = useState(false);
 
   const toggleFaq = (id: string) => {
     setOpenIndex(openIndex === id ? null : id);
@@ -103,6 +106,8 @@ QUESTIONS:
 [PASTE YOUR QUESTIONS HERE]`,
       copyPromptBtn: "Copy Prompt",
       copiedBtn: "Copied!",
+      showMoreBtn: "Show more",
+      showLessBtn: "Show less",
       sections: [
         {
           title: "General Usage",
@@ -271,6 +276,8 @@ PYTANIA:
 [TUTAJ WKLEJ SWOJE PYTANIA]`,
       copyPromptBtn: "Skopiuj zapytanie",
       copiedBtn: "Skopiowano!",
+      showMoreBtn: "Pokaż więcej",
+      showLessBtn: "Pokaż mniej",
       sections: [
         {
           title: "Podstawowe użytkowanie",
@@ -462,14 +469,40 @@ PYTANIA:
           <p className="text-muted-foreground text-sm">{t.promptDescription}</p>
         </div>
         <div className="p-6">
-          <div className="bg-muted p-4 rounded-xl font-mono text-sm leading-relaxed mb-4 whitespace-pre-wrap text-foreground/80 overflow-x-auto">
-            {t.promptText}
+          <div className="relative">
+            <motion.div
+              animate={{ height: isPromptExpanded ? "auto" : "160px" }}
+              transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
+              className="bg-muted p-4 rounded-xl font-mono text-sm leading-relaxed whitespace-pre-wrap text-foreground/80 overflow-hidden"
+            >
+              {t.promptText}
+            </motion.div>
+
+            {!isPromptExpanded && (
+              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-muted to-transparent rounded-b-xl pointer-events-none" />
+            )}
           </div>
-          <div className="flex justify-end">
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsPromptExpanded(!isPromptExpanded)}
+              className="text-primary hover:text-primary/80 hover:bg-primary/10 gap-2 transition-colors order-2 sm:order-1"
+            >
+              <motion.div
+                animate={{ rotate: isPromptExpanded ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown className="w-4 h-4" />
+              </motion.div>
+              {isPromptExpanded ? t.showLessBtn : t.showMoreBtn}
+            </Button>
+
             <Button
               onClick={() => handleCopyPrompt(t.promptText)}
               variant={isCopied ? "default" : "secondary"}
-              className={`gap-2 transition-all ${isCopied ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
+              className={`w-full sm:w-auto gap-2 transition-all order-1 sm:order-2 ${isCopied ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
             >
               <AnimatePresence mode="wait" initial={false}>
                 {isCopied ? (

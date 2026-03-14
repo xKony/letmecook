@@ -7,6 +7,7 @@ import { useApp } from "@/lib/app-context";
 import { Button } from "@/components/ui/button";
 import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download, LogIn, User, Shield, Settings, HelpCircle } from "lucide-react";
 import { GlobalDecksModal } from "@/components/global-decks-modal";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
@@ -175,6 +176,7 @@ export function Dashboard() {
                         </p>
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2">
+                        <ThemeToggle className="mr-2 hidden sm:flex" />
                         <Button
                             variant="ghost"
                             size="sm"
