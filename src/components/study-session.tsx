@@ -23,7 +23,7 @@ import {
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 
 export function StudySession() {
-    const { currentDeck, closeDeck, resetCurrentDeck, updateCardLevel, updateCard } = useApp();
+    const { currentDeck, closeDeck, resetCurrentDeck, updateCardLevel, updateCard, t } = useApp();
     const { enabled: ttsEnabled, speak, toggle: toggleTTS } = useTTS();
 
     // Session state - NOW STORES CARD IDs, NOT INDICES
@@ -277,7 +277,7 @@ export function StudySession() {
     if (!currentDeck) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <p className="text-muted-foreground">No deck selected</p>
+                <p className="text-muted-foreground">{t("study.noDeckSelected")}</p>
             </div>
         );
     }
@@ -286,10 +286,10 @@ export function StudySession() {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
                 <p className="text-muted-foreground text-center">
-                    No cards match the filter &quot;{activeFilter}&quot;
+                    {t("study.noCardsMatch", { filter: t(`levels.${activeFilter}`) })}
                 </p>
-                <Button onClick={() => setActiveFilter(null)}>Show All Cards</Button>
-                <Button variant="ghost" onClick={closeDeck}>Back to Dashboard</Button>
+                <Button onClick={() => setActiveFilter(null)}>{t("study.showAll", { count: currentDeck.cards.length })}</Button>
+                <Button variant="ghost" onClick={closeDeck}>{t("common.backToDashboard")}</Button>
             </div>
         );
     }
@@ -298,9 +298,9 @@ export function StudySession() {
         <div className="min-h-screen flex flex-col p-4 md:p-8">
             <ConfirmationModal
                 isOpen={showRestartModal}
-                title="End of Deck"
-                description="You've reached the end of this deck. Would you like to restart?"
-                confirmLabel="Restart"
+                title={t("study.endOfDeck")}
+                description={t("study.endOfDeckDescription")}
+                confirmLabel={t("common.restart")}
                 onConfirm={() => {
                     if (currentDeck) {
                         initializePlayOrder(currentDeck.cards, isShuffled, activeFilter);
@@ -312,9 +312,9 @@ export function StudySession() {
 
             <ConfirmationModal
                 isOpen={showResetModal}
-                title="Reset Progress"
-                description="Are you sure you want to reset all cards to 'New'? This cannot be undone."
-                confirmLabel="Reset"
+                title={t("study.resetProgress")}
+                description={t("study.resetProgressDescription")}
+                confirmLabel={t("common.delete")}
                 variant="destructive"
                 onConfirm={() => {
                     resetCurrentDeck();
@@ -342,7 +342,7 @@ export function StudySession() {
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-lg font-semibold flex items-center gap-2">
                                     <BarChart3 className="w-5 h-5" />
-                                    Deck Stats
+                                    {t("study.deckStats")}
                                 </h3>
                                 <Button variant="ghost" size="icon" onClick={() => setShowStatsModal(false)}>
                                     <X className="w-4 h-4" />
@@ -367,10 +367,10 @@ export function StudySession() {
                                         >
                                             <div className="flex justify-between items-center mb-2">
                                                 <span className={`text-sm font-medium ${LEVEL_COLORS[level].text}`}>
-                                                    {level}
+                                                    {t(`levels.${level}`)}
                                                 </span>
                                                 <span className="text-sm text-muted-foreground">
-                                                    {count} cards
+                                                    {t("dashboard.cardsCount", { count })}
                                                 </span>
                                             </div>
                                             <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -386,17 +386,16 @@ export function StudySession() {
                                 })}
                             </div>
 
-                            {/* Filter Info */}
                             <div className="border-t border-border pt-4">
                                 <p className="text-xs text-muted-foreground mb-3">
-                                    Click a level to filter cards
+                                    {t("study.clickToFilter")}
                                 </p>
                                 <Button
                                     variant={activeFilter === null ? "default" : "outline"}
                                     className="w-full"
                                     onClick={() => handleFilterSelect(null)}
                                 >
-                                    Show All Cards ({currentDeck.cards.length})
+                                    {t("study.showAll", { count: currentDeck.cards.length })}
                                 </Button>
                             </div>
                         </motion.div>
@@ -421,7 +420,7 @@ export function StudySession() {
                             className="bg-card border border-border rounded-2xl p-6 shadow-xl w-full max-w-sm mx-4"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <h3 className="text-lg font-semibold mb-4">Go to Question</h3>
+                            <h3 className="text-lg font-semibold mb-4">{t("study.goToQuestion")}</h3>
                             <div className="flex gap-2">
                                 <input
                                     type="number"
@@ -434,10 +433,10 @@ export function StudySession() {
                                     autoFocus
                                     className="flex-1 p-3 rounded-lg bg-background border border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                                 />
-                                <Button onClick={handleGoto}>Go</Button>
+                               <Button onClick={handleGoto}>{t("common.go")}</Button>
                             </div>
                             <p className="text-xs text-muted-foreground mt-3">
-                                Press Enter to go, Escape to cancel
+                                {t("study.goToHint")}
                             </p>
                         </motion.div>
                     </motion.div>
@@ -464,17 +463,16 @@ export function StudySession() {
                             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
                                 <Coffee className="w-8 h-8 text-amber-500" />
                             </div>
-                            <h3 className="text-xl font-semibold mb-2">Time for a Break! ☕</h3>
+                            <h3 className="text-xl font-semibold mb-2">{t("study.breakTime")}</h3>
                             <p className="text-muted-foreground mb-6">
-                                You&apos;ve been studying for {formatTime(sessionSeconds)}.
-                                Taking a short break helps your brain consolidate what you&apos;ve learned.
+                                {t("study.breakDescription", { time: formatTime(sessionSeconds) })}
                             </p>
                             <div className="flex flex-col gap-2">
                                 <Button
                                     onClick={() => setShowBreakModal(false)}
                                     className="w-full"
                                 >
-                                    Continue Studying
+                                    {t("study.continueStudying")}
                                 </Button>
                                 <Button
                                     variant="outline"
@@ -483,7 +481,7 @@ export function StudySession() {
                                         closeDeck();
                                     }}
                                 >
-                                    Take a Break
+                                    {t("study.takeBreak")}
                                 </Button>
                             </div>
                         </motion.div>
@@ -498,7 +496,7 @@ export function StudySession() {
                     <Button variant="ghost" size="icon" onClick={closeDeck} className="h-10 w-10">
                         <X className="w-5 h-5" />
                     </Button>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Session time">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title={t("common.loading")}>
                         <Clock className="w-3.5 h-3.5" />
                         <span className="tabular-nums">{formatTime(sessionSeconds)}</span>
                     </div>
@@ -508,14 +506,14 @@ export function StudySession() {
                 <button
                     onClick={() => setShowStatsModal(true)}
                     className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    title="View stats and filter"
+                    title={t("study.deckStats")}
                 >
                     {activeFilter && (
                         <span className={`px-2 py-0.5 rounded-full text-xs ${LEVEL_COLORS[activeFilter].bg} ${LEVEL_COLORS[activeFilter].text}`}>
-                            {activeFilter}
+                            {t(`levels.${activeFilter}`)}
                         </span>
                     )}
-                    <span>Card {playIndex + 1} / {playOrder.length}</span>
+                    <span>{t("study.cardCounter", { current: playIndex + 1, total: playOrder.length })}</span>
                 </button>
 
                 {/* Right: Action buttons */}
@@ -527,7 +525,7 @@ export function StudySession() {
                             setShowGotoModal(true);
                             setGotoInput("");
                         }}
-                        title="Go to question (G)"
+                        title={t("study.goToQuestion")}
                     >
                         <Hash className="w-4 h-4" />
                     </Button>
@@ -545,7 +543,7 @@ export function StudySession() {
                         size="icon"
                         onClick={handleReset}
                         className="text-destructive"
-                        title="Reset Progress"
+                        title={t("study.resetProgress")}
                     >
                         <RotateCcw className="w-4 h-4" />
                     </Button>
@@ -593,14 +591,14 @@ export function StudySession() {
                         className="flex-1 md:flex-none md:w-32 h-12"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
-                        Previous
+                        {t("study.previous")}
                     </Button>
                     <Button
                         variant="outline"
                         onClick={handleNext}
                         className="flex-1 md:flex-none md:w-32 h-12"
                     >
-                        Next
+                        {t("study.next")}
                         <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                 </div>

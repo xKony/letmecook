@@ -16,7 +16,7 @@ interface PublicDeck {
 }
 
 export function GlobalDecksModal() {
-    const { addDeck } = useApp();
+    const { addDeck, t } = useApp();
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [decks, setDecks] = useState<PublicDeck[]>([]);
@@ -31,7 +31,7 @@ export function GlobalDecksModal() {
             setDecks(publicDecks as PublicDeck[]);
         } catch (err) {
             console.error("Failed to fetch public decks", err);
-            setError("Failed to load library. Please try again.");
+            setError(t("dashboard.noPublicDecks"));
         } finally {
             setIsLoading(false);
         }
@@ -51,32 +51,32 @@ export function GlobalDecksModal() {
             <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                     <Globe className="w-4 h-4" />
-                    Browse Library
+                    {t("dashboard.browseLibrary")}
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Public Deck Library</DialogTitle>
+                    <DialogTitle>{t("dashboard.publicLibraryTitle")}</DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                             <Loader2 className="w-8 h-8 animate-spin mb-4" />
-                            <p>Loading library...</p>
+                            <p>{t("common.loading")}</p>
                         </div>
                     ) : error ? (
                         <div className="text-center py-8">
                             <p className="text-rose-400 mb-4">{error}</p>
                             <Button variant="outline" onClick={fetchDecks}>
-                                Retry
+                                {t("common.retry")}
                             </Button>
                         </div>
                     ) : decks.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                             <BookOpen className="w-12 h-12 mb-4 opacity-50" />
-                            <p>No public decks available yet.</p>
-                            <p className="text-sm mt-2">Check back later!</p>
+                            <p>{t("dashboard.noPublicDecks")}</p>
+                            <p className="text-sm mt-2">{t("dashboard.checkLater")}</p>
                         </div>
                     ) : (
                         <div className="grid gap-3">
@@ -91,7 +91,7 @@ export function GlobalDecksModal() {
                                     <div className="min-w-0 flex-1">
                                         <h3 className="font-semibold truncate">{deck.name}</h3>
                                         <p className="text-sm text-muted-foreground">
-                                            {deck.flashcards.length} cards
+                                            {t("dashboard.cardsCount", { count: deck.flashcards.length })}
                                             {deck.owner?.name && (
                                                 <span className="ml-2 opacity-70">
                                                     by {deck.owner.name}
@@ -108,11 +108,11 @@ export function GlobalDecksModal() {
                                     >
                                         {downloadedIds.has(deck.id) ? (
                                             <>
-                                                <Check className="w-4 h-4 mr-1" /> Added
+                                                <Check className="w-4 h-4 mr-1" /> {t("common.added")}
                                             </>
                                         ) : (
                                             <>
-                                                <Download className="w-4 h-4 mr-1" /> Import Copy
+                                                <Download className="w-4 h-4 mr-1" /> {t("dashboard.importCopy")}
                                             </>
                                         )}
                                     </Button>

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download, LogIn, User, Shield, Settings, HelpCircle } from "lucide-react";
 import { GlobalDecksModal } from "@/components/global-decks-modal";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Component as LanguageSelectorDropdown } from "@/components/ui/language-selector-dropdown";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
@@ -25,7 +26,8 @@ export function Dashboard() {
         isGuest,
         isAdmin,
         authUser,
-        maxDecks
+        maxDecks,
+        t,
     } = useApp();
 
     const [isImporting, setIsImporting] = useState(false);
@@ -138,15 +140,15 @@ export function Dashboard() {
     // Get display name
     const displayName = isAuthenticated
         ? (authUser?.name || authUser?.email?.split("@")[0] || "User")
-        : "Guest";
+        : t("common.guestMode");
 
     return (
         <div className="min-h-screen p-4 md:p-8">
             <ConfirmationModal
                 isOpen={!!deckToDelete}
-                title="Delete Deck"
-                description={`Are you sure you want to delete "${deckToDelete?.name}"? This action cannot be undone.`}
-                confirmLabel="Delete"
+                title={t("dashboard.deleteDeckTitle")}
+                description={t("dashboard.deleteDeckDescription", { name: deckToDelete?.name || "" })}
+                confirmLabel={t("common.delete")}
                 variant="destructive"
                 onConfirm={() => {
                     if (deckToDelete) {
@@ -160,12 +162,12 @@ export function Dashboard() {
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">LetMeCook 🍳</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">{t("dashboard.title")}</h1>
                         <p className="text-muted-foreground flex items-center gap-2">
                             {isGuest ? (
                                 <>
                                     <User className="w-4 h-4" />
-                                    Guest Mode
+                                    {t("common.guestMode")}
                                 </>
                             ) : (
                                 <>
@@ -176,6 +178,7 @@ export function Dashboard() {
                         </p>
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2">
+                        <LanguageSelectorDropdown />
                         <ThemeToggle className="mr-2 hidden sm:flex" />
                         <Button
                             variant="ghost"
@@ -184,7 +187,7 @@ export function Dashboard() {
                             className="gap-2"
                         >
                             <HelpCircle className="w-4 h-4" />
-                            <span className="hidden sm:inline">FAQ</span>
+                            <span className="hidden sm:inline">{t("common.faq")}</span>
                         </Button>
                         {isAdmin && (
                             <Button
@@ -194,7 +197,7 @@ export function Dashboard() {
                                 className="gap-2"
                             >
                                 <Shield className="w-4 h-4" />
-                                Admin
+                                {t("common.admin")}
                             </Button>
                         )}
                         {isGuest ? (
@@ -204,7 +207,7 @@ export function Dashboard() {
                                 className="gap-2"
                             >
                                 <LogIn className="w-4 h-4" />
-                                Sign In
+                                {t("common.signIn")}
                             </Button>
                         ) : (
                             <>
@@ -215,7 +218,7 @@ export function Dashboard() {
                                     className="gap-2"
                                 >
                                     <Settings className="w-4 h-4" />
-                                    Settings
+                                    {t("common.settings")}
                                 </Button>
                                 <Button
                                     variant="ghost"
@@ -223,7 +226,7 @@ export function Dashboard() {
                                     className="gap-2"
                                 >
                                     <LogOut className="w-4 h-4" />
-                                    Sign Out
+                                    {t("common.signOut")}
                                 </Button>
                             </>
                         )}
@@ -240,9 +243,9 @@ export function Dashboard() {
                     onClick={() => fileInputRef.current?.click()}
                 >
                     <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">Drop a .txt file here</p>
+                    <p className="text-lg font-medium">{t("dashboard.dropZoneTitle")}</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                        or click to browse (Format: Question | Answer)
+                        {t("dashboard.dropZoneDescription")}
                     </p>
                     <input
                         ref={fileInputRef}
@@ -264,15 +267,15 @@ export function Dashboard() {
                             type="text"
                             value={deckName}
                             onChange={(e) => setDeckName(e.target.value)}
-                            placeholder="Deck name (optional)"
+                            placeholder={t("dashboard.deckNamePlaceholder")}
                             className="w-full p-3 rounded-lg bg-background border border-input mb-3"
                         />
                         <div className="flex gap-2">
                             <Button onClick={() => fileInputRef.current?.click()}>
-                                Choose File
+                                {t("dashboard.chooseFile")}
                             </Button>
                             <Button variant="ghost" onClick={() => setIsImporting(false)}>
-                                Cancel
+                                {t("common.cancel")}
                             </Button>
                         </div>
                     </motion.div>
@@ -282,13 +285,13 @@ export function Dashboard() {
                 <div className="space-y-4">
                     <div className="flex justify-between items-center">
                         <h2 className="text-xl font-semibold">
-                            {isGuest ? "Your Decks (Local)" : "Your Decks"} ({decks.length}/{maxDecks})
+                            {isGuest ? t("dashboard.yourDecksGuest") : t("dashboard.yourDecks")} ({decks.length}/{maxDecks})
                         </h2>
                         <div className="flex gap-2">
                             <GlobalDecksModal />
                             <Button onClick={() => setIsImporting(true)} className="gap-2">
                                 <Plus className="w-4 h-4" />
-                                New Deck
+                                {t("dashboard.newDeck")}
                             </Button>
                         </div>
                     </div>
@@ -296,7 +299,7 @@ export function Dashboard() {
                     {decks.length === 0 ? (
                         <div className="text-center py-12 text-muted-foreground">
                             <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                            <p>No decks yet. Import a .txt file to get started!</p>
+                            <p>{t("dashboard.noDecks")}</p>
                         </div>
                     ) : (
                         <div className="grid gap-4">
@@ -367,7 +370,7 @@ export function Dashboard() {
                                                             </Button>
                                                         </div>
                                                         <p className="text-sm text-muted-foreground">
-                                                            {deck.cards.length} cards
+                                                            {t("dashboard.cardsCount", { count: deck.cards.length })}
                                                         </p>
                                                     </motion.div>
                                                 )}
@@ -383,7 +386,7 @@ export function Dashboard() {
                                                         exportDeck(deck);
                                                     }}
                                                     className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
-                                                    title="Export deck"
+                                                    title={t("common.export")}
                                                 >
                                                     <Download className="w-4 h-4" />
                                                 </Button>
@@ -440,7 +443,7 @@ export function Dashboard() {
                         >
                             <div className="p-4 border-b border-border">
                                 <h3 className="font-semibold truncate">{contextMenuDeck.name}</h3>
-                                <p className="text-sm text-muted-foreground">{contextMenuDeck.cards.length} cards</p>
+                                <p className="text-sm text-muted-foreground">{t("dashboard.cardsCount", { count: contextMenuDeck.cards.length })}</p>
                             </div>
                             <div className="p-2">
                                 <button
@@ -452,14 +455,14 @@ export function Dashboard() {
                                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left"
                                 >
                                     <Pencil className="w-5 h-5 text-muted-foreground" />
-                                    <span>Rename</span>
+                                    <span>{t("common.rename")}</span>
                                 </button>
                                 <button
                                     onClick={() => exportDeck(contextMenuDeck)}
                                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left"
                                 >
                                     <Download className="w-5 h-5 text-muted-foreground" />
-                                    <span>Export to .txt</span>
+                                    <span>{t("common.export")}</span>
                                 </button>
                                 <button
                                     onClick={() => {
@@ -469,14 +472,14 @@ export function Dashboard() {
                                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left text-destructive"
                                 >
                                     <Trash2 className="w-5 h-5" />
-                                    <span>Delete</span>
+                                    <span>{t("common.delete")}</span>
                                 </button>
                             </div>
                             <button
                                 onClick={closeContextMenu}
                                 className="w-full p-4 text-center text-muted-foreground hover:bg-muted transition-colors border-t border-border"
                             >
-                                Cancel
+                                {t("common.cancel")}
                             </button>
                         </motion.div>
                     </motion.div>

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LatexRenderer } from "@/components/latex-renderer";
+import { useApp } from "@/lib/app-context";
 
 type Language = "en" | "pl";
 
@@ -45,7 +46,8 @@ type ContentDict = {
 
 export default function FAQPage() {
   const router = useRouter();
-  const [language, setLanguage] = useState<Language>("en");
+  const { language, setLanguage, t: globalT } = useApp();
+  const faqLang = language as Language;
   const [openIndex, setOpenIndex] = useState<string | null>("sec-0-item-0");
   const [isCopied, setIsCopied] = useState(false);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
@@ -124,9 +126,9 @@ QUESTIONS:
                 "Yes! LetMeCook is a local-first application. By default, your decks are stored directly in your browser's local storage. If you choose to create an account, your progress is synced securely to our database.",
             },
             {
-              question: "How does the Spaced Repetition work?",
+              question: "How does the mastery system work?",
               answer:
-                "When you review cards, you rate how difficult they were. Cards you find hard will appear more frequently, while easy cards will be shown less often, optimizing your study time.",
+                "When you review cards, you rate how difficult they were. Your progress is tracked through levels (from New to Mastered), giving you a clear overview of which areas need more focus. While the current version doesn't automatically schedule reviews, it empowers you to filter and focus on specific mastery levels manually during your sessions.",
             },
           ],
         },
@@ -294,10 +296,9 @@ PYTANIA:
                 "Tak! LetMeCook to aplikacja działająca lokalnie (local-first). Domyślnie Twoje talie są zapisywane bezpośrednio w pamięci przeglądarki. Jeśli zdecydujesz się założyć konto, Twoje postępy będą bezpiecznie synchronizowane z naszą bazą danych.",
             },
             {
-              question:
-                "Jak działa algorytm Spaced Repetition (Powtórki w odstępach)?",
+              question: "Jak działa system opanowania materiału?",
               answer:
-                "Podczas przeglądania kart oceniasz, jak trudne były. Karty, które uznasz za trudne, będą pojawiać się częściej, podczas gdy łatwe karty będą wyświetlane rzadziej, co optymalizuje czas Twojej nauki.",
+                "Podczas przeglądania kart oceniasz, jak trudne były. Twoje postępy są śledzone poprzez poziomy (od Nowych po Opanowane), co daje Ci jasny obraz tego, które obszary wymagają więcej uwagi. Choć obecna wersja nie planuje powtórek automatycznie, pozwala Ci na ręczne filtrowanie i skupienie się na konkretnych poziomach opanowania podczas sesji nauki.",
             },
           ],
         },
@@ -414,10 +415,10 @@ PYTANIA:
     },
   };
 
-  const t = content[language];
+  const t = content[faqLang];
 
   const toggleLanguage = () => {
-    setLanguage((prev) => (prev === "en" ? "pl" : "en"));
+    setLanguage(language === "en" ? "pl" : "en");
   };
 
   return (
@@ -436,10 +437,10 @@ PYTANIA:
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-2 md:gap-3">
               <HelpCircle className="w-7 h-7 md:w-10 md:h-10 text-primary hidden sm:block" />
-              {t.header}
+              {globalT("faq.header")}
             </h1>
             <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
-              {t.description}
+              {globalT("faq.description")}
             </p>
           </div>
         </div>
@@ -451,7 +452,7 @@ PYTANIA:
           className="gap-2 min-w-[100px]"
         >
           <Languages className="w-4 h-4" />
-          {t.languageToggle}
+          {globalT("faq.languageToggle")}
         </Button>
       </div>
 
@@ -464,9 +465,9 @@ PYTANIA:
         <div className="p-6 border-b border-border bg-muted/20">
           <h2 className="text-xl font-semibold flex items-center gap-2 mb-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            {t.promptTitle}
+            {globalT("faq.promptTitle")}
           </h2>
-          <p className="text-muted-foreground text-sm">{t.promptDescription}</p>
+          <p className="text-muted-foreground text-sm">{globalT("faq.promptDescription")}</p>
         </div>
         <div className="p-6">
           <div className="relative">
@@ -475,7 +476,7 @@ PYTANIA:
               transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
               className="bg-muted p-4 rounded-xl font-mono text-sm leading-relaxed whitespace-pre-wrap text-foreground/80 overflow-hidden"
             >
-              {t.promptText}
+              {globalT("faq.promptText")}
             </motion.div>
 
             {!isPromptExpanded && (
@@ -496,11 +497,11 @@ PYTANIA:
               >
                 <ChevronDown className="w-4 h-4" />
               </motion.div>
-              {isPromptExpanded ? t.showLessBtn : t.showMoreBtn}
+              {isPromptExpanded ? globalT("faq.showLessBtn") : globalT("faq.showMoreBtn")}
             </Button>
 
             <Button
-              onClick={() => handleCopyPrompt(t.promptText)}
+              onClick={() => handleCopyPrompt(globalT("faq.promptText"))}
               variant={isCopied ? "default" : "secondary"}
               className={`w-full sm:w-auto gap-2 transition-all order-1 sm:order-2 ${isCopied ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
             >
@@ -607,16 +608,16 @@ PYTANIA:
         <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 text-primary mb-4">
           <HelpCircle className="w-6 h-6" />
         </div>
-        <h3 className="text-xl font-medium mb-2">{t.readyToStart}</h3>
+        <h3 className="text-xl font-medium mb-2">{globalT("faq.readyToStart")}</h3>
         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-          {t.readyDescription}
+          {globalT("faq.readyDescription")}
         </p>
         <Button
           onClick={() => router.push("/")}
           size="lg"
           className="rounded-full px-8"
         >
-          {t.goDashboardBtn}
+          {globalT("faq.goDashboardBtn")}
         </Button>
       </motion.div>
     </div>

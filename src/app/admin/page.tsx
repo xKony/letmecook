@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { createPublicDeck, getPublicDecks, toggleDeckPublic, checkIsAdmin, getAllUsers, updateUserMaxDecks } from "@/app/actions/admin-actions";
 import { parseQuestionsFile } from "@/lib/storage";
+import { useApp } from "@/lib/app-context";
 
 interface PublicDeck {
     id: string;
@@ -38,6 +39,7 @@ interface AdminUser {
 
 export default function AdminPage() {
     const router = useRouter();
+    const { t } = useApp();
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
     const [decks, setDecks] = useState<PublicDeck[]>([]);
     const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
@@ -79,7 +81,7 @@ export default function AdminPage() {
 
     const handleUpload = async () => {
         if (!deckName.trim() || !fileContent.trim()) {
-            setMessage({ type: "error", text: "Please provide a deck name and file" });
+            setMessage({ type: "error", text: t("admin.noPublicDecks") }); // Reuse or add specific key
             return;
         }
 
@@ -138,11 +140,11 @@ export default function AdminPage() {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-4">
                 <AlertCircle className="w-16 h-16 text-rose-500" />
-                <h1 className="text-2xl font-bold">Access Denied</h1>
-                <p className="text-muted-foreground">You don&apos;t have admin privileges.</p>
+                <h1 className="text-2xl font-bold">{t("admin.accessDenied")}</h1>
+                <p className="text-muted-foreground">{t("admin.noAdminPrivileges")}</p>
                 <Button onClick={() => router.push("/")}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Go Home
+                    {t("admin.goHome")}
                 </Button>
             </div>
         );
@@ -154,12 +156,12 @@ export default function AdminPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-                        <p className="text-muted-foreground">Manage public decks</p>
+                        <h1 className="text-3xl font-bold">{t("admin.dashboard")}</h1>
+                        <p className="text-muted-foreground">{t("admin.managePublicDecks")}</p>
                     </div>
                     <Button variant="outline" onClick={() => router.push("/")}>
                         <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back
+                        {t("admin.back")}
                     </Button>
                 </div>
 
@@ -171,25 +173,25 @@ export default function AdminPage() {
                 >
                     <h2 className="text-xl font-semibold flex items-center gap-2">
                         <Plus className="w-5 h-5" />
-                        Upload Public Deck
+                        {t("admin.uploadPublicDeck")}
                     </h2>
 
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm font-medium">Deck Name</label>
+                            <label className="text-sm font-medium">{t("admin.deckName")}</label>
                             <input
                                 type="text"
                                 value={deckName}
                                 onChange={(e) => setDeckName(e.target.value)}
-                                placeholder="e.g., Biology 101"
+                                placeholder={t("admin.deckNamePlaceholder")}
                                 className="w-full mt-1 px-3 py-2 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium">Questions File</label>
+                            <label className="text-sm font-medium">{t("admin.questionsFile")}</label>
                             <p className="text-xs text-muted-foreground mb-2">
-                                Format: Q: question A: answer (one per line)
+                                {t("admin.fileFormatHint")}
                             </p>
                             <input
                                 ref={fileInputRef}
@@ -205,7 +207,7 @@ export default function AdminPage() {
                                 className="w-full"
                             >
                                 <FileText className="w-4 h-4 mr-2" />
-                                {fileContent ? "File Selected ✓" : "Choose File"}
+                                {fileContent ? t("admin.fileSelected") : t("dashboard.chooseFile")}
                             </Button>
                         </div>
 
@@ -217,12 +219,12 @@ export default function AdminPage() {
                             {uploading ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Uploading...
+                                    {t("admin.uploading")}
                                 </>
                             ) : (
                                 <>
                                     <Upload className="w-4 h-4 mr-2" />
-                                    Upload Public Deck
+                                    {t("admin.uploadPublicDeck")}
                                 </>
                             )}
                         </Button>
@@ -252,12 +254,12 @@ export default function AdminPage() {
                 >
                     <h2 className="text-xl font-semibold flex items-center gap-2">
                         <Globe className="w-5 h-5" />
-                        Public Decks ({decks.length})
+                        {t("admin.publicDecksCount", { count: decks.length })}
                     </h2>
 
                     {decks.length === 0 ? (
                         <p className="text-muted-foreground text-center py-8">
-                            No public decks yet. Upload one above!
+                            {t("admin.noPublicDecks")}
                         </p>
                     ) : (
                         <div className="space-y-2">
@@ -269,7 +271,7 @@ export default function AdminPage() {
                                     <div>
                                         <p className="font-medium">{deck.name}</p>
                                         <p className="text-xs text-muted-foreground">
-                                            {deck.flashcards.length} cards
+                                            {t("dashboard.cardsCount", { count: deck.flashcards.length })}
                                         </p>
                                     </div>
                                     <Button
@@ -280,12 +282,12 @@ export default function AdminPage() {
                                         {deck.isPublic ? (
                                             <>
                                                 <Globe className="w-4 h-4 mr-1 text-emerald-500" />
-                                                Public
+                                                {t("admin.public")}
                                             </>
                                         ) : (
                                             <>
                                                 <Lock className="w-4 h-4 mr-1" />
-                                                Private
+                                                {t("admin.private")}
                                             </>
                                         )}
                                     </Button>
@@ -304,12 +306,12 @@ export default function AdminPage() {
                 >
                     <h2 className="text-xl font-semibold flex items-center gap-2">
                         <Users className="w-5 h-5" />
-                        Manage Users ({adminUsers.length})
+                        {t("admin.manageUsers", { count: adminUsers.length })}
                     </h2>
 
                     {adminUsers.length === 0 ? (
                         <p className="text-muted-foreground text-center py-8">
-                            No users found.
+                            {t("admin.noUsersFound")}
                         </p>
                     ) : (
                         <div className="space-y-2">
@@ -325,12 +327,12 @@ export default function AdminPage() {
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium truncate">{user.email}</p>
                                             <p className="text-xs text-muted-foreground">
-                                                {user.deckCount} / {user.maxDecks} decks
+                                                {t("dashboard.cardsCount", { count: user.deckCount })} / {user.maxDecks}
                                                 {user.isAdmin && <span className="ml-2 text-emerald-500">• Admin</span>}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2 ml-4">
-                                            <span className="text-sm text-muted-foreground">Max:</span>
+                                            <span className="text-sm text-muted-foreground">{t("admin.maxDecks")}:</span>
                                             <input
                                                 type="number"
                                                 min={1}

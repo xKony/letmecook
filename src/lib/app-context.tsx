@@ -15,6 +15,7 @@ import { LOCALSTORAGE_SAVE_DEBOUNCE_MS, MAX_DECKS_PER_USER } from "@/lib/constan
 // Server actions for authenticated users
 import { getMyDecks, getUserMaxDecks, createDeck as createDbDeck, deleteDeck as deleteDbDeck, updateDeck as updateDbDeck } from "@/app/actions/deck-actions";
 import { updateCardLevel as updateDbCardLevel, updateCard as updateDbCard, resetDeckProgress as resetDbDeckProgress } from "@/app/actions/card-actions";
+import { Language, getTranslation } from "@/lib/i18n";
 
 interface AppContextType {
     // Auth state
@@ -23,6 +24,9 @@ interface AppContextType {
     isAdmin: boolean;
     authUser: { id: string; email: string; name?: string | null } | null;
     authLoading: boolean;
+    language: Language;
+    setLanguage: (lang: Language) => void;
+    t: (key: string, params?: Record<string, string | number>) => string;
 
     // App state
     decks: Deck[];
@@ -83,6 +87,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [maxDecks, setMaxDecks] = useState(MAX_DECKS_PER_USER);
+    const [language, setLanguageState] = useState<Language>("en");
+
+    // Initialize language from localStorage
+    useEffect(() => {
+        const savedLang = localStorage.getItem("language") as Language;
+        if (savedLang === "en" || savedLang === "pl") {
+            setLanguageState(savedLang);
+        }
+    }, []);
+
+    const setLanguage = useCallback((lang: Language) => {
+        setLanguageState(lang);
+        localStorage.setItem("language", lang);
+    }, []);
+
+    const t = useCallback((key: string, params?: Record<string, string | number>) => {
+        return getTranslation(language, key, params);
+    }, [language]);
 
     // Auth state derived from session
     const authLoading = status === "loading";
@@ -372,6 +394,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         refreshDecks,
         updateCardLevel,
         updateCard,
+        language,
+        setLanguage,
+        t,
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

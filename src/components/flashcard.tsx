@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard as FlashcardType, CardLevel, RATINGS } from "@/lib/types";
+import { useApp } from "@/lib/app-context";
 import { LEVEL_COLORS, RATING_STYLES } from "@/lib/level-styles";
 import { FLASHCARD_LONG_PRESS_MS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,8 @@ interface FlashcardProps {
     onTTSToggle: () => void;
 }
 
+
+
 export function FlashcardComponent({
     card,
     deckName,
@@ -30,6 +33,7 @@ export function FlashcardComponent({
     ttsEnabled,
     onTTSToggle,
 }: FlashcardProps) {
+    const { t } = useApp();
     const [isEditingQuestion, setIsEditingQuestion] = useState(false);
     const [isEditingAnswer, setIsEditingAnswer] = useState(false);
     const [editQuestion, setEditQuestion] = useState(card.question);
@@ -70,7 +74,7 @@ export function FlashcardComponent({
                             return (
                                 <div key={index} className="flex items-center gap-2 text-muted-foreground text-sm">
                                     <ImageOff className="w-4 h-4" />
-                                    <span>Image failed to load</span>
+                                    <span>{t("study.imageFailed")}</span>
                                 </div>
                             );
                         }
@@ -200,7 +204,7 @@ export function FlashcardComponent({
                     <div className="flex items-center gap-2">
                         <span className={`w-3 h-3 rounded-full ${LEVEL_COLORS[card.level].dot}`} />
                         <span className={`text-sm font-medium ${LEVEL_COLORS[card.level].text}`}>
-                            {card.level}
+                            {t(`levels.${card.level}`)}
                         </span>
                     </div>
                 </div>
@@ -232,7 +236,7 @@ export function FlashcardComponent({
                                     onKeyDown={(e) => handleKeyDown(e, "question")}
                                     autoFocus
                                     className="w-full p-4 text-xl md:text-2xl font-bold text-center bg-background border border-input rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[100px]"
-                                    placeholder="Enter question..."
+                                    placeholder={t("study.enterQuestion")}
                                 />
                                 <div className="flex justify-center gap-2">
                                     <Button
@@ -241,7 +245,7 @@ export function FlashcardComponent({
                                         className="gap-1"
                                     >
                                         <Check className="w-4 h-4" />
-                                        Save
+                                        {t("common.save")}
                                     </Button>
                                     <Button
                                         size="sm"
@@ -250,7 +254,7 @@ export function FlashcardComponent({
                                         className="gap-1"
                                     >
                                         <X className="w-4 h-4" />
-                                        Cancel
+                                        {t("common.cancel")}
                                     </Button>
                                 </div>
                             </motion.div>
@@ -320,7 +324,7 @@ export function FlashcardComponent({
                                             onKeyDown={(e) => handleKeyDown(e, "answer")}
                                             autoFocus
                                             className="w-full p-4 text-lg md:text-xl font-medium text-center bg-background border border-input rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[80px]"
-                                            placeholder="Enter answer..."
+                                            placeholder={t("study.enterAnswer")}
                                         />
                                         <div className="flex justify-center gap-2">
                                             <Button
@@ -329,7 +333,7 @@ export function FlashcardComponent({
                                                 className="gap-1"
                                             >
                                                 <Check className="w-4 h-4" />
-                                                Save
+                                                {t("common.save")}
                                             </Button>
                                             <Button
                                                 size="sm"
@@ -338,7 +342,7 @@ export function FlashcardComponent({
                                                 className="gap-1"
                                             >
                                                 <X className="w-4 h-4" />
-                                                Cancel
+                                                {t("common.cancel")}
                                             </Button>
                                         </div>
                                     </motion.div>
@@ -351,10 +355,9 @@ export function FlashcardComponent({
                                         className="relative w-full"
                                     >
                                         <div
-                                            className="text-xl md:text-2xl font-medium text-center text-muted-foreground"
                                             aria-live="polite"
                                         >
-                                            {renderContent(card.answer, false) || "(Mental Answer)"}
+                                            {renderContent(card.answer, false) || t("study.mentalAnswer")}
                                         </div>
 
                                         {/* Edit button - Desktop hover */}
@@ -370,7 +373,7 @@ export function FlashcardComponent({
                                                         setIsEditingAnswer(true);
                                                     }}
                                                     className="absolute -right-10 top-1/2 -translate-y-1/2 p-2 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors hidden md:flex"
-                                                    title="Edit answer"
+                                                    title={t("study.editAnswer")}
                                                 >
                                                     <Pencil className="w-4 h-4" />
                                                 </motion.button>
@@ -398,7 +401,7 @@ export function FlashcardComponent({
                                 onClick={onReveal}
                                 className="w-full h-14 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-lg shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
                             >
-                                Show Answer (Space)
+                                {t("study.reveal")}
                             </Button>
                         </motion.div>
                     ) : (
@@ -416,7 +419,7 @@ export function FlashcardComponent({
                                     variant="outline"
                                     className={`h-16 rounded-xl border-2 transition-all font-medium ${RATING_STYLES[rating.value]}`}
                                 >
-                                    {rating.label}
+                                    {t(`ratings.${rating.value}`)}
                                 </Button>
                             ))}
                         </motion.div>
@@ -452,7 +455,7 @@ export function FlashcardComponent({
                             <X className="w-6 h-6" />
                         </button>
                         <p className="absolute bottom-4 text-white/50 text-sm">
-                            Click anywhere or press Escape to close
+                            {t("study.zoomHint")}
                         </p>
                     </motion.div>
                 )}
