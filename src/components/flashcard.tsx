@@ -6,6 +6,7 @@ import { Flashcard as FlashcardType, CardLevel, RATINGS } from "@/lib/types";
 import { useApp } from "@/lib/app-context";
 import { LEVEL_COLORS, RATING_STYLES } from "@/lib/level-styles";
 import { FLASHCARD_LONG_PRESS_MS } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
 import dynamic from "next/dynamic";
 import { Volume2, VolumeX, Pencil, Check, X, ImageOff, ZoomIn } from "lucide-react";
 

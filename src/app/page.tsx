@@ -3,12 +3,13 @@ import { getMyDecks, getUserMaxDecks } from "@/app/actions/deck-actions";
 import { AppMain } from "@/components/app-main";
 import { transformDbDeck } from "@/lib/utils";
 import { Suspense } from "react";
+import { Deck } from "@/lib/types";
 
 export default async function Home() {
     const session = await auth();
 
     // Fetch initial data on server if authenticated
-    let initialDecks = [];
+    let initialDecks: Deck[] = [];
     let initialMaxDecks = 5;
 
     if (session?.user?.id) {

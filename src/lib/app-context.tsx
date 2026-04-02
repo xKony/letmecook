@@ -67,11 +67,7 @@ export function AppProvider({
     initialSession?: Session | null
 }) {
     // Use useSession as the source of truth for client-side auth state
-    const { data: session, status } = useSession({
-        // Use the initialSession from server to avoid a flash of unauthenticated state
-        // Note: next-auth beta-30 useSession might not support fallback directly in this version
-        // so we'll handle the initial state manually in our state hooks.
-    });
+    const { data: session, status } = useSession();
     
     // Use server-side data as initial state to avoid loading spinners
     const [dbDecks, setDbDecks] = useState<Deck[]>(initialDecks);
