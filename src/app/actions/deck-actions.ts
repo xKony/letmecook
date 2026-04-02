@@ -7,12 +7,13 @@ import { eq, and } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createDeckSchema } from "@/lib/validations";
+import { cache } from "react";
 
 // ============================================
 // Helper: Get current user or throw
 // ============================================
 
-async function requireAuth(): Promise<{ id: string; email: string; name?: string | null }> {
+const requireAuth = cache(async function (): Promise<{ id: string; email: string; name?: string | null }> {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
@@ -22,7 +23,7 @@ async function requireAuth(): Promise<{ id: string; email: string; name?: string
         email: session.user.email || "",
         name: session.user.name,
     };
-}
+});
 
 // ============================================
 // Helper: Check deck access
@@ -30,7 +31,7 @@ async function requireAuth(): Promise<{ id: string; email: string; name?: string
 
 type AccessLevel = "owner" | "editor" | "viewer" | null;
 
-async function getDeckAccess(deckId: string, userId: string | undefined): Promise<{ deck: typeof decks.$inferSelect | null; access: AccessLevel }> {
+const getDeckAccess = cache(async function (deckId: string, userId: string | undefined): Promise<{ deck: typeof decks.$inferSelect | null; access: AccessLevel }> {
     const deck = await db.query.decks.findFirst({
         where: eq(decks.id, deckId),
     });
@@ -64,13 +65,13 @@ async function getDeckAccess(deckId: string, userId: string | undefined): Promis
     }
 
     return { deck: null, access: null };
-}
+});
 
 // ============================================
 // READ: Get user's decks
 // ============================================
 
-export async function getMyDecks() {
+export const getMyDecks = cache(async function () {
     const user = await requireAuth();
 
     const userDecks = await db.query.decks.findMany({
@@ -83,13 +84,13 @@ export async function getMyDecks() {
     // Sort by updatedAt in memory (simpler than typed orderBy)
     type DeckWithCards = typeof userDecks[number];
     return userDecks.sort((a: DeckWithCards, b: DeckWithCards) => b.updatedAt.getTime() - a.updatedAt.getTime());
-}
+});
 
 // ============================================
 // READ: Get user's max decks limit
 // ============================================
 
-export async function getUserMaxDecks(): Promise<number> {
+export const getUserMaxDecks = cache(async function (): Promise<number> {
     const user = await requireAuth();
 
     const dbUser = await db.query.users.findFirst({
@@ -97,7 +98,7 @@ export async function getUserMaxDecks(): Promise<number> {
     });
 
     return dbUser?.maxDecks ?? 5;
-}
+});
 
 // ============================================
 // READ: Get single deck with cards

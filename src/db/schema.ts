@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, uuid, primaryKey, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, uuid, primaryKey, integer, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import type { AdapterAccountType } from "next-auth/adapters";
 
@@ -60,7 +60,10 @@ export const decks = pgTable("decks", {
     shareToken: text("share_token").unique(), // For private link sharing
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-});
+}, (table) => [
+    index("decks_owner_id_idx").on(table.ownerId),
+    index("decks_updated_at_idx").on(table.updatedAt),
+]);
 
 export const flashcards = pgTable("flashcards", {
     id: uuid("id").defaultRandom().primaryKey(),
@@ -70,7 +73,9 @@ export const flashcards = pgTable("flashcards", {
     level: text("level").default("Nowe").notNull(), // CardLevel type
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-});
+}, (table) => [
+    index("flashcards_deck_id_idx").on(table.deckId),
+]);
 
 export const deckPermissions = pgTable("deck_permissions", {
     id: uuid("id").defaultRandom().primaryKey(),
@@ -78,7 +83,10 @@ export const deckPermissions = pgTable("deck_permissions", {
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     role: text("role").notNull().$type<"viewer" | "editor">(), // Permission level
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-});
+}, (table) => [
+    index("deck_permissions_user_id_idx").on(table.userId),
+    index("deck_permissions_deck_id_idx").on(table.deckId),
+]);
 
 // ============================================
 // Relations

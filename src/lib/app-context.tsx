@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
+import type { Session } from "next-auth";
 import { GuestState, Deck, CardLevel } from "@/lib/types";
 import {
     loadGuestState,
@@ -16,6 +17,7 @@ import { LOCALSTORAGE_SAVE_DEBOUNCE_MS, MAX_DECKS_PER_USER } from "@/lib/constan
 import { getMyDecks, getUserMaxDecks, createDeck as createDbDeck, deleteDeck as deleteDbDeck, updateDeck as updateDbDeck } from "@/app/actions/deck-actions";
 import { updateCardLevel as updateDbCardLevel, updateCard as updateDbCard, resetDeckProgress as resetDbDeckProgress } from "@/app/actions/card-actions";
 import { Language, getTranslation } from "@/lib/i18n";
+import { transformDbDeck } from "@/lib/utils";
 
 interface AppContextType {
     // Auth state
@@ -53,40 +55,31 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-// Helper to transform DB deck to local Deck type
-function transformDbDeck(dbDeck: {
-    id: string;
-    name: string;
-    createdAt: Date;
-    updatedAt: Date;
-    flashcards: {
-        id: string;
-        question: string;
-        answer: string;
-        level: string;
-    }[];
-}): Deck {
-    return {
-        id: dbDeck.id,
-        name: dbDeck.name,
-        createdAt: dbDeck.createdAt.getTime(),
-        updatedAt: dbDeck.updatedAt.getTime(),
-        cards: dbDeck.flashcards.map((card) => ({
-            id: card.id,
-            question: card.question,
-            answer: card.answer,
-            level: card.level as CardLevel,
-        })),
-    };
-}
-
-export function AppProvider({ children }: { children: React.ReactNode }) {
-    const { data: session, status } = useSession();
+export function AppProvider({ 
+    children,
+    initialDecks = [],
+    initialMaxDecks = MAX_DECKS_PER_USER,
+    initialSession = null
+}: { 
+    children: React.ReactNode,
+    initialDecks?: Deck[],
+    initialMaxDecks?: number,
+    initialSession?: Session | null
+}) {
+    // Use useSession as the source of truth for client-side auth state
+    const { data: session, status } = useSession({
+        // Use the initialSession from server to avoid a flash of unauthenticated state
+        // Note: next-auth beta-30 useSession might not support fallback directly in this version
+        // so we'll handle the initial state manually in our state hooks.
+    });
+    
+    // Use server-side data as initial state to avoid loading spinners
+    const [dbDecks, setDbDecks] = useState<Deck[]>(initialDecks);
+    const [maxDecks, setMaxDecks] = useState(initialMaxDecks);
+    
     const [guestState, setGuestState] = useState<GuestState>({ decks: [] });
-    const [dbDecks, setDbDecks] = useState<Deck[]>([]);
     const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [maxDecks, setMaxDecks] = useState(MAX_DECKS_PER_USER);
+    const [isLoading, setIsLoading] = useState(false); // Start as NOT loading if we have server data
     const [language, setLanguageState] = useState<Language>("en");
 
     // Initialize language from localStorage
@@ -106,52 +99,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return getTranslation(language, key, params);
     }, [language]);
 
-    // Auth state derived from session
-    const authLoading = status === "loading";
-    const isAuthenticated = status === "authenticated" && !!session?.user;
-    const isGuest = !isAuthenticated;
-    const isAdmin = (session?.user as { isAdmin?: boolean } | undefined)?.isAdmin ?? false;
-    const authUser = session?.user ? {
-        id: session.user.id || "",
-        email: session.user.email || "",
-        name: session.user.name,
-    } : null;
+    // Auth state derived from session or initialSession
+    const currentSession = session || initialSession;
+    
+    // Derived values should be calculated during render, not in effects
+    const isAuthenticated = useMemo(() => !!currentSession?.user, [currentSession]);
+    const isGuest = useMemo(() => !isAuthenticated, [isAuthenticated]);
+    const isAdmin = useMemo(() => (currentSession?.user as { isAdmin?: boolean } | undefined)?.isAdmin ?? false, [currentSession]);
+    const authUser = useMemo(() => currentSession?.user ? {
+        id: currentSession.user.id || "",
+        email: currentSession.user.email || "",
+        name: currentSession.user.name,
+    } : null, [currentSession]);
 
-    // Load data based on auth state
+    // Use a ref for authLoading to avoid unnecessary re-renders if we already have initial data
+    const authLoading = status === "loading" && !initialSession;
+
+    // Sync with database if session changes and we don't have data yet
     useEffect(() => {
-        const loadData = async () => {
-            setIsLoading(true);
-            try {
-                if (isAuthenticated) {
-                    // Fetch decks from database
+        if (isAuthenticated && dbDecks.length === 0 && !initialDecks.length) {
+            const loadData = async () => {
+                setIsLoading(true);
+                try {
                     const decks = await getMyDecks();
                     setDbDecks(decks.map(transformDbDeck));
-                    // Fetch user's max decks limit
                     const userMaxDecks = await getUserMaxDecks();
                     setMaxDecks(userMaxDecks);
-                } else if (!authLoading) {
-                    // Load from localStorage for guests
-                    const loaded = loadGuestState();
-                    setGuestState(loaded);
-                    setMaxDecks(MAX_DECKS_PER_USER); // Default for guests
+                } catch (error) {
+                    console.error("Failed to load decks:", error);
+                } finally {
+                    setIsLoading(false);
                 }
-            } catch (error) {
-                console.error("Failed to load decks:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        if (!authLoading) {
+            };
             loadData();
+        } else if (isGuest && !authLoading) {
+            // Always load guest state from local storage on mount
+            const loaded = loadGuestState();
+            setGuestState(loaded);
         }
-    }, [isAuthenticated, authLoading]);
+    }, [isAuthenticated, isGuest, authLoading, initialDecks.length, dbDecks.length]);
 
     // Debounced save to localStorage for guests
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        if (!isLoading && isGuest && !authLoading) {
+        if (isGuest && !authLoading) {
             if (saveTimeoutRef.current) {
                 clearTimeout(saveTimeoutRef.current);
             }
@@ -165,7 +157,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 clearTimeout(saveTimeoutRef.current);
             }
         };
-    }, [guestState, isLoading, isGuest, authLoading]);
+    }, [guestState, isGuest, authLoading]);
 
     // Get decks based on auth state
     const decks = useMemo(() => {
@@ -214,7 +206,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 await refreshDecks();
             } catch (error) {
                 console.error("Failed to create deck:", error);
-                // Show specific error if available
                 alert(error instanceof Error ? error.message : "Failed to create deck. Please try again.");
             }
         } else {

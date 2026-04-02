@@ -6,9 +6,13 @@ import { Flashcard as FlashcardType, CardLevel, RATINGS } from "@/lib/types";
 import { useApp } from "@/lib/app-context";
 import { LEVEL_COLORS, RATING_STYLES } from "@/lib/level-styles";
 import { FLASHCARD_LONG_PRESS_MS } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
-import { LatexRenderer } from "@/components/latex-renderer";
+import dynamic from "next/dynamic";
 import { Volume2, VolumeX, Pencil, Check, X, ImageOff, ZoomIn } from "lucide-react";
+
+// Dynamically import LatexRenderer as it is only needed when text contains math
+const LatexRenderer = dynamic(() => import("@/components/latex-renderer").then(mod => mod.LatexRenderer), {
+    ssr: true, // Keep SSR for SEO/initial paint
+});
 
 interface FlashcardProps {
     card: FlashcardType;

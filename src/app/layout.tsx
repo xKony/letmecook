@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { AppProvider } from "@/lib/app-context";
+import { auth } from "@/lib/auth";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 
@@ -23,19 +24,21 @@ export const metadata: Metadata = {
   keywords: ["flashcards", "active recall", "study", "learning", "education"],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}
       >
-        <AuthProvider>
+        <AuthProvider session={session}>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-            <AppProvider>{children}</AppProvider>
+            <AppProvider initialSession={session}>{children}</AppProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>
