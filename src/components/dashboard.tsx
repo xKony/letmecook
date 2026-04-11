@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { useDeckImport } from "@/hooks/use-deck-import";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { ImportDropZone } from "@/components/dashboard/import-drop-zone";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Trash2, BookOpen, Pencil, Check, X, Download } from "lucide-react";
+import { Plus, Trash2, BookOpen, Pencil, Check, X, Download } from "lucide-react";
 import { GlobalDecksModal } from "@/components/global-decks-modal";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
@@ -124,53 +125,16 @@ export function Dashboard() {
             <div className="max-w-4xl mx-auto">
                 <DashboardHeader />
 
-                {/* Drop Zone */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    className="border-2 border-dashed border-border rounded-2xl p-8 text-center mb-8 hover:border-primary/50 transition-colors cursor-pointer"
-                    onClick={() => fileInputRef.current?.click()}
-                >
-                    <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">{t("dashboard.dropZoneTitle")}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        {t("dashboard.dropZoneDescription")}
-                    </p>
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".txt"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                    />
-                </motion.div>
-
-                {/* Import Form */}
-                {isImporting && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        className="bg-card rounded-xl p-4 mb-8 border border-border"
-                    >
-                        <input
-                            type="text"
-                            value={deckName}
-                            onChange={(e) => setDeckName(e.target.value)}
-                            placeholder={t("dashboard.deckNamePlaceholder")}
-                            className="w-full p-3 rounded-lg bg-background border border-input mb-3"
-                        />
-                        <div className="flex gap-2">
-                            <Button onClick={() => fileInputRef.current?.click()}>
-                                {t("dashboard.chooseFile")}
-                            </Button>
-                            <Button variant="ghost" onClick={() => setIsImporting(false)}>
-                                {t("common.cancel")}
-                            </Button>
-                        </div>
-                    </motion.div>
-                )}
+                <ImportDropZone
+                    isImporting={isImporting}
+                    setIsImporting={setIsImporting}
+                    deckName={deckName}
+                    setDeckName={setDeckName}
+                    fileInputRef={fileInputRef}
+                    handleFileSelect={handleFileSelect}
+                    handleDrop={handleDrop}
+                    handleDragOver={handleDragOver}
+                />
 
                 {/* Deck List */}
                 <div className="space-y-4">
