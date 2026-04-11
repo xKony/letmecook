@@ -13,6 +13,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Two-pass rendering is necessary to avoid hydration mismatch for theme-specific UI
     setMounted(true);
   }, []);
 
