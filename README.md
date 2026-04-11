@@ -67,7 +67,7 @@ Follow these instructions to set up the project locally.
 
 ### Prerequisites
 - **Node.js**: Version 18.17 or higher
-- **npm** or **yarn**
+- **pnpm**: Version 10.33.0 or higher
 
 ### Installation
 
@@ -79,14 +79,12 @@ Follow these instructions to set up the project locally.
 
 2. **Install dependencies**
    ```bash
-   npm install
-   # or
-   yarn install
+   pnpm install
    ```
 
 3. **Run the development server**
    ```bash
-   npm run dev
+   pnpm dev
    ```
 
 4. **Access the app**
