@@ -146,7 +146,7 @@ QUESTIONS:
               answer: (
                 <div className="space-y-4">
                   <p>
-                    When creating flashcards from your professor's presentations
+                    When creating flashcards from your professor&apos;s presentations
                     or your own notes, aim for highly specific questions for
                     every definition, structural model, and complex concept.
                   </p>
