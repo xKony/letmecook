@@ -1,4 +1,4 @@
-export { auth as middleware } from "@/lib/auth";
+export { auth as proxy } from "@/lib/auth";
 
 // Configure which routes require authentication
 export const config = {
