@@ -112,7 +112,7 @@ export function FlashcardComponent({
                 })}
             </div>
         );
-    }, [imageErrors]);
+    }, [imageErrors, t]);
 
     // Handle long press for mobile
     const handleTouchStart = useCallback((type: "question" | "answer") => {
