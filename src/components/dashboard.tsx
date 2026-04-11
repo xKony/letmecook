@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
+import { useDeckImport } from "@/hooks/use-deck-import";
 import { Button } from "@/components/ui/button";
 import { Plus, Upload, Trash2, BookOpen, LogOut, Pencil, Check, X, Download, LogIn, User, Shield, Settings, HelpCircle } from "lucide-react";
 import { GlobalDecksModal } from "@/components/global-decks-modal";
@@ -17,7 +18,6 @@ export function Dashboard() {
     const router = useRouter();
     const {
         decks,
-        addDeck,
         selectDeck,
         deleteDeck,
         renameDeck,
@@ -30,47 +30,22 @@ export function Dashboard() {
         t,
     } = useApp();
 
-    const [isImporting, setIsImporting] = useState(false);
-    const [deckName, setDeckName] = useState("");
+    const {
+        isImporting,
+        setIsImporting,
+        deckName,
+        setDeckName,
+        fileInputRef,
+        handleFileSelect,
+        handleDrop,
+        handleDragOver,
+    } = useDeckImport();
+
     const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState("");
     const [contextMenuDeck, setContextMenuDeck] = useState<Deck | null>(null);
     const [deckToDelete, setDeckToDelete] = useState<Deck | null>(null);
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const content = event.target?.result as string;
-            const name = deckName.trim() || file.name.replace(/\.txt$/, "");
-            addDeck(name, content);
-            setIsImporting(false);
-            setDeckName("");
-        };
-        reader.readAsText(file);
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        const file = e.dataTransfer.files?.[0];
-        if (!file || !file.name.endsWith(".txt")) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const content = event.target?.result as string;
-            const name = file.name.replace(/\.txt$/, "");
-            addDeck(name, content);
-        };
-        reader.readAsText(file);
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-    };
 
     const startEditing = (deckId: string, currentName: string, e: React.MouseEvent) => {
         e.stopPropagation();
