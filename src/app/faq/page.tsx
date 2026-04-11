@@ -152,14 +152,14 @@ QUESTIONS:
                   </p>
                   <ul className="list-disc pl-5 space-y-2">
                     <li>
-                      <strong>Break it down:</strong> Don't create one massive
+                      <strong>Break it down:</strong> Don&apos;t create one massive
                       flashcard for a large topic. Break it into atomic,
                       bite-sized questions.
                     </li>
                     <li>
                       <strong>Question formats:</strong> Use clear context.
-                      Instead of "Mitochondria", use "What is the primary
-                      function of the Mitochondria?".
+                      Instead of &quot;Mitochondria&quot;, use &quot;What is the primary
+                      function of the Mitochondria?&quot;.
                     </li>
                     <li>
                       <strong>Visual models:</strong> If a concept relies
@@ -222,13 +222,13 @@ QUESTIONS:
                     Important Note on Academic Integrity:
                   </strong>
                   When using AI tools (like ChatGPT, Claude, etc.) to generate
-                  flashcards from your professor's materials,{" "}
+                  flashcards from your professor&apos;s materials,{" "}
                   <strong>
-                    you MUST uncheck the "Allow data training" option in your
+                    you MUST uncheck the &quot;Allow data training&quot; option in your
                     LLM settings.
                   </strong>{" "}
                   This ensures the ethical use of academic materials and
-                  protects your professor's Intellectual Property (IP) from
+                  protects your professor&apos;s Intellectual Property (IP) from
                   being absorbed into public AI models without consent.
                 </div>
               ),
@@ -288,7 +288,7 @@ PYTANIA:
             {
               question: "Jak zaimportować istniejące fiszki?",
               answer:
-                "Obecnie możesz importować fiszki, przeciągając i upuszczając plik .txt na panel główny lub klikając obszar zrzutu, aby wybrać plik. Twój plik powinien być sformatowany jako 'Pytanie | Odpowiedź' w każdej linijce.",
+                "Obecnie możesz importować fiszki, przeciągając i upuszczając plik .txt na panel główny lub klikając obszar zrzutu, aby wybrać plik. Twój plik powinien być sformatowany jako &apos;Pytanie | Odpowiedź&apos; w każdej linijce.",
             },
             {
               question: "Czy moje dane są bezpieczne?",
@@ -329,8 +329,8 @@ PYTANIA:
                     </li>
                     <li>
                       <strong>Formatowanie pytań:</strong> Używaj jasnego
-                      kontekstu. Zamiast 'Mitochondria', zapytaj 'Jaka jest
-                      główna funkcja mitochondriów?'.
+                      kontekstu. Zamiast &apos;Mitochondria&apos;, zapytaj &apos;Jaka jest
+                      główna funkcja mitochondriów?&apos;.
                     </li>
                     <li>
                       <strong>Modele wizualne:</strong> Jeśli dana koncepcja w
