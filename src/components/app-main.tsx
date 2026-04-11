@@ -24,7 +24,7 @@ interface AppMainProps {
     session?: Session | null;
 }
 
-export function AppMain({ initialDecks, initialMaxDecks, session }: AppMainProps) {
+export function AppMain({ initialDecks }: AppMainProps) {
     const { currentDeck, isLoading, authLoading, isGuest, t } = useApp();
 
     // Show loading while auth is checking OR if we're waiting for initial data
