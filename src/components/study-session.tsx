@@ -7,6 +7,7 @@ import { useTTS } from "@/hooks/use-tts";
 import { FlashcardComponent } from "@/components/flashcard";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { CardLevel } from "@/lib/types";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { BREAK_REMINDER_INTERVAL_SECONDS } from "@/lib/constants";
 
