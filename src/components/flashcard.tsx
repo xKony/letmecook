@@ -4,16 +4,18 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard as FlashcardType, CardLevel, RATINGS } from "@/lib/types";
 import { useApp } from "@/lib/app-context";
-import { LEVEL_COLORS, RATING_STYLES } from "@/lib/level-styles";
+import { RATING_STYLES } from "@/lib/level-styles";
 import { FLASHCARD_LONG_PRESS_MS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import dynamic from "next/dynamic";
-import { Volume2, VolumeX, Pencil, Check, X, ImageOff, ZoomIn } from "lucide-react";
+import { Pencil, Check, X, ImageOff, ZoomIn } from "lucide-react";
 
 // Dynamically import LatexRenderer as it is only needed when text contains math
 const LatexRenderer = dynamic(() => import("@/components/latex-renderer").then(mod => mod.LatexRenderer), {
     ssr: true, // Keep SSR for SEO/initial paint
 });
+
+import { FlashcardHeader } from "./flashcard/flashcard-header";
 
 interface FlashcardProps {
     card: FlashcardType;
@@ -186,33 +188,12 @@ export function FlashcardComponent({
         >
             {/* Card Container */}
             <div className="relative bg-card rounded-3xl border border-border shadow-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] dark:border-white/5 min-h-[400px] flex flex-col p-8 md:p-12">
-                {/* Deck Name Indicator */}
-                <div className="absolute top-4 left-1/2 -translate-x-1/2">
-                    <span className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">
-                        {deckName}
-                    </span>
-                </div>
-
-                {/* Status Label with Color Dot */}
-                <div className="flex justify-between items-center mb-4 mt-2">
-                    <button
-                        onClick={onTTSToggle}
-                        className="p-2 rounded-full hover:bg-muted transition-colors"
-                        aria-label={ttsEnabled ? "Disable TTS" : "Enable TTS"}
-                    >
-                        {ttsEnabled ? (
-                            <Volume2 className="w-5 h-5 text-primary" />
-                        ) : (
-                            <VolumeX className="w-5 h-5 text-muted-foreground" />
-                        )}
-                    </button>
-                    <div className="flex items-center gap-2">
-                        <span className={`w-3 h-3 rounded-full ${LEVEL_COLORS[card.level].dot}`} />
-                        <span className={`text-sm font-medium ${LEVEL_COLORS[card.level].text}`}>
-                            {t(`levels.${card.level}`)}
-                        </span>
-                    </div>
-                </div>
+                <FlashcardHeader
+                    card={card}
+                    deckName={deckName}
+                    ttsEnabled={ttsEnabled}
+                    onTTSToggle={onTTSToggle}
+                />
 
                 {/* Question */}
                 <motion.div
