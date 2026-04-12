@@ -16,6 +16,8 @@ const LatexRenderer = dynamic(() => import("@/components/latex-renderer").then(m
 
 import { FlashcardHeader } from "./flashcard/flashcard-header";
 import { FlashcardRating } from "./flashcard/flashcard-rating";
+import { useFlashcardImageZoom } from "./flashcard/use-flashcard-image-zoom";
+import { FlashcardZoomModal } from "./flashcard/flashcard-zoom-modal";
 
 interface FlashcardProps {
     card: FlashcardType;
@@ -51,16 +53,7 @@ export function FlashcardComponent({
 
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Close zoom modal on Escape key
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === "Escape" && zoomedImage) {
-                setZoomedImage(null);
-            }
-        };
-        window.addEventListener("keydown", handleEscape);
-        return () => window.removeEventListener("keydown", handleEscape);
-    }, [zoomedImage]);
+    const { openZoom, closeZoom } = useFlashcardImageZoom(zoomedImage, setZoomedImage);
 
     // Parse [img:URL] syntax and render content with inline images
     const renderContent = useCallback((text: string, isLarge: boolean = false) => {
@@ -95,7 +88,7 @@ export function FlashcardComponent({
                                     className={`rounded-lg cursor-zoom-in shadow-md hover:shadow-lg transition-shadow ${isLarge ? 'max-h-48' : 'max-h-32'}`}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setZoomedImage(imageUrl);
+                                        openZoom(imageUrl);
                                     }}
                                     onError={() => setImageErrors(prev => new Set(prev).add(imageUrl))}
                                 />
@@ -114,7 +107,7 @@ export function FlashcardComponent({
                 })}
             </div>
         );
-    }, [imageErrors, t]);
+    }, [imageErrors, t, openZoom]);
 
     // Handle long press for mobile
     const handleTouchStart = useCallback((type: "question" | "answer") => {
@@ -379,39 +372,10 @@ export function FlashcardComponent({
                 onRate={onRate}
             />
 
-            {/* Image Zoom Modal */}
-            <AnimatePresence>
-                {zoomedImage && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-                        onClick={() => setZoomedImage(null)}
-                    >
-                        <motion.img
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.8, opacity: 0 }}
-                            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                            src={zoomedImage}
-                            alt="Zoomed flashcard image"
-                            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                        <button
-                            onClick={() => setZoomedImage(null)}
-                            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-                        <p className="absolute bottom-4 text-white/50 text-sm">
-                            {t("study.zoomHint")}
-                        </p>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <FlashcardZoomModal
+                zoomedImage={zoomedImage}
+                onClose={closeZoom}
+            />
         </motion.div>
     );
 }
