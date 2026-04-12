@@ -152,7 +152,7 @@ Question here | Answer here
 
 LaTeX formulas are supported using `$` delimiters, e.g., `$E = mc^2$`.
 
-Images are supported using `img: [RAW_URL]`, e.g., `img: [https://example.com/image.png]`
+Images are supported using `[img:RAW_URL]`, e.g., `[img:https://example.com/image.png]`
 
 [↑ Back to top](#letmecook-web-)
 
