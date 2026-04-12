@@ -1,278 +1,122 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import React, { useState, useEffect, useCallback } from "react";
+import { AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { useTTS } from "@/hooks/use-tts";
 import { FlashcardComponent } from "@/components/flashcard";
 import { Button } from "@/components/ui/button";
-import { CardLevel, Flashcard } from "@/lib/types";
-import { LEVEL_COLORS, ALL_LEVELS } from "@/lib/level-styles";
-import { BREAK_REMINDER_INTERVAL_SECONDS } from "@/lib/constants";
-import {
-    ArrowLeft,
-    ArrowRight,
-    Shuffle,
-    RotateCcw,
-    X,
-    Hash,
-    BarChart3,
-    Clock,
-    Coffee,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
+import { BREAK_REMINDER_INTERVAL_SECONDS } from "@/lib/constants";
 
+// New custom hooks
+import { 
+    useStudySession, 
+    useSessionTimer, 
+    useSessionShortcuts 
+} from "@/hooks/use-study-session";
+
+// New sub-components
+import { StudySessionHeader } from "./study/study-session-header";
+import { StudySessionProgress } from "./study/study-session-progress";
+import { StudySessionStatsModal } from "./study/study-session-stats-modal";
+import { StudySessionGotoModal } from "./study/study-session-goto-modal";
+import { StudySessionBreakModal } from "./study/study-session-break-modal";
+import { StudySessionEmptyState } from "./study/study-session-empty-state";
+
+/**
+ * The main study session component that orchestrates the flashcard learning experience.
+ * It manages the session state, timer, shortcuts, and various UI sub-components.
+ */
 export function StudySession() {
-    const { currentDeck, closeDeck, resetCurrentDeck, updateCardLevel, updateCard, t } = useApp();
-    const { enabled: ttsEnabled, speak, toggle: toggleTTS } = useTTS();
+    const { 
+        currentDeck, 
+        closeDeck, 
+        resetCurrentDeck, 
+        updateCardLevel, 
+        updateCard, 
+        t 
+    } = useApp();
+    
+    const { 
+        enabled: ttsEnabled, 
+        speak, 
+        toggle: toggleTTS 
+    } = useTTS();
 
-    // Session state - NOW STORES CARD IDs, NOT INDICES
-    const [playIndex, setPlayIndex] = useState(0);  // Current position in playOrder
-    const [playOrder, setPlayOrder] = useState<string[]>([]);  // Array of card IDs in play order
-    const [isShuffled, setIsShuffled] = useState(false);
-    const [isRevealed, setIsRevealed] = useState(false);
-    const [showGotoModal, setShowGotoModal] = useState(false);
+    // Core session logic hook
+    const {
+        playIndex,
+        playOrder,
+        currentCard,
+        isShuffled,
+        activeFilter,
+        isRevealed,
+        stats,
+        maxCount,
+        setIsRevealed,
+        setActiveFilter,
+        handleNext,
+        handlePrev,
+        handleShuffle,
+        handleGoto,
+        restart,
+    } = useStudySession(currentDeck);
+
+    // Timer logic hook
+    const {
+        seconds,
+        showBreakModal,
+        setShowBreakModal,
+        formatTime,
+    } = useSessionTimer(BREAK_REMINDER_INTERVAL_SECONDS);
+
+    // Modal visibility state
     const [showStatsModal, setShowStatsModal] = useState(false);
-    const [gotoInput, setGotoInput] = useState("");
-    const [activeFilter, setActiveFilter] = useState<CardLevel | null>(null);
-
-    // Session timer state
-    const [sessionSeconds, setSessionSeconds] = useState(0);
-    const [showBreakModal, setShowBreakModal] = useState(false);
-    const [lastBreakTime, setLastBreakTime] = useState(0);
-
-    // Confirmation modals state
+    const [showGotoModal, setShowGotoModal] = useState(false);
     const [showRestartModal, setShowRestartModal] = useState(false);
     const [showResetModal, setShowResetModal] = useState(false);
 
-    // Track last initialized deck and filter to avoid unnecessary reinitializations
-    const lastDeckIdRef = useRef<string | null>(null);
-    const lastFilterRef = useRef<CardLevel | null>(null);
-
-    // Fisher-Yates shuffle algorithm
-    const fisherYatesShuffle = useCallback(<T,>(array: T[]): T[] => {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    }, []);
-
-    // Build and set play order from current deck
-    const initializePlayOrder = useCallback((cards: Flashcard[], shuffle: boolean, filterLevel: CardLevel | null) => {
-        // Filter cards if needed
-        let filteredCards = cards;
-        if (filterLevel) {
-            filteredCards = cards.filter(c => c.level === filterLevel);
-        }
-
-        // Get card IDs in order
-        let cardIds = filteredCards.map(c => c.id);
-
-        // Shuffle if requested
-        if (shuffle) {
-            cardIds = fisherYatesShuffle(cardIds);
-        }
-
-        setPlayOrder(cardIds);
-        setPlayIndex(0);
-        setIsRevealed(false);
-    }, [fisherYatesShuffle]);
-
-    // Initialize when deck or filter changes
-    useEffect(() => {
-        if (!currentDeck) return;
-
-        const deckChanged = lastDeckIdRef.current !== currentDeck.id;
-        const filterChanged = lastFilterRef.current !== activeFilter;
-
-        if (deckChanged || filterChanged) {
-            lastDeckIdRef.current = currentDeck.id;
-            lastFilterRef.current = activeFilter;
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            initializePlayOrder(currentDeck.cards, isShuffled, activeFilter);
-        }
-    }, [currentDeck, activeFilter, initializePlayOrder, isShuffled]); // Only watch deck ID and filter
-
-    // Helper to find card by ID (stable lookup regardless of array order)
-    const getCardById = useCallback((cardId: string): Flashcard | null => {
-        if (!currentDeck) return null;
-        return currentDeck.cards.find(c => c.id === cardId) || null;
-    }, [currentDeck]);
-
-    // Current card based on ID lookup (NOT index)
-    const currentCard = useMemo(() => {
-        if (playOrder.length === 0) return null;
-        const cardId = playOrder[playIndex];
-        return getCardById(cardId);
-    }, [playOrder, playIndex, getCardById]);
-
-    // Calculate stats
-    const stats = useMemo((): Record<CardLevel, number> => {
-        const counts: Record<CardLevel, number> = {
-            "Nowe": 0,
-            "Nie umiem": 0,
-            "W miarę": 0,
-            "Umiem": 0,
-            "Opanowane 100%": 0,
-        };
-        if (!currentDeck) return counts;
-        currentDeck.cards.forEach((card) => {
-            counts[card.level]++;
-        });
-        return counts;
-    }, [currentDeck]);
-
-    const maxCount = useMemo(() => {
-        return Math.max(...Object.values(stats), 1);
-    }, [stats]);
-
-    // TTS on card change
+    // TTS effect for current card
     useEffect(() => {
         if (currentCard && ttsEnabled) {
             speak(currentCard.question);
         }
     }, [currentCard, ttsEnabled, speak]);
 
-    // Session timer
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setSessionSeconds((prev) => {
-                const newSeconds = prev + 1;
-                // Check for break reminder
-                if (newSeconds > 0 && newSeconds % BREAK_REMINDER_INTERVAL_SECONDS === 0 && newSeconds !== lastBreakTime) {
-                    setShowBreakModal(true);
-                    setLastBreakTime(newSeconds);
-                }
-                return newSeconds;
-            });
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [lastBreakTime]);
-
-    // Format time as MM:SS or HH:MM:SS
-    const formatTime = (seconds: number): string => {
-        const hrs = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-
-        if (hrs > 0) {
-            return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    const handleReveal = useCallback(() => {
+    /**
+     * Handle revealing the card answer and triggering TTS if enabled.
+     */
+    const onReveal = useCallback(() => {
         setIsRevealed(true);
         if (currentCard && ttsEnabled) {
             speak(currentCard.answer);
         }
-    }, [currentCard, ttsEnabled, speak]);
+    }, [currentCard, ttsEnabled, speak, setIsRevealed]);
 
-    const handleNext = useCallback(() => {
-        if (!currentDeck || playOrder.length === 0) return;
-
-        if (playIndex < playOrder.length - 1) {
-            // Increment pointer to next card in shuffled order
-            setPlayIndex((prev) => prev + 1);
-            setIsRevealed(false);
-        } else {
-            // End of deck cycle - offer to restart
-            setShowRestartModal(true);
-        }
-    }, [currentDeck, playIndex, playOrder.length]);
-
-    const handleRate = useCallback((level: CardLevel) => {
+    /**
+     * Handle rating a card and moving to the next one.
+     */
+    const onRate = useCallback((level: CardLevel) => {
         if (currentCard) {
             updateCardLevel(currentCard.id, level);
         }
-        handleNext();
+        handleNext(() => setShowRestartModal(true));
     }, [currentCard, updateCardLevel, handleNext]);
 
-    const handlePrev = useCallback(() => {
-        if (playIndex > 0) {
-            setPlayIndex((prev) => prev - 1);
-            setIsRevealed(false);
+    // Keyboard shortcuts hook
+    useSessionShortcuts(
+        isRevealed,
+        showStatsModal || showGotoModal || showRestartModal || showResetModal || showBreakModal,
+        {
+            onReveal,
+            onNext: () => handleNext(() => setShowRestartModal(true)),
+            onPrev: handlePrev,
+            onRate,
+            onShowGoto: () => setShowGotoModal(true),
         }
-    }, [playIndex]);
-
-    // Keyboard shortcuts
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Don't handle shortcuts when modals are open
-            if (showGotoModal || showStatsModal) return;
-
-            // Ignore shortcuts if the user is typing in an input field or textarea
-            const target = e.target as HTMLElement;
-            if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
-                return;
-            }
-
-            if (e.key === " " || e.code === "Space") {
-                e.preventDefault();
-                if (!isRevealed) {
-                    handleReveal();
-                }
-            } else if (e.key === "ArrowLeft") {
-                handlePrev();
-            } else if (e.key === "ArrowRight") {
-                handleNext();
-            } else if (e.key === "g" || e.key === "G") {
-                setShowGotoModal(true);
-                setGotoInput("");
-            } else if (isRevealed) {
-                if (e.key === "1") handleRate("Nie umiem");
-                else if (e.key === "2") handleRate("W miarę");
-                else if (e.key === "3") handleRate("Umiem");
-                else if (e.key === "4") handleRate("Opanowane 100%");
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isRevealed, playIndex, playOrder, showGotoModal, showStatsModal, handleReveal, handlePrev, handleNext, handleRate]);
-
-    const handleShuffle = useCallback(() => {
-        if (!currentDeck) return;
-        const newShuffleState = !isShuffled;
-        setIsShuffled(newShuffleState);
-        // Re-initialize order with new shuffle state (creates new random order or resets to sequential)
-        initializePlayOrder(currentDeck.cards, newShuffleState, activeFilter);
-    }, [currentDeck, isShuffled, activeFilter, initializePlayOrder]);
-
-    const handleReset = useCallback(() => {
-        setShowResetModal(true);
-    }, []);
-
-    const handleGoto = useCallback(() => {
-        if (!currentDeck) return;
-
-        const targetNum = parseInt(gotoInput, 10);
-        if (isNaN(targetNum) || targetNum < 1 || targetNum > playOrder.length) {
-            return;
-        }
-
-        setPlayIndex(targetNum - 1);
-        setIsRevealed(false);
-        setShowGotoModal(false);
-        setGotoInput("");
-    }, [currentDeck, gotoInput, playOrder]);
-
-    const handleGotoKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter") {
-            handleGoto();
-        } else if (e.key === "Escape") {
-            setShowGotoModal(false);
-            setGotoInput("");
-        }
-    };
-
-    const handleFilterSelect = (level: CardLevel | null) => {
-        setActiveFilter(level);
-        setShowStatsModal(false);
-    };
+    );
 
     if (!currentDeck) {
         return (
@@ -282,29 +126,29 @@ export function StudySession() {
         );
     }
 
+    // Empty state view
     if (playOrder.length === 0) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
-                <p className="text-muted-foreground text-center">
-                    {t("study.noCardsMatch", { filter: t(`levels.${activeFilter}`) })}
-                </p>
-                <Button onClick={() => setActiveFilter(null)}>{t("study.showAll", { count: currentDeck.cards.length })}</Button>
-                <Button variant="ghost" onClick={closeDeck}>{t("common.backToDashboard")}</Button>
-            </div>
+            <StudySessionEmptyState
+                activeFilter={activeFilter}
+                totalCardsInDeck={currentDeck.cards.length}
+                onResetFilter={() => setActiveFilter(null)}
+                onBackToDashboard={closeDeck}
+                t={t}
+            />
         );
     }
 
     return (
         <div className="min-h-screen flex flex-col p-4 md:p-8">
+            {/* Confirmation Modals */}
             <ConfirmationModal
                 isOpen={showRestartModal}
                 title={t("study.endOfDeck")}
                 description={t("study.endOfDeckDescription")}
                 confirmLabel={t("common.restart")}
                 onConfirm={() => {
-                    if (currentDeck) {
-                        initializePlayOrder(currentDeck.cards, isShuffled, activeFilter);
-                    }
+                    restart();
                     setShowRestartModal(false);
                 }}
                 onCancel={() => setShowRestartModal(false)}
@@ -322,248 +166,62 @@ export function StudySession() {
                 }}
                 onCancel={() => setShowResetModal(false)}
             />
-            {/* Stats Modal */}
-            <AnimatePresence>
-                {showStatsModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
-                        onClick={() => setShowStatsModal(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-card border border-border rounded-2xl p-6 shadow-xl w-full max-w-md mx-4"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-semibold flex items-center gap-2">
-                                    <BarChart3 className="w-5 h-5" />
-                                    {t("study.deckStats")}
-                                </h3>
-                                <Button variant="ghost" size="icon" onClick={() => setShowStatsModal(false)}>
-                                    <X className="w-4 h-4" />
-                                </Button>
-                            </div>
 
-                            {/* Stats Bars */}
-                            <div className="space-y-3 mb-6">
-                                {ALL_LEVELS.map((level) => {
-                                    const count = stats[level] || 0;
-                                    const percentage = (count / maxCount) * 100;
-                                    const isActive = activeFilter === level;
+            {/* Specialized Study Modals */}
+            <StudySessionStatsModal
+                isOpen={showStatsModal}
+                onClose={() => setShowStatsModal(false)}
+                stats={stats}
+                maxCount={maxCount}
+                activeFilter={activeFilter}
+                totalCards={currentDeck.cards.length}
+                onFilterSelect={(level) => {
+                    setActiveFilter(level);
+                    setShowStatsModal(false);
+                }}
+                t={t}
+            />
 
-                                    return (
-                                        <button
-                                            key={level}
-                                            onClick={() => handleFilterSelect(level)}
-                                            className={`w-full text-left p-3 rounded-xl transition-all ${isActive
-                                                ? `${LEVEL_COLORS[level].bg} ring-2 ring-offset-2 ring-offset-background ${LEVEL_COLORS[level].text.replace('text-', 'ring-')}`
-                                                : 'hover:bg-muted/50'
-                                                }`}
-                                        >
-                                            <div className="flex justify-between items-center mb-2">
-                                                <span className={`text-sm font-medium ${LEVEL_COLORS[level].text}`}>
-                                                    {t(`levels.${level}`)}
-                                                </span>
-                                                <span className="text-sm text-muted-foreground">
-                                                    {t("dashboard.cardsCount", { count })}
-                                                </span>
-                                            </div>
-                                            <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${percentage}%` }}
-                                                    transition={{ duration: 0.5, delay: 0.1 }}
-                                                    className={`h-full rounded-full ${LEVEL_COLORS[level].bar}`}
-                                                />
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+            <StudySessionGotoModal
+                isOpen={showGotoModal}
+                onClose={() => setShowGotoModal(false)}
+                totalCards={playOrder.length}
+                onGoto={handleGoto}
+                t={t}
+            />
 
-                            <div className="border-t border-border pt-4">
-                                <p className="text-xs text-muted-foreground mb-3">
-                                    {t("study.clickToFilter")}
-                                </p>
-                                <Button
-                                    variant={activeFilter === null ? "default" : "outline"}
-                                    className="w-full"
-                                    onClick={() => handleFilterSelect(null)}
-                                >
-                                    {t("study.showAll", { count: currentDeck.cards.length })}
-                                </Button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <StudySessionBreakModal
+                isOpen={showBreakModal}
+                onClose={() => setShowBreakModal(false)}
+                formattedTime={formatTime(seconds)}
+                onTakeBreak={() => {
+                    setShowBreakModal(false);
+                    closeDeck();
+                }}
+                t={t}
+            />
 
-            {/* Go to Question Modal */}
-            <AnimatePresence>
-                {showGotoModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
-                        onClick={() => setShowGotoModal(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-card border border-border rounded-2xl p-6 shadow-xl w-full max-w-sm mx-4"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <h3 className="text-lg font-semibold mb-4">{t("study.goToQuestion")}</h3>
-                            <div className="flex gap-2">
-                                <input
-                                    type="number"
-                                    min={1}
-                                    max={playOrder.length}
-                                    value={gotoInput}
-                                    onChange={(e) => setGotoInput(e.target.value)}
-                                    onKeyDown={handleGotoKeyDown}
-                                    placeholder={`1 - ${playOrder.length}`}
-                                    autoFocus
-                                    className="flex-1 p-3 rounded-lg bg-background border border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                />
-                               <Button onClick={handleGoto}>{t("common.go")}</Button>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-3">
-                                {t("study.goToHint")}
-                            </p>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* UI Layout */}
+            <StudySessionHeader
+                currentIndex={playIndex}
+                totalCards={playOrder.length}
+                formattedTime={formatTime(seconds)}
+                isShuffled={isShuffled}
+                activeFilter={activeFilter}
+                onClose={closeDeck}
+                onShowStats={() => setShowStatsModal(true)}
+                onShowGoto={() => setShowGotoModal(true)}
+                onShuffle={handleShuffle}
+                onReset={() => setShowResetModal(true)}
+                t={t}
+            />
 
-            {/* Break Reminder Modal */}
-            <AnimatePresence>
-                {showBreakModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
-                        onClick={() => setShowBreakModal(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-card border border-border rounded-2xl p-8 shadow-xl w-full max-w-sm mx-4 text-center"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
-                                <Coffee className="w-8 h-8 text-amber-500" />
-                            </div>
-                            <h3 className="text-xl font-semibold mb-2">{t("study.breakTime")}</h3>
-                            <p className="text-muted-foreground mb-6">
-                                {t("study.breakDescription", { time: formatTime(sessionSeconds) })}
-                            </p>
-                            <div className="flex flex-col gap-2">
-                                <Button
-                                    onClick={() => setShowBreakModal(false)}
-                                    className="w-full"
-                                >
-                                    {t("study.continueStudying")}
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setShowBreakModal(false);
-                                        closeDeck();
-                                    }}
-                                >
-                                    {t("study.takeBreak")}
-                                </Button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <StudySessionProgress 
+                currentIndex={playIndex} 
+                totalCards={playOrder.length} 
+            />
 
-            {/* Top Bar */}
-            <div className="relative flex justify-between items-center mb-4 max-w-2xl mx-auto w-full h-10">
-                {/* Left: Close + Timer */}
-                <div className="flex items-center gap-2 z-10">
-                    <Button variant="ghost" size="icon" onClick={closeDeck} className="h-10 w-10">
-                        <X className="w-5 h-5" />
-                    </Button>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title={t("common.loading")}>
-                        <Clock className="w-3.5 h-3.5" />
-                        <span className="tabular-nums">{formatTime(sessionSeconds)}</span>
-                    </div>
-                </div>
-
-                {/* Center: Card counter - absolutely positioned for true centering */}
-                <button
-                    onClick={() => setShowStatsModal(true)}
-                    className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    title={t("study.deckStats")}
-                >
-                    {activeFilter && (
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${LEVEL_COLORS[activeFilter].bg} ${LEVEL_COLORS[activeFilter].text}`}>
-                            {t(`levels.${activeFilter}`)}
-                        </span>
-                    )}
-                    <span>{t("study.cardCounter", { current: playIndex + 1, total: playOrder.length })}</span>
-                </button>
-
-                {/* Right: Action buttons */}
-                <div className="flex items-center gap-1">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                            setShowGotoModal(true);
-                            setGotoInput("");
-                        }}
-                        title={t("study.goToQuestion")}
-                    >
-                        <Hash className="w-4 h-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleShuffle}
-                        className={isShuffled ? "text-primary bg-primary/20" : ""}
-                        title={`Shuffle: ${isShuffled ? "ON" : "OFF"}`}
-                    >
-                        <Shuffle className="w-4 h-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleReset}
-                        className="text-destructive"
-                        title={t("study.resetProgress")}
-                    >
-                        <RotateCcw className="w-4 h-4" />
-                    </Button>
-                </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="max-w-2xl mx-auto w-full mb-6">
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                        className="h-full bg-gradient-to-r from-blue-400 to-purple-500 rounded-full transition-all"
-                        style={{
-                            width: `${((playIndex + 1) / playOrder.length) * 100}%`,
-                        }}
-                    />
-                </div>
-            </div>
-
-            {/* Card Area */}
-            <div className="flex-1 flex items-center justify-center">
+            <main className="flex-1 flex items-center justify-center" aria-label={t("study.cardArea")}>
                 <AnimatePresence mode="wait">
                     {currentCard && (
                         <FlashcardComponent
@@ -571,41 +229,43 @@ export function StudySession() {
                             card={currentCard}
                             deckName={currentDeck.name}
                             isRevealed={isRevealed}
-                            onReveal={handleReveal}
-                            onRate={handleRate}
+                            onReveal={onReveal}
+                            onRate={onRate}
                             onUpdateCard={updateCard}
                             ttsEnabled={ttsEnabled}
                             onTTSToggle={toggleTTS}
                         />
                     )}
                 </AnimatePresence>
-            </div>
+            </main>
 
-            {/* Bottom Navigation - Mobile Friendly */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background to-transparent md:relative md:bg-transparent md:mt-6">
+            {/* Bottom Navigation */}
+            <footer className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background to-transparent md:relative md:bg-transparent md:mt-6">
                 <div className="max-w-2xl mx-auto flex justify-between gap-4">
                     <Button
                         variant="outline"
                         onClick={handlePrev}
                         disabled={playIndex === 0}
                         className="flex-1 md:flex-none md:w-32 h-12"
+                        aria-label={t("study.previous")}
                     >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
                         {t("study.previous")}
                     </Button>
                     <Button
                         variant="outline"
-                        onClick={handleNext}
+                        onClick={() => handleNext(() => setShowRestartModal(true))}
                         className="flex-1 md:flex-none md:w-32 h-12"
+                        aria-label={t("study.next")}
                     >
                         {t("study.next")}
-                        <ArrowRight className="w-4 h-4 ml-2" />
+                        <ArrowRight className="w-4 h-4 ml-2" aria-hidden="true" />
                     </Button>
                 </div>
-            </div>
+            </footer>
 
-            {/* Spacer for fixed bottom nav */}
-            <div className="h-20 md:hidden" />
+            {/* Spacer for fixed bottom nav on mobile */}
+            <div className="h-20 md:hidden" aria-hidden="true" />
         </div>
     );
 }
