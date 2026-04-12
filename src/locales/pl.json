@@ -74,10 +74,10 @@
     "Opanowane 100%": "Opanowane 100%"
   },
   "ratings": {
-    "Nie umiem": "Powtórz",
-    "W miarę": "Trudne",
-    "Umiem": "Dobre",
-    "Opanowane 100%": "Łatwe"
+    "Nie umiem": "Nie umiem",
+    "W miarę": "W miarę",
+    "Umiem": "Umiem",
+    "Opanowane 100%": "Opanowane 100%"
   },
   "banner": {
     "guestMode": "Tryb Gościa:",
