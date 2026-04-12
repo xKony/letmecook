@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard as FlashcardType, CardLevel } from "@/lib/types";
 import { useApp } from "@/lib/app-context";
@@ -14,19 +14,35 @@ import { FlashcardContent } from "./flashcard/flashcard-content";
 import { useFlashcardEdit } from "./flashcard/use-flashcard-edit";
 import { FlashcardEditor } from "./flashcard/flashcard-editor";
 
+/**
+ * Props for the FlashcardComponent.
+ */
 interface FlashcardProps {
+    /** The flashcard data to display. */
     card: FlashcardType;
+    /** The name of the deck this card belongs to. */
     deckName: string;
+    /** Whether the answer is currently revealed. */
     isRevealed: boolean;
+    /** Callback to reveal the answer. */
     onReveal: () => void;
+    /** Callback to rate the card's difficulty. */
     onRate: (level: CardLevel) => void;
+    /** Optional callback to update the card's content. */
     onUpdateCard?: (cardId: string, question: string, answer: string) => void;
+    /** Whether Text-to-Speech is enabled. */
     ttsEnabled: boolean;
+    /** Callback to toggle TTS state. */
     onTTSToggle: () => void;
 }
 
-
-
+/**
+ * The primary component for displaying and interacting with a flashcard.
+ * Handles display, editing, rating, and image zooming.
+ * 
+ * @param props - Component props.
+ * @returns The rendered flashcard.
+ */
 export function FlashcardComponent({
     card,
     deckName,

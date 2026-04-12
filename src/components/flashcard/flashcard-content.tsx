@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { ImageOff, ZoomIn } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import dynamic from "next/dynamic";
