@@ -71,8 +71,6 @@ export async function updateCardLevel(cardId: string, level: string) {
     await db.update(decks)
         .set({ updatedAt: new Date() })
         .where(eq(decks.id, card.deckId));
-
-    revalidatePath("/");
 }
 
 // ============================================
@@ -105,8 +103,6 @@ export async function updateCard(cardId: string, question: string, answer: strin
     await db.update(decks)
         .set({ updatedAt: new Date() })
         .where(eq(decks.id, card.deckId));
-
-    revalidatePath("/");
 }
 
 // ============================================

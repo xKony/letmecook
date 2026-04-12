@@ -1,125 +1,165 @@
-# LetMeCook Web - Simple Active Recall System
+# LetMeCook Web 🍳
 
-![Next.js](https://img.shields.io/badge/Next.js-16.1-black?style=for-the-badge&logo=next.js&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Framer Motion](https://img.shields.io/badge/Framer_Motion-Latest-black?style=for-the-badge&logo=framer&logoColor=white)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/yourusername/letmecook-web)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D18.17-brightgreen.svg)](https://nodejs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.2.3-black.svg)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2.5-blue.svg)](https://react.dev/)
+[![Tailwind](https://img.shields.io/badge/Tailwind-4.2.1-38B2AC.svg)](https://tailwindcss.com/)
 
-**LetMeCook Web** is a high-performance, local-first Active Recall study tool. Originally inspired by a PyQt6 desktop tool, this modern web port brings the power of efficient learning to the browser with a sleek, responsive, and animated user interface.
-
-Designed for students and lifelong learners, it prioritizes **speed**, **privacy**, and **user experience**, running entirely in your browser without requiring a backend server.
-
----
-
-## ✨ Key Features
-
-- **🧠 Active Recall System**: 
-  - Self-paced mastery tracking to reinforce learning.
-  - Progress levels from "New" to "Mastered" for every card.
-
-- **🔒 Local-First Architecture**:
-  - **100% Privacy**: All data (decks, cards, progress) is stored locally in your browser (LocalStorage).
-  - **Offline Capable**: Study anywhere, anytime, without an internet connection.
-
-- **👥 Multi-User Support**:
-  - Create multiple user profiles on a single device.
-  - Separate deck collections and progress tracking for each user.
-
-- **📊 Comprehensive Dashboard**:
-  - Visual overview of your learning decks.
-  - Progress tracking for individual cards and sessions.
-
-- **🎨 Modern User Interface**:
-  - **Dark Mode** support via `next-themes`.
-  - Smooth, buttery animations using **Framer Motion**.
-  - Fully responsive design optimized for Mobile, Tablet, and Desktop.
-
-- **⚡ High Performance**:
-  - Built on **React 19** and **Next.js 16** for lightning-fast rendering.
-  - Zero-latency interactions.
+**LetMeCook Web** is a high-performance, local-first Active Recall study tool built with **Next.js 16** and **React 19**. It empowers users to master any subject through an efficient flashcard system featuring dual-mode persistence, LaTeX support, and a sleek, animated interface.
 
 ---
 
-## 🛠️ Tech Stack
+## ✨ Features
 
-This project is built with the latest modern web technologies to ensure scalability, maintainability, and performance.
+- **🧠 Active Recall System**: Five-level mastery tracking (New, Don't know, Somewhat, I know, Mastered) to optimize memory retention.
+- **🔒 Dual-Mode Persistence**:
+  - **Guest Mode**: Privacy-focused storage in the browser's `LocalStorage`.
+  - **Authenticated Mode**: Persistent synchronization with a PostgreSQL (Neon) database.
+- **📁 Smart Importing**: Seamlessly import flashcards from `.txt` files (Format: `Question | Answer`).
+- **🧬 LaTeX Support**: Full support for mathematical and technical formulas rendered via **KaTeX**.
+- **🎨 Modern UI/UX**: Styled with **Tailwind CSS 4** and fluidly animated with **Framer Motion**.
+- **🌍 Internationalization**: Native support for **English** and **Polski** locales.
+- **🌗 Theme Support**: Full support for Light and Dark modes via `next-themes`.
+- **🛠 Admin Dashboard**: Centralized management for public decks and user permissions.
+- **🚀 Data Migration**: Built-in functionality to migrate Guest data to an Authenticated account.
 
-### Core
-- **Framework**: [Next.js 16 (App Router)](https://nextjs.org/)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Library**: [React 19](https://react.dev/)
+[↑ Back to top](#letmecook-web-)
 
-### Styling & UI
-- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
-- **Animations**: [Framer Motion](https://www.framer.com/motion/)
-- **Components**: [Radix UI](https://www.radix-ui.com/) & [Lucide React](https://lucide.dev/) (Icons)
-- **Utilities**: `clsx`, `tailwind-merge`
+---
 
-### State & Persistence
-- **State Management**: React Context API + Custom Hooks
-- **Persistence**: LocalStorage API (Custom storage adapter)
+## 🛠 Tech Stack
+
+### Framework & UI
+
+- **Framework**: [Next.js 16.2.3](https://nextjs.org/) (App Router)
+- **Library**: [React 19.2.5](https://react.dev/)
+- **Styling**: [Tailwind CSS 4.2.1](https://tailwindcss.com/)
+- **Animations**: [Framer Motion 12.36.0](https://www.framer.com/motion/)
+- **Icons**: [Lucide React 0.563.0](https://lucide.dev/)
+- **Components**: [Radix UI](https://www.radix-ui.com/)
+
+### Backend & Auth
+
+- **Database**: [PostgreSQL (Neon)](https://neon.tech/)
+- **ORM**: [Drizzle ORM 0.45.1](https://orm.drizzle.team/)
+- **Authentication**: [NextAuth.js 5.0.0-beta.30](https://authjs.dev/)
+- **Security**: `bcryptjs` for password hashing
+
+### Tooling
+
+- **Language**: [TypeScript 5.9.3](https://www.typescriptlang.org/)
+- **Package Manager**: [pnpm 10.33.0](https://pnpm.io/)
+- **Math Rendering**: [KaTeX 0.16.38](https://katex.org/)
+- **Schema Management**: `drizzle-kit`
+
+[↑ Back to top](#letmecook-web-)
+
+---
+
+## 📁 Project Structure
+
+```text
+├── src/
+│   ├── app/                # Next.js App Router: Routes and Server Actions
+│   │   ├── actions/        # Server Actions for DB mutations (Auth, Decks, Cards)
+│   │   ├── api/            # API Route handlers (Auth, NextAuth)
+│   │   └── (routes)        # Pages (Dashboard, Settings, Admin, FAQ)
+│   ├── components/         # React Components
+│   │   ├── dashboard/      # Dashboard-specific views
+│   │   ├── flashcard/      # Flashcard rendering and editing
+│   │   ├── study/          # Study session interface
+│   │   └── ui/             # Reusable Shadcn/Radix UI primitives
+│   ├── db/                 # Database schema (Drizzle) and migrations
+│   ├── hooks/              # Custom React hooks (Study session, Export, Import)
+│   ├── lib/                # Core logic, types, storage adapters, and utilities
+│   │   ├── app-context.tsx # Global State Management (AppProvider)
+│   │   └── storage.ts      # LocalStorage persistence logic for Guest Mode
+│   └── locales/            # i18n JSON files (en, pl)
+├── public/                 # Static assets and preview images
+├── drizzle.config.ts       # Drizzle ORM configuration
+├── next.config.ts          # Next.js configuration
+├── tailwind.config.ts      # Tailwind CSS v4 configuration (CSS-in-JS style)
+└── tsconfig.json           # TypeScript configuration
+```
+
+[↑ Back to top](#letmecook-web-)
 
 ---
 
 ## 🚀 Getting Started
 
-Follow these instructions to set up the project locally.
-
 ### Prerequisites
-- **Node.js**: Version 18.17 or higher
-- **pnpm**: Version 10.33.0 or higher
+
+- **Node.js**: `18.17.x` or higher
+- **pnpm**: `10.33.0` or higher
 
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/letmecook-web.git
    cd letmecook-web
    ```
 
 2. **Install dependencies**
+
    ```bash
    pnpm install
    ```
 
-3. **Run the development server**
+3. **Environment Setup**
+   Create a `.env.local` file in the root directory:
+
+   ```env
+   DATABASE_URL=your_postgresql_url
+   AUTH_SECRET=your_nextauth_secret
+   ```
+
+4. **Database Migration**
+
+   ```bash
+   pnpm drizzle-kit push
+   ```
+
+5. **Run Development Server**
    ```bash
    pnpm dev
    ```
 
-4. **Access the app**
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
+[↑ Back to top](#letmecook-web-)
 
 ---
 
-## 📂 Project Structure
+## 📖 Usage
 
-```
-├── src/
-│   ├── app/                # Next.js App Router pages
-│   │   ├── page.tsx        # Entry point (Main Wrappers)
-│   │   └── layout.tsx      # Root layout
-│   ├── components/         # Reusable UI components
-│   │   ├── app-main.tsx    # Main Application Logic Controller
-│   │   ├── dashboard.tsx   # Dashboard View
-│   │   ├── study-session.tsx # Active Recall Interface
-│   │   └── ui/             # Generic Design System Components
-│   ├── lib/                # Utilities and Logic
-│   │   ├── app-context.tsx # Global State Management
-│   │   ├── storage.ts      # LocalStorage Adapter
-│   │   └── types.ts        # TypeScript Interfaces (Deck, Flashcard)
-│   └── hooks/              # Custom React Hooks
-└── public/                 # Static assets
+### Key Commands
+
+- `pnpm dev`: Start development server on `localhost:3000`.
+- `pnpm build`: Create an optimized production build.
+- `pnpm start`: Start the production server.
+- `pnpm lint`: Run ESLint to check for code quality issues.
+
+### Import Format
+
+To import flashcards, use a `.txt` file with the following format (one card per line):
+
+```text
+Question here | Answer here
 ```
 
+LaTeX formulas are supported using `$` delimiters, e.g., `$E = mc^2$`.
+
+Images are supported using `img: [RAW_URL]`, e.g., `img: [https://example.com/image.png]`
+
+[↑ Back to top](#letmecook-web-)
+
 ---
 
-## 📜 License
+## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the **MIT License**. See `LICENSE` for more information.
 
----
-
-<div align="center">
-  <sub>Built with ❤️ and Antigravity.</sub>
-</div>
+[↑ Back to top](#letmecook-web-)

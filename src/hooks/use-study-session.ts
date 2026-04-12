@@ -53,9 +53,11 @@ export function useStudySession(deck: Deck | null) {
 
     // Adjust state during render when play order changes
     // This is the recommended way to sync state from other state/props during render
-    const [prevPlayOrder, setPrevPlayOrder] = useState(playOrder);
-    if (playOrder !== prevPlayOrder) {
-        setPrevPlayOrder(playOrder);
+    const playOrderJson = JSON.stringify(playOrder);
+    const [prevPlayOrderJson, setPrevPlayOrderJson] = useState(playOrderJson);
+    
+    if (playOrderJson !== prevPlayOrderJson) {
+        setPrevPlayOrderJson(playOrderJson);
         setPlayIndex(0);
         setIsRevealed(false);
     }

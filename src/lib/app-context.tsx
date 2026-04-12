@@ -189,8 +189,18 @@ export function AppProvider({
      * @param userMaxDecks Maximum decks limit for the user
      */
     const setInitialData = useCallback((decks: Deck[], userMaxDecks: number) => {
-        setDbDecks(decks);
-        setMaxDecks(userMaxDecks);
+        // Deep compare with existing dbDecks to avoid unnecessary re-renders
+        // This is crucial because revalidatePath calls can trigger this via AppMain
+        setDbDecks(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(decks)) return prev;
+            return decks;
+        });
+        
+        setMaxDecks(prev => {
+            if (prev === userMaxDecks) return prev;
+            return userMaxDecks;
+        });
+        
         hasInitializedAuthData.current = true;
     }, []);
 
@@ -319,21 +329,16 @@ export function AppProvider({
 
     // Update a single card's level
     const updateCardLevel = useCallback(async (cardId: string, level: CardLevel) => {
-        if (isAuthenticated) {
-            try {
-                await updateDbCardLevel(cardId, level);
-                // Immediately update local state for responsiveness
-                setDbDecks((prev) => prev.map((deck) => ({
-                    ...deck,
-                    cards: deck.cards.map((card) =>
-                        card.id === cardId ? { ...card, level } : card
-                    ),
-                    updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-                })));
-            } catch (error) {
-                console.error("Failed to update card level:", error);
-            }
-        } else {
+        // Optimistically update local state for responsiveness
+        const updateLocal = () => {
+            setDbDecks((prev) => prev.map((deck) => ({
+                ...deck,
+                cards: deck.cards.map((card) =>
+                    card.id === cardId ? { ...card, level } : card
+                ),
+                updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
+            })));
+
             setGuestState((prev) => ({
                 ...prev,
                 decks: prev.decks.map((deck) => ({
@@ -344,26 +349,33 @@ export function AppProvider({
                     updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
                 })),
             }));
+        };
+
+        // Always update local state first
+        updateLocal();
+
+        if (isAuthenticated) {
+            try {
+                // Background DB update
+                await updateDbCardLevel(cardId, level);
+            } catch (error) {
+                console.error("Failed to update card level:", error);
+            }
         }
     }, [isAuthenticated]);
 
     // Update a single card's question and answer
     const updateCard = useCallback(async (cardId: string, question: string, answer: string) => {
-        if (isAuthenticated) {
-            try {
-                await updateDbCard(cardId, question, answer);
-                // Immediately update local state
-                setDbDecks((prev) => prev.map((deck) => ({
-                    ...deck,
-                    cards: deck.cards.map((card) =>
-                        card.id === cardId ? { ...card, question, answer } : card
-                    ),
-                    updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-                })));
-            } catch (error) {
-                console.error("Failed to update card:", error);
-            }
-        } else {
+        // Optimistically update local state
+        const updateLocal = () => {
+            setDbDecks((prev) => prev.map((deck) => ({
+                ...deck,
+                cards: deck.cards.map((card) =>
+                    card.id === cardId ? { ...card, question, answer } : card
+                ),
+                updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
+            })));
+
             setGuestState((prev) => ({
                 ...prev,
                 decks: prev.decks.map((deck) => ({
@@ -374,6 +386,16 @@ export function AppProvider({
                     updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
                 })),
             }));
+        };
+
+        updateLocal();
+
+        if (isAuthenticated) {
+            try {
+                await updateDbCard(cardId, question, answer);
+            } catch (error) {
+                console.error("Failed to update card:", error);
+            }
         }
     }, [isAuthenticated]);
 
