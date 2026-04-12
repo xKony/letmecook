@@ -18,6 +18,7 @@ import { FlashcardHeader } from "./flashcard/flashcard-header";
 import { FlashcardRating } from "./flashcard/flashcard-rating";
 import { useFlashcardImageZoom } from "./flashcard/use-flashcard-image-zoom";
 import { FlashcardZoomModal } from "./flashcard/flashcard-zoom-modal";
+import { FlashcardContent } from "./flashcard/flashcard-content";
 
 interface FlashcardProps {
     card: FlashcardType;
@@ -48,66 +49,11 @@ export function FlashcardComponent({
     const [editQuestion, setEditQuestion] = useState(card.question);
     const [editAnswer, setEditAnswer] = useState(card.answer);
     const [showEditHint, setShowEditHint] = useState<"question" | "answer" | null>(null);
-    const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     const { openZoom, closeZoom } = useFlashcardImageZoom(zoomedImage, setZoomedImage);
-
-    // Parse [img:URL] syntax and render content with inline images
-    const renderContent = useCallback((text: string, isLarge: boolean = false) => {
-        if (!text) return null;
-
-        // Split by [img:...] pattern, keeping the delimiters
-        const parts = text.split(/(\[img:.*?\])/g);
-
-        return (
-            <div className={`flex flex-col items-center gap-3 ${isLarge ? '' : ''}`}>
-                {parts.map((part, index) => {
-                    const imgMatch = part.match(/\[img:(.*?)\]/);
-                    if (imgMatch) {
-                        const imageUrl = imgMatch[1];
-                        const hasError = imageErrors.has(imageUrl);
-
-                        if (hasError) {
-                            return (
-                                <div key={index} className="flex items-center gap-2 text-muted-foreground text-sm">
-                                    <ImageOff className="w-4 h-4" />
-                                    <span>{t("study.imageFailed")}</span>
-                                </div>
-                            );
-                        }
-
-                        return (
-                            <div key={index} className="relative group/img">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                    src={imageUrl}
-                                    alt="Flashcard image"
-                                    className={`rounded-lg cursor-zoom-in shadow-md hover:shadow-lg transition-shadow ${isLarge ? 'max-h-48' : 'max-h-32'}`}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        openZoom(imageUrl);
-                                    }}
-                                    onError={() => setImageErrors(prev => new Set(prev).add(imageUrl))}
-                                />
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/20 rounded-lg pointer-events-none">
-                                    <ZoomIn className="w-6 h-6 text-white drop-shadow-lg" />
-                                </div>
-                            </div>
-                        );
-                    }
-
-                    // Regular text part - render with LaTeX support
-                    if (part.trim()) {
-                        return <LatexRenderer key={index} text={part} />;
-                    }
-                    return null;
-                })}
-            </div>
-        );
-    }, [imageErrors, t, openZoom]);
 
     // Handle long press for mobile
     const handleTouchStart = useCallback((type: "question" | "answer") => {
@@ -246,7 +192,11 @@ export function FlashcardComponent({
                                 className="relative"
                             >
                                 <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight text-foreground">
-                                    {renderContent(card.question, true)}
+                                    <FlashcardContent
+                                        text={card.question}
+                                        isLarge={true}
+                                        onImageZoom={openZoom}
+                                    />
                                 </h2>
                                 {/* Edit button - Desktop hover */}
                                 <AnimatePresence>
@@ -336,7 +286,11 @@ export function FlashcardComponent({
                                         <div
                                             aria-live="polite"
                                         >
-                                            {renderContent(card.answer, false) || t("study.mentalAnswer")}
+                                            <FlashcardContent
+                                                text={card.answer}
+                                                onImageZoom={openZoom}
+                                            />
+                                            {!card.answer && t("study.mentalAnswer")}
                                         </div>
 
                                         {/* Edit button - Desktop hover */}
