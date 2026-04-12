@@ -19,6 +19,7 @@ import { FlashcardRating } from "./flashcard/flashcard-rating";
 import { useFlashcardImageZoom } from "./flashcard/use-flashcard-image-zoom";
 import { FlashcardZoomModal } from "./flashcard/flashcard-zoom-modal";
 import { FlashcardContent } from "./flashcard/flashcard-content";
+import { useFlashcardEdit } from "./flashcard/use-flashcard-edit";
 
 interface FlashcardProps {
     card: FlashcardType;
@@ -44,77 +45,26 @@ export function FlashcardComponent({
     onTTSToggle,
 }: FlashcardProps) {
     const { t } = useApp();
-    const [isEditingQuestion, setIsEditingQuestion] = useState(false);
-    const [isEditingAnswer, setIsEditingAnswer] = useState(false);
-    const [editQuestion, setEditQuestion] = useState(card.question);
-    const [editAnswer, setEditAnswer] = useState(card.answer);
-    const [showEditHint, setShowEditHint] = useState<"question" | "answer" | null>(null);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
-    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-
     const { openZoom, closeZoom } = useFlashcardImageZoom(zoomedImage, setZoomedImage);
-
-    // Handle long press for mobile
-    const handleTouchStart = useCallback((type: "question" | "answer") => {
-        longPressTimerRef.current = setTimeout(() => {
-            if (type === "question") {
-                setEditQuestion(card.question);
-                setIsEditingQuestion(true);
-            } else {
-                setEditAnswer(card.answer);
-                setIsEditingAnswer(true);
-            }
-        }, FLASHCARD_LONG_PRESS_MS);
-    }, [card.question, card.answer]);
-
-    const handleTouchEnd = useCallback(() => {
-        if (longPressTimerRef.current) {
-            clearTimeout(longPressTimerRef.current);
-            longPressTimerRef.current = null;
-        }
-    }, []);
-
-    const handleSaveQuestion = () => {
-        if (onUpdateCard && editQuestion.trim()) {
-            // Replace newlines with spaces to maintain file structure
-            const sanitizedQuestion = editQuestion.replace(/[\r\n]+/g, " ").trim();
-            onUpdateCard(card.id, sanitizedQuestion, card.answer);
-        }
-        setIsEditingQuestion(false);
-    };
-
-    const handleSaveAnswer = () => {
-        if (onUpdateCard) {
-            // Replace newlines with spaces to maintain file structure
-            const sanitizedAnswer = editAnswer.replace(/[\r\n]+/g, " ").trim();
-            onUpdateCard(card.id, card.question, sanitizedAnswer);
-        }
-        setIsEditingAnswer(false);
-    };
-
-    const handleCancelEdit = (type: "question" | "answer") => {
-        if (type === "question") {
-            setEditQuestion(card.question);
-            setIsEditingQuestion(false);
-        } else {
-            setEditAnswer(card.answer);
-            setIsEditingAnswer(false);
-        }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent, type: "question" | "answer") => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            if (type === "question") {
-                handleSaveQuestion();
-            } else {
-                handleSaveAnswer();
-            }
-        } else if (e.key === "Escape") {
-            handleCancelEdit(type);
-        }
-    };
+    const {
+        isEditingQuestion,
+        isEditingAnswer,
+        editQuestion,
+        editAnswer,
+        setEditQuestion,
+        setEditAnswer,
+        showEditHint,
+        setShowEditHint,
+        handleTouchStart,
+        handleTouchEnd,
+        handleSaveQuestion,
+        handleSaveAnswer,
+        handleCancelEdit,
+        handleKeyDown,
+        startEditing,
+    } = useFlashcardEdit({ card, onUpdateCard });
 
     return (
         <motion.div
@@ -206,10 +156,7 @@ export function FlashcardComponent({
                                             animate={{ opacity: 1, scale: 1 }}
                                             exit={{ opacity: 0, scale: 0.8 }}
                                             transition={{ duration: 0.15 }}
-                                            onClick={() => {
-                                                setEditQuestion(card.question);
-                                                setIsEditingQuestion(true);
-                                            }}
+                                            onClick={() => startEditing("question")}
                                             className="absolute -right-10 top-1/2 -translate-y-1/2 p-2 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors hidden md:flex"
                                             title="Edit question"
                                         >
@@ -301,10 +248,7 @@ export function FlashcardComponent({
                                                     animate={{ opacity: 1, scale: 1 }}
                                                     exit={{ opacity: 0, scale: 0.8 }}
                                                     transition={{ duration: 0.15 }}
-                                                    onClick={() => {
-                                                        setEditAnswer(card.answer);
-                                                        setIsEditingAnswer(true);
-                                                    }}
+                                                    onClick={() => startEditing("answer")}
                                                     className="absolute -right-10 top-1/2 -translate-y-1/2 p-2 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors hidden md:flex"
                                                     title={t("study.editAnswer")}
                                                 >
