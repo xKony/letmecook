@@ -4,15 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard as FlashcardType, CardLevel } from "@/lib/types";
 import { useApp } from "@/lib/app-context";
-import { FLASHCARD_LONG_PRESS_MS } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
-import dynamic from "next/dynamic";
-import { Pencil, Check, X, ImageOff, ZoomIn } from "lucide-react";
-
-// Dynamically import LatexRenderer as it is only needed when text contains math
-const LatexRenderer = dynamic(() => import("@/components/latex-renderer").then(mod => mod.LatexRenderer), {
-    ssr: true, // Keep SSR for SEO/initial paint
-});
+import { Pencil } from "lucide-react";
 
 import { FlashcardHeader } from "./flashcard/flashcard-header";
 import { FlashcardRating } from "./flashcard/flashcard-rating";
@@ -20,6 +12,7 @@ import { useFlashcardImageZoom } from "./flashcard/use-flashcard-image-zoom";
 import { FlashcardZoomModal } from "./flashcard/flashcard-zoom-modal";
 import { FlashcardContent } from "./flashcard/flashcard-content";
 import { useFlashcardEdit } from "./flashcard/use-flashcard-edit";
+import { FlashcardEditor } from "./flashcard/flashcard-editor";
 
 interface FlashcardProps {
     card: FlashcardType;
@@ -97,42 +90,15 @@ export function FlashcardComponent({
                 >
                     <AnimatePresence mode="wait">
                         {isEditingQuestion ? (
-                            <motion.div
-                                key="edit-question"
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ duration: 0.2 }}
-                                className="w-full flex flex-col gap-3"
-                            >
-                                <textarea
-                                    value={editQuestion}
-                                    onChange={(e) => setEditQuestion(e.target.value)}
-                                    onKeyDown={(e) => handleKeyDown(e, "question")}
-                                    autoFocus
-                                    className="w-full p-4 text-xl md:text-2xl font-bold text-center bg-background border border-input rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[100px]"
-                                    placeholder={t("study.enterQuestion")}
-                                />
-                                <div className="flex justify-center gap-2">
-                                    <Button
-                                        size="sm"
-                                        onClick={handleSaveQuestion}
-                                        className="gap-1"
-                                    >
-                                        <Check className="w-4 h-4" />
-                                        {t("common.save")}
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => handleCancelEdit("question")}
-                                        className="gap-1"
-                                    >
-                                        <X className="w-4 h-4" />
-                                        {t("common.cancel")}
-                                    </Button>
-                                </div>
-                            </motion.div>
+                            <FlashcardEditor
+                                value={editQuestion}
+                                onChange={setEditQuestion}
+                                onSave={handleSaveQuestion}
+                                onCancel={() => handleCancelEdit("question")}
+                                onKeyDown={(e) => handleKeyDown(e, "question")}
+                                placeholder={t("study.enterQuestion")}
+                                isQuestion={true}
+                            />
                         ) : (
                             <motion.div
                                 key="display-question"
@@ -186,42 +152,14 @@ export function FlashcardComponent({
                         >
                             <AnimatePresence mode="wait">
                                 {isEditingAnswer ? (
-                                    <motion.div
-                                        key="edit-answer"
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="w-full flex flex-col gap-3"
-                                    >
-                                        <textarea
-                                            value={editAnswer}
-                                            onChange={(e) => setEditAnswer(e.target.value)}
-                                            onKeyDown={(e) => handleKeyDown(e, "answer")}
-                                            autoFocus
-                                            className="w-full p-4 text-lg md:text-xl font-medium text-center bg-background border border-input rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[80px]"
-                                            placeholder={t("study.enterAnswer")}
-                                        />
-                                        <div className="flex justify-center gap-2">
-                                            <Button
-                                                size="sm"
-                                                onClick={handleSaveAnswer}
-                                                className="gap-1"
-                                            >
-                                                <Check className="w-4 h-4" />
-                                                {t("common.save")}
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => handleCancelEdit("answer")}
-                                                className="gap-1"
-                                            >
-                                                <X className="w-4 h-4" />
-                                                {t("common.cancel")}
-                                            </Button>
-                                        </div>
-                                    </motion.div>
+                                    <FlashcardEditor
+                                        value={editAnswer}
+                                        onChange={setEditAnswer}
+                                        onSave={handleSaveAnswer}
+                                        onCancel={() => handleCancelEdit("answer")}
+                                        onKeyDown={(e) => handleKeyDown(e, "answer")}
+                                        placeholder={t("study.enterAnswer")}
+                                    />
                                 ) : (
                                     <motion.div
                                         key="display-answer"
