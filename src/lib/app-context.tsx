@@ -36,6 +36,9 @@ interface AppContextType {
     isLoading: boolean;
     maxDecks: number;
 
+    // Data sync
+    setInitialData: (decks: Deck[], maxDecks: number) => void;
+
     // Auth actions
     handleSignOut: () => void;
 
@@ -77,6 +80,7 @@ export function AppProvider({
     const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false); // Start as NOT loading if we have server data
     const [language, setLanguageState] = useState<Language>("en");
+    const hasInitializedAuthData = useRef(false);
 
     // Initialize language from localStorage
     useEffect(() => {
@@ -113,7 +117,7 @@ export function AppProvider({
 
     // Sync with database if session changes and we don't have data yet
     useEffect(() => {
-        if (isAuthenticated && dbDecks.length === 0 && !initialDecks.length) {
+        if (isAuthenticated && !hasInitializedAuthData.current && dbDecks.length === 0 && !initialDecks.length) {
             const loadData = async () => {
                 setIsLoading(true);
                 try {
@@ -121,6 +125,7 @@ export function AppProvider({
                     setDbDecks(decks.map(transformDbDeck));
                     const userMaxDecks = await getUserMaxDecks();
                     setMaxDecks(userMaxDecks);
+                    hasInitializedAuthData.current = true;
                 } catch (error) {
                     console.error("Failed to load decks:", error);
                 } finally {
@@ -177,6 +182,17 @@ export function AppProvider({
             }
         }
     }, [isAuthenticated]);
+
+    /**
+     * Set initial data from server components to sync state
+     * @param decks Initial decks from server
+     * @param userMaxDecks Maximum decks limit for the user
+     */
+    const setInitialData = useCallback((decks: Deck[], userMaxDecks: number) => {
+        setDbDecks(decks);
+        setMaxDecks(userMaxDecks);
+        hasInitializedAuthData.current = true;
+    }, []);
 
     // Sign out handler
     const handleSignOut = useCallback(() => {
@@ -371,6 +387,7 @@ export function AppProvider({
         currentDeck,
         isLoading,
         maxDecks,
+        setInitialData,
         handleSignOut,
         addDeck,
         selectDeck,

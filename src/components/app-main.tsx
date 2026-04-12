@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect } from "react";
 import { useApp } from "@/lib/app-context";
 import { Dashboard } from "@/components/dashboard";
 import { GuestModeBanner } from "@/components/guest-mode-banner";
@@ -24,8 +25,19 @@ interface AppMainProps {
     session?: Session | null;
 }
 
-export function AppMain({ initialDecks }: AppMainProps) {
-    const { currentDeck, isLoading, authLoading, isGuest, t } = useApp();
+/**
+ * Main application component that handles the transition between Dashboard and StudySession.
+ * It also syncs server-side fetched data into the global AppProvider context.
+ */
+export function AppMain({ initialDecks, initialMaxDecks }: AppMainProps) {
+    const { currentDeck, isLoading, authLoading, isGuest, setInitialData, t } = useApp();
+
+    // Sync initial data from server to context
+    useEffect(() => {
+        if (initialDecks && initialMaxDecks !== undefined) {
+            setInitialData(initialDecks, initialMaxDecks);
+        }
+    }, [initialDecks, initialMaxDecks, setInitialData]);
 
     // Show loading while auth is checking OR if we're waiting for initial data
     // But if we have initial session/decks, we don't show the global spinner

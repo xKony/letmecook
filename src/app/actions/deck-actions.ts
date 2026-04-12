@@ -67,10 +67,10 @@ const getDeckAccess = cache(async function (deckId: string, userId: string | und
     return { deck: null, access: null };
 });
 
-// ============================================
-// READ: Get user's decks
-// ============================================
-
+/**
+ * READ: Get user's decks
+ * @returns Sorted array of decks with flashcards
+ */
 export const getMyDecks = cache(async function () {
     const user = await requireAuth();
 
@@ -86,10 +86,10 @@ export const getMyDecks = cache(async function () {
     return userDecks.sort((a: DeckWithCards, b: DeckWithCards) => b.updatedAt.getTime() - a.updatedAt.getTime());
 });
 
-// ============================================
-// READ: Get user's max decks limit
-// ============================================
-
+/**
+ * READ: Get user's max decks limit
+ * @returns Maximum number of decks the user can own
+ */
 export const getUserMaxDecks = cache(async function (): Promise<number> {
     const user = await requireAuth();
 
@@ -100,10 +100,12 @@ export const getUserMaxDecks = cache(async function (): Promise<number> {
     return dbUser?.maxDecks ?? 5;
 });
 
-// ============================================
-// READ: Get single deck with cards
-// ============================================
-
+/**
+ * READ: Get single deck with cards
+ * @param deckId UUID of the deck
+ * @param shareToken Optional share token for public access
+ * @returns Deck with flashcards and access level
+ */
 export async function getDeck(deckId: string, shareToken?: string) {
     const session = await auth();
     const userId = session?.user?.id;
@@ -133,10 +135,10 @@ export async function getDeck(deckId: string, shareToken?: string) {
     return { deck: deckWithCards, access };
 }
 
-// ============================================
-// READ: Get shared decks (where user has permission)
-// ============================================
-
+/**
+ * READ: Get shared decks (where user has permission)
+ * @returns Array of decks shared with the user
+ */
 export async function getSharedDecks() {
     const user = await requireAuth();
 
@@ -155,14 +157,12 @@ export async function getSharedDecks() {
     }));
 }
 
-// ============================================
-// CREATE: New deck
-// ============================================
-
-// ============================================
-// CREATE: New deck
-// ============================================
-
+/**
+ * CREATE: New deck
+ * @param name Deck name
+ * @param cards Array of questions and answers
+ * @returns The created deck
+ */
 export async function createDeck(name: string, cards: { question: string; answer: string }[]) {
     console.log(`[CREATE_DECK] Starting creation for deck: "${name}" with ${cards.length} cards`);
     const user = await requireAuth();
@@ -229,10 +229,11 @@ export async function createDeck(name: string, cards: { question: string; answer
     }
 }
 
-// ============================================
-// UPDATE: Deck metadata
-// ============================================
-
+/**
+ * UPDATE: Deck metadata
+ * @param deckId UUID of the deck
+ * @param data Name and/or public visibility status
+ */
 export async function updateDeck(deckId: string, data: { name?: string; isPublic?: boolean }) {
     const user = await requireAuth();
     const { access } = await getDeckAccess(deckId, user.id);
@@ -256,10 +257,10 @@ export async function updateDeck(deckId: string, data: { name?: string; isPublic
     revalidatePath("/");
 }
 
-// ============================================
-// DELETE: Deck
-// ============================================
-
+/**
+ * DELETE: Deck
+ * @param deckId UUID of the deck
+ */
 export async function deleteDeck(deckId: string) {
     const user = await requireAuth();
     const { access } = await getDeckAccess(deckId, user.id);
@@ -272,10 +273,11 @@ export async function deleteDeck(deckId: string) {
     revalidatePath("/");
 }
 
-// ============================================
-// SHARING: Generate share link
-// ============================================
-
+/**
+ * SHARING: Generate share link
+ * @param deckId UUID of the deck
+ * @returns The share token
+ */
 export async function generateShareLink(deckId: string) {
     const user = await requireAuth();
     const { deck, access } = await getDeckAccess(deckId, user.id);
@@ -299,10 +301,12 @@ export async function generateShareLink(deckId: string) {
     return token;
 }
 
-// ============================================
-// SHARING: Add user permission
-// ============================================
-
+/**
+ * SHARING: Add user permission
+ * @param deckId UUID of the deck
+ * @param email Email of the user to grant access
+ * @param role Access level (viewer or editor)
+ */
 export async function addDeckPermission(deckId: string, email: string, role: "viewer" | "editor") {
     const user = await requireAuth();
     const { access } = await getDeckAccess(deckId, user.id);
@@ -345,10 +349,11 @@ export async function addDeckPermission(deckId: string, email: string, role: "vi
     revalidatePath("/");
 }
 
-// ============================================
-// SHARING: Remove user permission
-// ============================================
-
+/**
+ * SHARING: Remove user permission
+ * @param deckId UUID of the deck
+ * @param targetUserId UUID of the user to remove
+ */
 export async function removeDeckPermission(deckId: string, targetUserId: string) {
     const user = await requireAuth();
     const { access } = await getDeckAccess(deckId, user.id);
