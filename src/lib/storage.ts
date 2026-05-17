@@ -74,6 +74,13 @@ export function loadGuestState(): GuestState {
             if (isValidGuestState(parsed)) {
                 return parsed;
             }
+            
+            // Salvage: If it's just an array of decks, wrap it
+            if (Array.isArray(parsed)) {
+                console.log("Salvaged decks from array-format storage");
+                return { decks: parsed };
+            }
+
             console.warn("Invalid guest state structure, checking for legacy data");
         }
 
