@@ -206,6 +206,7 @@ export async function createDeck(name: string, cards: { question: string; answer
                         deckId: deck.id,
                         question: card.question,
                         answer: card.answer,
+                        image: card.image,
                         level: "Nowe",
                     }))
                 );

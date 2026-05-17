@@ -61,7 +61,7 @@ export function ImportDropZone({
                 <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".txt"
+                    accept=".txt,.json"
                     onChange={handleFileSelect}
                     className="hidden"
                 />

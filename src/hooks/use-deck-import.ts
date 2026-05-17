@@ -22,7 +22,7 @@ export function useDeckImport() {
         const reader = new FileReader();
         reader.onload = (event) => {
             const content = event.target?.result as string;
-            const name = deckName.trim() || file.name.replace(/\.txt$/, "");
+            const name = deckName.trim() || file.name.replace(/\.(txt|json)$/, "");
             addDeck(name, content);
             setIsImporting(false);
             setDeckName("");
@@ -41,12 +41,12 @@ export function useDeckImport() {
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         const file = e.dataTransfer.files?.[0];
-        if (!file || !file.name.endsWith(".txt")) return;
+        if (!file || !(file.name.endsWith(".txt") || file.name.endsWith(".json"))) return;
 
         const reader = new FileReader();
         reader.onload = (event) => {
             const content = event.target?.result as string;
-            const name = file.name.replace(/\.txt$/, "");
+            const name = file.name.replace(/\.(txt|json)$/, "");
             addDeck(name, content);
         };
         reader.readAsText(file);

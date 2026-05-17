@@ -120,6 +120,9 @@ export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "lev
                 image: item.image ? String(item.image) : undefined,
             })).filter((card) => card.question);
         }
+        // If it's valid JSON but not an array (e.g., a backup file), 
+        // we shouldn't fall through to pipe-separated parsing as it will create garbage.
+        return [];
     } catch {
         // Fallback to legacy pipe-separated format
     }

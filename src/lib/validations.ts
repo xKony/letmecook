@@ -20,8 +20,8 @@ export const cardSchema = z.object({
         .max(LIMITS.QUESTION_MAX, `Question must be ${LIMITS.QUESTION_MAX} characters or less`),
     answer: z
         .string()
-        .min(1, "Answer is required")
         .max(LIMITS.ANSWER_MAX, `Answer must be ${LIMITS.ANSWER_MAX} characters or less`),
+    image: z.string().optional(),
 });
 
 // Deck creation schema

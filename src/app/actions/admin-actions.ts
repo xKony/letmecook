@@ -33,7 +33,7 @@ async function requireAdmin() {
 
 export async function createPublicDeck(
     name: string,
-    cards: { question: string; answer: string }[]
+    cards: { question: string; answer: string; image?: string }[]
 ) {
     const admin = await requireAdmin();
 
@@ -49,6 +49,7 @@ export async function createPublicDeck(
                 deckId: newDeck.id,
                 question: card.question,
                 answer: card.answer,
+                image: card.image,
                 level: "Nowe",
             }))
         );
