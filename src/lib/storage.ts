@@ -101,8 +101,22 @@ export function saveGuestState(state: GuestState): void {
     }
 }
 
-// Parse questions.txt format: "Question | Answer"
+// Parse questions.txt format: "Question | Answer" or JSON array
 export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "level">[] {
+    // Try parsing as JSON first
+    try {
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed)) {
+            return parsed.map((item: any) => ({
+                question: String(item.question || ""),
+                answer: String(item.answer || ""),
+                image: item.image ? String(item.image) : undefined,
+            })).filter((card) => card.question);
+        }
+    } catch (e) {
+        // Fallback to legacy pipe-separated format
+    }
+
     const lines = content.split("\n");
     const cards: Omit<Flashcard, "id" | "level">[] = [];
 

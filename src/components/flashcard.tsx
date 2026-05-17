@@ -151,6 +151,20 @@ export function FlashcardComponent({
                     </AnimatePresence>
                 </motion.div>
 
+                {/* Dedicated Card Image */}
+                {card.image && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="my-4 flex justify-center"
+                    >
+                        <FlashcardContent
+                            text={`[img:${card.image}]`}
+                            onImageZoom={openZoom}
+                        />
+                    </motion.div>
+                )}
+
                 {/* Answer */}
                 <AnimatePresence>
                     {isRevealed && (

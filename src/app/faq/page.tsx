@@ -118,7 +118,33 @@ QUESTIONS:
             {
               question: "How do I import existing flashcards?",
               answer:
-                "Currently, you can import flashcards by dragging and dropping a .txt file onto the dashboard, or clicking the drop zone to select a file. The file should be formatted with 'Question | Answer' on each line.",
+                "You can import flashcards by dragging and dropping a .json or .txt file onto the dashboard. We recommend using the JSON format for advanced features like images. Standard text files formatted with 'Question | Answer' on each line are also supported for backward compatibility.",
+            },
+            {
+              question: "What is the recommended JSON format?",
+              answer: (
+                <div className="space-y-3">
+                  <p>
+                    The recommended format is a JSON array of objects. Each object should have <code>question</code>, <code>answer</code>, and an optional <code>image</code> key.
+                  </p>
+                  <pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
+{`[
+  {
+    "question": "What is 2+2?",
+    "answer": "4",
+    "image": "https://example.com/image.png"
+  },
+  {
+    "question": "Formula for circle area?",
+    "answer": "The formula is $P = \\\\pi r^2$."
+  }
+]`}
+                  </pre>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    <strong>Note:</strong> In JSON, backslashes for LaTeX must be double-escaped (e.g., <code>\\\\pi</code> instead of <code>\\pi</code>).
+                  </p>
+                </div>
+              ),
             },
             {
               question: "Is my data stored securely?",

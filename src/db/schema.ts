@@ -70,6 +70,7 @@ export const flashcards = pgTable("flashcards", {
     deckId: uuid("deck_id").notNull().references(() => decks.id, { onDelete: "cascade" }),
     question: text("question").notNull(),
     answer: text("answer").notNull(),
+    image: text("image"),
     level: text("level").default("Nowe").notNull(), // CardLevel type
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
