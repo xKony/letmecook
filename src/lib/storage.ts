@@ -113,7 +113,7 @@ export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "lev
                 image: item.image ? String(item.image) : undefined,
             })).filter((card) => card.question);
         }
-    } catch (e) {
+    } catch {
         // Fallback to legacy pipe-separated format
     }
 
