@@ -113,16 +113,60 @@ export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "lev
     // Try parsing as JSON first
     try {
         const parsed = JSON.parse(content);
+        
+        // Helper to extract cards from a raw JSON array
+        const extractCards = (arr: any[]): Omit<Flashcard, "id" | "level">[] => {
+            return arr.map((item: any) => {
+                // Support multiple key mappings case-insensitively
+                const q = item.question ?? item.Question ?? item.q ?? item.Q ?? item.front ?? item.Front ?? item.text ?? item.Text ?? item.prompt ?? item.Prompt ?? "";
+                const a = item.answer ?? item.Answer ?? item.a ?? item.A ?? item.back ?? item.Back ?? item.definition ?? item.Definition ?? item.response ?? item.Response ?? "";
+                const img = item.image ?? item.Image ?? item.img ?? item.Img ?? undefined;
+                
+                return {
+                    question: String(q),
+                    answer: String(a),
+                    image: img ? String(img) : undefined,
+                };
+            }).filter((card) => card.question.trim());
+        };
+
+        // 1. Direct array of cards
         if (Array.isArray(parsed)) {
-            return parsed.map((item: Partial<Flashcard>) => ({
-                question: String(item.question || ""),
-                answer: String(item.answer || ""),
-                image: item.image ? String(item.image) : undefined,
-            })).filter((card) => card.question);
+            if (parsed.length > 0) {
+                // If the first item has a cards array, it's an array of decks
+                if (Array.isArray(parsed[0].cards)) {
+                    const allCards: Omit<Flashcard, "id" | "level">[] = [];
+                    for (const deck of parsed) {
+                        if (Array.isArray(deck.cards)) {
+                            allCards.push(...extractCards(deck.cards));
+                        }
+                    }
+                    if (allCards.length > 0) return allCards;
+                }
+                
+                const cards = extractCards(parsed);
+                if (cards.length > 0) return cards;
+            }
         }
-        // If it's valid JSON but not an array (e.g., a backup file), 
-        // we shouldn't fall through to pipe-separated parsing as it will create garbage.
-        return [];
+        
+        // 2. Object containing decks (e.g. backup format) or cards (e.g. single deck format)
+        if (parsed && typeof parsed === "object") {
+            if (Array.isArray(parsed.decks)) {
+                const allCards: Omit<Flashcard, "id" | "level">[] = [];
+                for (const deck of parsed.decks) {
+                    if (Array.isArray(deck.cards)) {
+                        allCards.push(...extractCards(deck.cards));
+                    }
+                }
+                if (allCards.length > 0) return allCards;
+            }
+            if (Array.isArray(parsed.cards)) {
+                const cards = extractCards(parsed.cards);
+                if (cards.length > 0) return cards;
+            }
+        }
+        
+        // If it's valid JSON but parsed to nothing, fall through to legacy format
     } catch {
         // Fallback to legacy pipe-separated format
     }

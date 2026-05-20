@@ -106,7 +106,7 @@
     "deckName": "Deck Name",
     "deckNamePlaceholder": "e.g., Biology 101",
     "questionsFile": "Questions File",
-    "fileFormatHint": "Format: Question | Answer (one per line)",
+    "fileFormatHint": "Format: JSON (Array/Deck/Backup) or Question | Answer (one per line)",
     "fileSelected": "File Selected ✓",
     "uploading": "Uploading...",
     "publicDecksCount": "Public Decks ({{count}})",
@@ -119,6 +119,15 @@
     "accessDenied": "Access Denied",
     "noAdminPrivileges": "You don't have admin privileges.",
     "goHome": "Go Home",
-    "back": "Back"
+    "back": "Back",
+    "deckConverter": "Deck Format Converter",
+    "convertInstructions": "Paste legacy 'Question | Answer' lines or load a file to convert it to standard JSON format.",
+    "rawTextPlaceholder": "Question 1 | Answer 1\nQuestion 2 | Answer 2",
+    "pasteRawText": "Or paste raw text:",
+    "downloadJson": "Download JSON",
+    "uploadAsPublic": "Directly Create Public Deck",
+    "conversionSuccess": "Successfully converted {{count}} cards!",
+    "convertFile": "Load File to Convert",
+    "cardsPreview": "Cards Preview ({{count}})"
   }
 }

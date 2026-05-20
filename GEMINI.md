@@ -84,10 +84,10 @@
 - **UI Architecture**: Tailwind CSS 4 utility-first approach with `tw-animate-css` and `framer-motion`.
 
 ## 5. Available Scripts
-- `npm run dev`: Runs `next dev`
-- `npm run build`: Runs `next build`
-- `npm run start`: Runs `next start`
-- `npm run lint`: Runs `eslint`
+- `pnpm dev`: Runs `next dev`
+- `pnpm build`: Runs `next build`
+- `pnpm start`: Runs `next start`
+- `pnpm lint`: Runs `eslint`
 - `pnpm drizzle-kit generate`: Generate migrations.
 - `pnpm drizzle-kit push`: Sync schema to database.
 
@@ -118,4 +118,5 @@ Defined in `.env.local` (referenced in `drizzle.config.ts` and `src/db/index.ts`
 - **Public vs. Personal Decks**: Public library decks are strictly separated from personal study decks. Public library decks (created via Admin Dashboard) do not appear in the admin's personal deck list on the dashboard. This prevents accidental deletion of library decks when users/admins clean up their personal dashboard. Deleting a public deck must be performed explicitly from the Admin Dashboard, while deleting a personal deck only deletes that user's private deck copy.
 - **Next.js & Vercel Best Practices**: Use Server Actions (`"use server"`) for database writes/mutations. Leverage React `cache()` for server actions that fetch read-only data, and use `revalidatePath` to clear Next.js data caches and trigger UI refreshes on demand.
 - **React Best Practices**: Keep client-side state responsive. Use React Context (`AppProvider`) for global application state. Optimize render cycles by utilizing hooks like `useMemo` and `useCallback` where appropriate. Ensure components remain decoupled, clean, and focus on their respective responsibilities.
+- **Package Manager**: Always use `pnpm` instead of `npm` for scripts execution (e.g., `pnpm build`, `pnpm dev`, `pnpm lint`, `pnpm typecheck`).
 

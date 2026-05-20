@@ -106,7 +106,7 @@
     "deckName": "Nazwa talii",
     "deckNamePlaceholder": "np. Biologia 101",
     "questionsFile": "Plik z pytaniami",
-    "fileFormatHint": "Format: Pytanie | Odpowiedź (jedno na linię)",
+    "fileFormatHint": "Format: JSON (Tablica/Talia/Kopia) lub Pytanie | Odpowiedź (jedno na linię)",
     "fileSelected": "Wybrano plik ✓",
     "uploading": "Przesyłanie...",
     "publicDecksCount": "Publiczne talie ({{count}})",
@@ -119,6 +119,15 @@
     "accessDenied": "Brak dostępu",
     "noAdminPrivileges": "Nie masz uprawnień administratora.",
     "goHome": "Strona główna",
-    "back": "Wstecz"
+    "back": "Wstecz",
+    "deckConverter": "Konwerter formatu talii",
+    "convertInstructions": "Wklej linie 'Pytanie | Odpowiedź' lub wczytaj plik, aby skonwertować do standardowego formatu JSON.",
+    "rawTextPlaceholder": "Pytanie 1 | Odpowiedź 1\nPytanie 2 | Odpowiedź 2",
+    "pasteRawText": "Lub wklej tekst:",
+    "downloadJson": "Pobierz JSON",
+    "uploadAsPublic": "Utwórz bezpośrednio jako publiczną talię",
+    "conversionSuccess": "Pomyślnie skonwertowano {{count}} fiszek!",
+    "convertFile": "Wczytaj plik do konwersji",
+    "cardsPreview": "Podgląd fiszek ({{count}})"
   }
 }
