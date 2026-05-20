@@ -37,7 +37,7 @@ interface AdminUser {
     isAdmin: boolean;
     maxDecks: number;
     deckCount: number;
-    createdAt: Date;
+    createdAt: string;
 }
 
 export default function AdminPage() {
@@ -56,15 +56,21 @@ export default function AdminPage() {
 
     useEffect(() => {
         async function checkAdmin() {
-            const adminStatus = await checkIsAdmin();
-            setIsAdmin(adminStatus);
-            if (adminStatus) {
-                const publicDecks = await getPublicDecks();
-                setDecks(publicDecks as PublicDeck[]);
-                const users = await getAllUsers();
-                setAdminUsers(users as AdminUser[]);
+            try {
+                const adminStatus = await checkIsAdmin();
+                setIsAdmin(adminStatus);
+                if (adminStatus) {
+                    const publicDecks = await getPublicDecks();
+                    setDecks(publicDecks as PublicDeck[]);
+                    const users = await getAllUsers();
+                    setAdminUsers(users as AdminUser[]);
+                }
+            } catch (err) {
+                console.error("Failed to load admin data:", err);
+                setIsAdmin(false);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         }
         checkAdmin();
     }, []);

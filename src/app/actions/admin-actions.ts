@@ -56,7 +56,11 @@ export async function createPublicDeck(
     }
 
     revalidatePath("/");
-    return newDeck;
+    return {
+        id: newDeck.id,
+        name: newDeck.name,
+        isPublic: newDeck.isPublic,
+    };
 }
 
 // ============================================
@@ -67,12 +71,42 @@ export async function getPublicDecks() {
     const publicDecks = await db.query.decks.findMany({
         where: eq(decks.isPublic, true),
         with: {
-            flashcards: true,
-            owner: true,
+            flashcards: {
+                columns: {
+                    id: true,
+                    deckId: true,
+                    question: true,
+                    answer: true,
+                    image: true,
+                    level: true,
+                }
+            },
+            owner: {
+                columns: {
+                    name: true,
+                    email: true,
+                }
+            },
         },
     });
 
-    return publicDecks;
+    return publicDecks.map(deck => ({
+        id: deck.id,
+        name: deck.name,
+        isPublic: deck.isPublic,
+        owner: deck.owner ? {
+            name: deck.owner.name,
+            email: deck.owner.email,
+        } : null,
+        flashcards: deck.flashcards.map(card => ({
+            id: card.id,
+            deckId: card.deckId,
+            question: card.question,
+            answer: card.answer,
+            image: card.image || undefined,
+            level: card.level,
+        })),
+    }));
 }
 
 // ============================================
@@ -124,7 +158,11 @@ export async function getAllUsers() {
 
     const allUsers = await db.query.users.findMany({
         with: {
-            decks: true,
+            decks: {
+                columns: {
+                    id: true,
+                }
+            },
         },
     });
 
@@ -135,7 +173,7 @@ export async function getAllUsers() {
         isAdmin: user.isAdmin,
         maxDecks: user.maxDecks,
         deckCount: user.decks.length,
-        createdAt: user.createdAt,
+        createdAt: user.createdAt.toISOString(),
     }));
 }
 
