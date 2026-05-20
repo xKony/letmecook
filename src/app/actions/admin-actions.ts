@@ -156,3 +156,17 @@ export async function updateUserMaxDecks(userId: string, maxDecks: number) {
 
     revalidatePath("/admin");
 }
+
+// ============================================
+// Admin: Delete public deck
+// ============================================
+
+export async function deletePublicDeck(deckId: string) {
+    await requireAdmin();
+
+    await db.delete(decks).where(eq(decks.id, deckId));
+
+    revalidatePath("/");
+    revalidatePath("/admin");
+}
+

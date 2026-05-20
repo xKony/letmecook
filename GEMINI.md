@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # LetMeCook Web - Technical Reference (GEMINI.md)
 
 ## 1. Project Overview
@@ -111,3 +113,9 @@ Defined in `.env.local` (referenced in `drizzle.config.ts` and `src/db/index.ts`
 - **Max Decks**: Default limit is 5 decks per user (configurable in `src/lib/constants.ts` and DB `users` table).
 - **Guest Sync**: Guest data does NOT auto-sync to Auth account on login; users must manually export/import via `src/app/actions/migration-actions.ts`.
 - **LocalStorage Debounce**: Guest state saves are debounced by 1000ms to prevent performance hits during study sessions.
+
+## 10. Development Rules & Best Practices
+- **Public vs. Personal Decks**: Public library decks are strictly separated from personal study decks. Public library decks (created via Admin Dashboard) do not appear in the admin's personal deck list on the dashboard. This prevents accidental deletion of library decks when users/admins clean up their personal dashboard. Deleting a public deck must be performed explicitly from the Admin Dashboard, while deleting a personal deck only deletes that user's private deck copy.
+- **Next.js & Vercel Best Practices**: Use Server Actions (`"use server"`) for database writes/mutations. Leverage React `cache()` for server actions that fetch read-only data, and use `revalidatePath` to clear Next.js data caches and trigger UI refreshes on demand.
+- **React Best Practices**: Keep client-side state responsive. Use React Context (`AppProvider`) for global application state. Optimize render cycles by utilizing hooks like `useMemo` and `useCallback` where appropriate. Ensure components remain decoupled, clean, and focus on their respective responsibilities.
+

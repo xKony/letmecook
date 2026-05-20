@@ -14,9 +14,10 @@ import {
     Globe,
     Lock,
     ArrowLeft,
-    Users
+    Users,
+    Trash2
 } from "lucide-react";
-import { createPublicDeck, getPublicDecks, toggleDeckPublic, checkIsAdmin, getAllUsers, updateUserMaxDecks } from "@/app/actions/admin-actions";
+import { createPublicDeck, getPublicDecks, toggleDeckPublic, checkIsAdmin, getAllUsers, updateUserMaxDecks, deletePublicDeck } from "@/app/actions/admin-actions";
 import { parseQuestionsFile } from "@/lib/storage";
 import { useApp } from "@/lib/app-context";
 
@@ -116,6 +117,21 @@ export default function AdminPage() {
         await toggleDeckPublic(deckId);
         const publicDecks = await getPublicDecks();
         setDecks(publicDecks as PublicDeck[]);
+    };
+
+    const handleDeleteDeck = async (deckId: string, name: string) => {
+        if (!confirm(t("dashboard.deleteDeckDescription", { name }))) {
+            return;
+        }
+
+        try {
+            await deletePublicDeck(deckId);
+            setMessage({ type: "success", text: `Deleted "${name}"` });
+            const publicDecks = await getPublicDecks();
+            setDecks(publicDecks as PublicDeck[]);
+        } catch (err) {
+            setMessage({ type: "error", text: err instanceof Error ? err.message : "Failed to delete deck" });
+        }
     };
 
     const handleMaxDecksChange = async (userId: string, newMax: number) => {
@@ -274,23 +290,33 @@ export default function AdminPage() {
                                             {t("dashboard.cardsCount", { count: deck.flashcards.length })}
                                         </p>
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleTogglePublic(deck.id)}
-                                    >
-                                        {deck.isPublic ? (
-                                            <>
-                                                <Globe className="w-4 h-4 mr-1 text-emerald-500" />
-                                                {t("admin.public")}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Lock className="w-4 h-4 mr-1" />
-                                                {t("admin.private")}
-                                            </>
-                                        )}
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleTogglePublic(deck.id)}
+                                        >
+                                            {deck.isPublic ? (
+                                                <>
+                                                    <Globe className="w-4 h-4 mr-1 text-emerald-500" />
+                                                    {t("admin.public")}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Lock className="w-4 h-4 mr-1" />
+                                                    {t("admin.private")}
+                                                </>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDeleteDeck(deck.id, deck.name)}
+                                            className="text-rose-400 hover:text-rose-500 hover:bg-rose-500/10"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             ))}
                         </div>

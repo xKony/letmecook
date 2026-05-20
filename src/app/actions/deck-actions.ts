@@ -75,7 +75,10 @@ export const getMyDecks = cache(async function () {
     const user = await requireAuth();
 
     const userDecks = await db.query.decks.findMany({
-        where: eq(decks.ownerId, user.id),
+        where: and(
+            eq(decks.ownerId, user.id),
+            eq(decks.isPublic, false)
+        ),
         with: {
             flashcards: true,
         },
