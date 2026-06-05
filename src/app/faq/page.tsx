@@ -143,12 +143,12 @@ Examples of expected output structure:
   {
     "question": "What is the mitochondria?",
     "answer": "The powerhouse of the cell, responsible for generating ATP.",
-    "image": "https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?w=500"
+    "image": "https://images.unsplash.com/photo.png"
   },
   {
     "question": "Who painted the Mona Lisa?",
     "answer": "Leonardo da Vinci",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/687px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg"
+    "image": "https://i.imgur.com/image.jpg"
   },
   {
     "question": "Wzór na pole koła o promieniu $r$?",
@@ -376,12 +376,12 @@ Przykłady oczekiwanej struktury wyjściowej:
   {
     "question": "What is the mitochondria?",
     "answer": "The powerhouse of the cell, responsible for generating ATP.",
-    "image": "https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?w=500"
+    "image": "https://images.unsplash.com/photo.png"
   },
   {
     "question": "Who painted the Mona Lisa?",
     "answer": "Leonardo da Vinci",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/687px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg"
+    "image": "https://i.imgur.com/image.jpg"
   },
   {
     "question": "Wzór na pole koła o promieniu $r$?",
