@@ -177,7 +177,7 @@ export default function AdminPage() {
                 setConverterDeckName(nameWithoutExt);
             }
             setConverterMessage(null);
-        } catch (err) {
+        } catch {
             setConverterMessage({ type: "error", text: "Failed to read file" });
         } finally {
             if (converterFileInputRef.current) converterFileInputRef.current.value = "";
@@ -204,7 +204,7 @@ export default function AdminPage() {
                 type: "success", 
                 text: t("admin.conversionSuccess", { count: parsedConverterCards.length }) 
             });
-        } catch (err) {
+        } catch {
             setConverterMessage({ type: "error", text: "Failed to download JSON" });
         }
     };

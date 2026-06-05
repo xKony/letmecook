@@ -36,7 +36,13 @@ type ContentDict = {
   goDashboardBtn: string;
   promptTitle: string;
   promptDescription: string;
-  promptText: string;
+  promptTextTemplate: string;
+  subjectLabel: string;
+  subjectPlaceholder: string;
+  notesLabel: string;
+  notesPlaceholder: string;
+  questionsLabel: string;
+  questionsPlaceholder: string;
   copyPromptBtn: string;
   copiedBtn: string;
   showMoreBtn: string;
@@ -51,6 +57,30 @@ export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState<string | null>("sec-0-item-0");
   const [isCopied, setIsCopied] = useState(false);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
+
+  // States for prompt builder
+  const [subject, setSubject] = useState("");
+  const [notes, setNotes] = useState("");
+  const [questions, setQuestions] = useState("");
+
+  const getFormattedPrompt = () => {
+    const template = t.promptTextTemplate;
+    let formatted = template;
+
+    if (faqLang === "pl") {
+      formatted = formatted
+        .replace("{PRZEDMIOT}", subject.trim() || "{PRZEDMIOT}")
+        .replace("{DODATKOWE_NOTATKI}", notes.trim() || "{DODATKOWE_NOTATKI}")
+        .replace("[TUTAJ WKLEJ SWOJE PYTANIA]", questions.trim() || "[TUTAJ WKLEJ SWOJE PYTANIA]");
+    } else {
+      formatted = formatted
+        .replace("{PRZEDMIOT}", subject.trim() || "{PRZEDMIOT}")
+        .replace("{DODATKOWE_NOTATKI}", notes.trim() || "{DODATKOWE_NOTATKI}")
+        .replace("[PASTE YOUR QUESTIONS HERE]", questions.trim() || "[PASTE YOUR QUESTIONS HERE]");
+    }
+
+    return formatted;
+  };
 
   const toggleFaq = (id: string) => {
     setOpenIndex(openIndex === id ? null : id);
@@ -79,30 +109,67 @@ export default function FAQPage() {
       promptTitle: "AI Prompt Generator",
       promptDescription:
         "Use this prompt with your favorite LLM to automatically generate flashcards from your notes.",
-      promptText: `Role: You are an Instructional Design Expert and a specialist in Active Recall methodology. Your task is to transform raw questions and source materials into a high-quality set of educational flashcards.
+      subjectLabel: "Subject Name (Optional)",
+      subjectPlaceholder: "e.g., Biochemistry, Calculus II",
+      notesLabel: "Additional Comments (Optional)",
+      notesPlaceholder: "e.g., Focus on Krebs cycle, skip section 4",
+      questionsLabel: "Your Questions / Raw Notes",
+      questionsPlaceholder: "Paste your questions here (one per line) or raw text...",
+      promptTextTemplate: `Role: You are an Instructional Design Expert and a specialist in Active Recall methodology. Your task is to transform raw questions and source materials into a high-quality set of educational flashcards.
 
-Objective: Create a database of Questions and Answers (Question | Answer) based on the provided list of questions and the attached presentation/document.
+Context (optional):
+Subject name: {PRZEDMIOT}
+Additional comments for the deck: {DODATKOWE_NOTATKI}
+
+(If the context fields are empty, ignore them and rely solely on universal rules of logic for the provided questions).
+
+Objective: Create a database of questions and answers based on the provided list of questions and the content of the attached materials. If a context is defined, take into account the specifics of the subject or additional guidelines.
 
 Execution Instructions (Step-by-Step):
 1. Analysis and Correction: Read each question from the list. Correct any linguistic, spelling, or punctuation errors. If a question is vague, rephrase it to be specific while maintaining the original intent.
-2. Content Development: Answer each question, treating the content of the attached presentation/document as the primary source of truth.
-3. Filling Gaps: If the presentation does not contain the answer, use your broad expert knowledge to provide a full, factually correct, and comprehensive response.
-4. Stylistics: Answers must be specific yet exhaustive (leaving no room for doubt). Use professional terminology appropriate to the subject matter.
+2. Content Development: Answer each question, treating the content of the attached materials as the primary source of truth.
+3. Filling Gaps: If the presentation/document does not contain the answer, use your broad expert knowledge to provide a full, factually correct, and comprehensive response.
+4. Stylistics: Answers must be specific yet exhaustive (leaving no room for doubt). Use professional terminology.
 
 CRITICAL FORMATTING RULES (Constraint Checklist):
-- Generate ONLY one code block labeled as "plaintext".
-- Each line must strictly follow the format: Question | Answer
-- Absolute ban on using Markdown formatting inside the block (no bolding, italics, bullet points, or headers).
-- Do not add any introduction, acknowledgments, comments, or summaries before or after the code block.
-- Do not use quotation marks for entire lines.
-- Write mathematical or technical formulas in LaTeX format (e.g., $E=mc^2$).
-- Images: If the context allows, you may use the syntax: [img: URL].
+- Generate ONLY one code block labeled as "json".
+- The result must be a valid array of objects with keys: "question", "answer", and optionally "image".
+- Absolute ban on adding any introduction, acknowledgments, comments, or summaries before or after the JSON block.
+- Write mathematical/technical formulas in LaTeX format inside JSON strings (e.g., $E=mc^2$ or for blocks $$...$$).
+- Remember to properly format the JSON — in particular, double-escape characters in LaTeX commands (e.g., \\\\frac, \\\\pi).
 
-Example of structure inside the block:
-How do we define the data aggregation process? | Aggregation is the process of combining scattered data into a single entity to obtain synthetic information, such as sums or averages.
-What is the formula for the area of a circle? | The area of a circle is expressed by the formula $P = \pi r^2$. [img: https://link-to-image.com/circle.png]
+Examples of expected output structure:
+[
+  {
+    "question": "What is the mitochondria?",
+    "answer": "The powerhouse of the cell, responsible for generating ATP.",
+    "image": "https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?w=500"
+  },
+  {
+    "question": "Who painted the Mona Lisa?",
+    "answer": "Leonardo da Vinci",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/687px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg"
+  },
+  {
+    "question": "Wzór na pole koła o promieniu $r$?",
+    "answer": "Wzór to $P = \\\\pi r^2$.",
+    "image": "https://example.com/circle.png"
+  },
+  {
+    "question": "Jakie są pierwiastki równania kwadratowego $ax^2 + bx + c = 0$?",
+    "answer": "Pierwiastki wyznaczamy ze wzoru: $$x = \\\\frac{-b \\\\pm \\\\sqrt{b^2 - 4ac}}{2a}$$"
+  },
+  {
+    "question": "Zapisz definicję całki oznaczonej Newtona-Leibniza w bloku LaTeX.",
+    "answer": "Całka oznaczona reprezentuje pole pod wykresem: $$\\int_{a}^{b} f(x) \\\\, dx = F(b) - F(a)$$"
+  },
+  {
+    "question": "Jak zapisać ułamek $\\\\frac{a}{b}$ w LaTeX?",
+    "answer": "We use the \`\\\\frac{a}{b}\` command, which we write in JSON with a double backslash as \`$\\\\frac{a}{b}$\`."
+  }
+]
 
-The input data is provided below. Process it according to the instructions above.
+Below is the input data. Process it according to the instructions above.
 
 QUESTIONS:
 [PASTE YOUR QUESTIONS HERE]`,
@@ -272,31 +339,68 @@ QUESTIONS:
       readyDescription:
         "Wróć do panelu głównego, aby utworzyć swoją pierwszą talię lub zaimportować istniejącą.",
       goDashboardBtn: "Przejdź do panelu głównego",
-      promptTitle: "Generator zapytań AI",
+      promptTitle: "AI Prompt Generator",
       promptDescription:
         "Skopiuj poniższe zapytanie do swojego ulubionego modelu językowego (LLM), aby automatycznie wygenerować fiszki ze swoich notatek.",
-      promptText: `Rola: Jesteś ekspertem ds. projektowania instruktażowego (Instructional Design) oraz specjalistą od metodologii Active Recall. Twoim zadaniem jest przekształcenie surowych pytań i materiałów źródłowych w wysokiej jakości zestaw fiszek do nauki.
+      subjectLabel: "Nazwa przedmiotu (opcjonalnie)",
+      subjectPlaceholder: "np. Biochemia, Analiza Matematyczna II",
+      notesLabel: "Dodatkowe uwagi (opcjonalnie)",
+      notesPlaceholder: "np. Skup się na cyklu Krebsa, pomiń rozdział 4",
+      questionsLabel: "Twoje pytania / Surowe notatki",
+      questionsPlaceholder: "Wklej tutaj swoje pytania (jedno w linii) lub surowy tekst...",
+      promptTextTemplate: `Rola: Jesteś ekspertem ds. projektowania instruktażowego (Instructional Design) oraz specjalistą od metodologii Active Recall. Twoim zadaniem jest przekształcenie surowych pytań i materiałów źródłowych w wysokiej jakości zestaw fiszek do nauki.
 
-Cel zadania: Stworzenie bazy pytań i odpowiedzi (Pytanie | Odpowiedź) na podstawie dostarczonej listy pytań oraz treści załączonej prezentacji/dokumentu.
+Kontekst (opcjonalny):
+Nazwa przedmiotu: {PRZEDMIOT}
+Dodatkowe uwagi do zestawu: {DODATKOWE_NOTATKI}
+
+(Jeśli pola kontekstu są puste, zignoruj je i opieraj się wyłącznie na uniwersalnych zasadach logiki dla podanych pytań).
+
+Cel zadania: Stworzenie bazy pytań i odpowiedzi na podstawie dostarczonej listy pytań oraz treści załączonych materiałów. Jeśli zdefiniowano kontekst, uwzględnij specyfikę przedmiotu lub dodatkowe wytyczne.
 
 Instrukcje wykonawcze (Krok po kroku):
 1. Analiza i korekta: Przeczytaj każde pytanie z listy. Popraw błędy językowe, ortograficzne i interpunkcyjne. Jeśli pytanie jest niejasne, sformułuj je tak, aby było konkretne, zachowując pierwotny sens.
-2. Opracowanie merytoryczne: Odpowiedz na każde pytanie, traktując treść załączonej prezentacji jako priorytetowe źródło prawdy. 
-3. Uzupełnienie luk: Jeśli prezentacja nie zawiera odpowiedzi, wykorzystaj swoją szeroką wiedzę ekspercką, aby udzielić pełnej, poprawnej merytorycznie i wyczerpującej odpowiedzi.
+2. Opracowanie merytoryczne: Odpowiedz na każde pytanie, traktując treść załączonych materiałów jako priorytetowe źródło prawdy. 
+3. Uzupełnienie luk: Jeśli prezentacja/dokument nie zawiera odpowiedzi, wykorzystaj swoją szeroką wiedzę ekspercką, aby udzielić pełnej, poprawnej merytorycznie i wyczerpującej odpowiedzi.
 4. Stylistyka: Odpowiedzi muszą być konkretne, ale wyczerpujące (bez niedomówień). Używaj profesjonalnej terminologii.
 
 KRYTYCZNE ZASADY FORMATOWANIA (Constraint Checklist):
-- Wygeneruj wyłącznie jeden blok kodu oznaczony jako "plaintext".
-- Każdy wiersz musi ściśle trzymać się schematu: Pytanie | Odpowiedź
-- Całkowity zakaz używania formatowania Markdown wewnątrz bloku (brak pogrubień, kursywy, list punktowanych, nagłówków).
-- Zakaz dodawania jakiegokolwiek wstępu, podziękowań, komentarzy czy podsumowań przed i po bloku kodu.
-- Zakaz używania cudzysłowów dla całych linii.
-- Wzory matematyczne/techniczne zapisuj w formacie LaTeX (np. $E=mc^2$).
-- Obrazy: Jeśli kontekst na to pozwala, możesz użyć składni: [img: URL].
+- Wygeneruj wyłącznie jeden blok kodu oznaczony jako "json".
+- Wynik musi być poprawną tablicą obiektów z kluczami: "question", "answer" oraz opcjonalnie "image".
+- Całkowity zakaz dodawania jakiegokolwiek wstępu, podziękowań, komentarzy czy podsumowań przed i po bloku JSON.
+- Wzory matematyczne/techniczne zapisuj w formacie LaTeX wewnątrz stringów JSON (np. $E=mc^2$ lub dla bloków $$...$$).
+- Pamiętaj o poprawnym formatowaniu JSON — w szczególności o podwójnym uciekaniu znaków w komendach LaTeX (np. \\\\frac, \\\\pi).
 
-Przykład struktury wewnątrz bloku:
-Jak definiujemy proces agregacji? | Agregacja to proces łączenia rozproszonych danych w jedną całość w celu uzyskania syntetycznych informacji, np. sumy lub średniej.
-Wzór na pole koła? | Pole koła wyraża się wzorem $P = \pi r^2$. [img: https://link-do-obrazka.pl/kolo.png]
+Przykłady oczekiwanej struktury wyjściowej:
+[
+  {
+    "question": "What is the mitochondria?",
+    "answer": "The powerhouse of the cell, responsible for generating ATP.",
+    "image": "https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?w=500"
+  },
+  {
+    "question": "Who painted the Mona Lisa?",
+    "answer": "Leonardo da Vinci",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/687px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg"
+  },
+  {
+    "question": "Wzór na pole koła o promieniu $r$?",
+    "answer": "Wzór to $P = \\\\pi r^2$.",
+    "image": "https://example.com/circle.png"
+  },
+  {
+    "question": "Jakie są pierwiastki równania kwadratowego $ax^2 + bx + c = 0$?",
+    "answer": "Pierwiastki wyznaczamy ze wzoru: $$x = \\\\frac{-b \\\\pm \\\\sqrt{b^2 - 4ac}}{2a}$$"
+  },
+  {
+    "question": "Zapisz definicję całki oznaczonej Newtona-Leibniza w bloku LaTeX.",
+    "answer": "Całka oznaczona reprezentuje pole pod wykresem: $$\\int_{a}^{b} f(x) \\\\, dx = F(b) - F(a)$$"
+  },
+  {
+    "question": "Jak zapisać ułamek $\\\\frac{a}{b}$ w LaTeX?",
+    "answer": "Używamy polecenia \`\\\\frac{a}{b}\`, co w JSON zapisujemy z podwójnym backslashem jako \`$\\\\frac{a}{b}$\`."
+  }
+]
 
 Poniżej znajdują się dane wejściowe. Przetwórz je zgodnie z powyższymi instrukcjami.
 
@@ -496,13 +600,58 @@ PYTANIA:
           <p className="text-muted-foreground text-sm">{globalT("faq.promptDescription")}</p>
         </div>
         <div className="p-6">
+          {/* Prompt Inputs/Builder */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="subject-input" className="text-xs font-semibold text-foreground/80">
+                {t.subjectLabel}
+              </label>
+              <input
+                id="subject-input"
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder={t.subjectPlaceholder}
+                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/60"
+              />
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="notes-input" className="text-xs font-semibold text-foreground/80">
+                {t.notesLabel}
+              </label>
+              <input
+                id="notes-input"
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t.notesPlaceholder}
+                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/60"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 mb-6">
+            <label htmlFor="questions-input" className="text-xs font-semibold text-foreground/80">
+              {t.questionsLabel}
+            </label>
+            <textarea
+              id="questions-input"
+              value={questions}
+              onChange={(e) => setQuestions(e.target.value)}
+              placeholder={t.questionsPlaceholder}
+              rows={4}
+              className="w-full text-sm p-3 bg-muted/30 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono resize-y placeholder:text-muted-foreground/60"
+            />
+          </div>
+
           <div className="relative">
             <motion.div
               animate={{ height: isPromptExpanded ? "auto" : "160px" }}
               transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
               className="bg-muted p-4 rounded-xl font-mono text-sm leading-relaxed whitespace-pre-wrap text-foreground/80 overflow-hidden"
             >
-              {globalT("faq.promptText")}
+              {getFormattedPrompt()}
             </motion.div>
 
             {!isPromptExpanded && (
@@ -527,7 +676,7 @@ PYTANIA:
             </Button>
 
             <Button
-              onClick={() => handleCopyPrompt(globalT("faq.promptText"))}
+              onClick={() => handleCopyPrompt(getFormattedPrompt())}
               variant={isCopied ? "default" : "secondary"}
               className={`w-full sm:w-auto gap-2 transition-all order-1 sm:order-2 ${isCopied ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
             >

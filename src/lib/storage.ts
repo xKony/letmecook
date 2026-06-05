@@ -115,8 +115,9 @@ export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "lev
         const parsed = JSON.parse(content);
         
         // Helper to extract cards from a raw JSON array
-        const extractCards = (arr: any[]): Omit<Flashcard, "id" | "level">[] => {
-            return arr.map((item: any) => {
+        const extractCards = (arr: unknown[]): Omit<Flashcard, "id" | "level">[] => {
+            return arr.map((val) => {
+                const item = val as Record<string, unknown>;
                 // Support multiple key mappings case-insensitively
                 const q = item.question ?? item.Question ?? item.q ?? item.Q ?? item.front ?? item.Front ?? item.text ?? item.Text ?? item.prompt ?? item.Prompt ?? "";
                 const a = item.answer ?? item.Answer ?? item.a ?? item.A ?? item.back ?? item.Back ?? item.definition ?? item.Definition ?? item.response ?? item.Response ?? "";
