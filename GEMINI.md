@@ -82,6 +82,9 @@
 - **State Management**: React Context API (`AppProvider`) for global app state, auth status, and deck synchronization.
 - **Data Fetching**: Server Actions (`src/app/actions/`) for mutations and initial server-side fetching in `src/app/page.tsx`.
 - **UI Architecture**: Tailwind CSS 4 utility-first approach with `tw-animate-css` and `framer-motion`.
+- **Import & Parsing Pipeline (`src/lib/storage.ts`)**: Normalizes import data. Tries JSON parsing first, searching case-insensitively for question keys (`question`/`front`/`q`/`text`/`prompt`), answer keys (`answer`/`back`/`a`/`definition`/`response`), and image keys (`image`/`img`), with support for flattening nested deck collections. Falls back to plain-text line-by-line parsing using the pipe (`|`) separator.
+- **Interactive AI Prompt Generator (`src/app/faq/page.tsx`)**: Dynamic prompt builder supporting real-time parameter injection (subject name, additional instructions/comments, raw questions) in English and Polish to output pre-formatted JSON structures.
+- **LaTeX & KaTeX Integration**: Integrated math rendering supporting inline (`$...$`) and block (`$$...$$`) math formulas via `src/components/latex-renderer.tsx` and KaTeX.
 
 ## 5. Available Scripts
 - `pnpm dev`: Runs `next dev`

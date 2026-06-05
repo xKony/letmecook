@@ -111,12 +111,26 @@ export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
             }
 
             // Regular text
+            const renderTextSegment = (textVal: string) => {
+                const boldParts = textVal.split(/(\*\*.*?\*\*)/g);
+                if (boldParts.length > 1) {
+                    return boldParts.map((boldPart, bpIdx) => {
+                        if (boldPart.startsWith("**") && boldPart.endsWith("**")) {
+                            const innerText = boldPart.slice(2, -2);
+                            return <strong key={bpIdx} className="font-bold text-foreground">{innerText}</strong>;
+                        }
+                        return boldPart;
+                    });
+                }
+                return textVal;
+            };
+
             if (segment.trim()) {
-                return <span key={index}>{segment}</span>;
+                return <span key={index}>{renderTextSegment(segment)}</span>;
             }
-            return segment ? <span key={index}>{segment}</span> : null;
+            return segment ? <span key={index}>{renderTextSegment(segment)}</span> : null;
         });
     }, [text]);
 
-    return <span className={className}>{renderedContent}</span>;
+    return <span className={`whitespace-pre-wrap ${className}`}>{renderedContent}</span>;
 }

@@ -1,165 +1,158 @@
 # LetMeCook Web 🍳
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/yourusername/letmecook-web)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/xkony/letmecook)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.17-brightgreen.svg)](https://nodejs.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-16.2.3-black.svg)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2.5-blue.svg)](https://react.dev/)
 [![Tailwind](https://img.shields.io/badge/Tailwind-4.2.1-38B2AC.svg)](https://tailwindcss.com/)
 
-**LetMeCook Web** is a high-performance, local-first Active Recall study tool built with **Next.js 16** and **React 19**. It empowers users to master any subject through an efficient flashcard system featuring dual-mode persistence, LaTeX support, and a sleek, animated interface.
+> **LetMeCook Web** is a high-performance, local-first Active Recall study tool built with **Next.js 16** and **React 19**. It empowers students to master any subject through an efficient flashcard system featuring dual-mode persistence, an interactive AI prompt builder, advanced LaTeX rendering, and a sleek, animated user interface.
 
 ---
 
-## ✨ Features
+## 🚀 Key Features
 
-- **🧠 Active Recall System**: Five-level mastery tracking (New, Don't know, Somewhat, I know, Mastered) to optimize memory retention.
-- **🔒 Dual-Mode Persistence**:
-  - **Guest Mode**: Privacy-focused storage in the browser's `LocalStorage`.
-  - **Authenticated Mode**: Persistent synchronization with a PostgreSQL (Neon) database.
-- **📁 Smart Importing**: Seamlessly import flashcards from `.txt` files (Format: `Question | Answer`).
-- **🧬 LaTeX Support**: Full support for mathematical and technical formulas rendered via **KaTeX**.
-- **🎨 Modern UI/UX**: Styled with **Tailwind CSS 4** and fluidly animated with **Framer Motion**.
-- **🌍 Internationalization**: Native support for **English** and **Polski** locales.
-- **🌗 Theme Support**: Full support for Light and Dark modes via `next-themes`.
-- **🛠 Admin Dashboard**: Centralized management for public decks and user permissions.
-- **🚀 Data Migration**: Built-in functionality to migrate Guest data to an Authenticated account.
-
-[↑ Back to top](#letmecook-web-)
+* **🧠 Active Recall Mastery**: Grade card recall difficulty (New, Don't know, Somewhat, I know, Mastered) to track your progress and focus study sessions on weaker areas.
+* **🔒 Dual-Mode Persistence**:
+  * **Guest Mode**: Privacy-focused, local-first storage using the browser's `LocalStorage`.
+  * **Authenticated Mode**: Secured PostgreSQL database storage (via Neon) that syncs progress across devices.
+* **🤖 Interactive AI Prompt Generator**: A stateful, real-time prompt builder on the FAQ page. Customize the subject name, specific instructions, and list of questions to generate a tailored prompt for ChatGPT, Claude, or other LLMs to instantly output clean, importable flashcard decks.
+* **📁 Smart JSON & Plain-Text Importing**:
+  * **JSON Array**: Directly import cards, nested decks, or complete backups.
+  * **Flexible Case-Insensitive Mapping**: Resolves front keys (`question`, `front`, `q`, `text`), back keys (`answer`, `back`, `a`, `definition`), and image keys (`image`, `img`) dynamically.
+  * **Fallback**: Supports legacy pipe-separated (`Question | Answer`) text files.
+* **🧬 LaTeX & Image Integration**: Supports inline (`$...$`) and block (`$$...$$`) mathematical equations rendered via **KaTeX**, along with raw image URL resolution.
+* **🌗 Modern UI/UX**: Designed with curated dark/light color palettes, smooth animations powered by **Framer Motion**, and a responsive layout built on **Tailwind CSS 4**.
+* **🌍 Internationalization**: Seamless translation toggles between **English** and **Polski**.
 
 ---
 
 ## 🛠 Tech Stack
 
-### Framework & UI
-
-- **Framework**: [Next.js 16.2.3](https://nextjs.org/) (App Router)
-- **Library**: [React 19.2.5](https://react.dev/)
-- **Styling**: [Tailwind CSS 4.2.1](https://tailwindcss.com/)
-- **Animations**: [Framer Motion 12.36.0](https://www.framer.com/motion/)
-- **Icons**: [Lucide React 0.563.0](https://lucide.dev/)
-- **Components**: [Radix UI](https://www.radix-ui.com/)
-
-### Backend & Auth
-
-- **Database**: [PostgreSQL (Neon)](https://neon.tech/)
-- **ORM**: [Drizzle ORM 0.45.1](https://orm.drizzle.team/)
-- **Authentication**: [NextAuth.js 5.0.0-beta.30](https://authjs.dev/)
-- **Security**: `bcryptjs` for password hashing
-
-### Tooling
-
-- **Language**: [TypeScript 5.9.3](https://www.typescriptlang.org/)
-- **Package Manager**: [pnpm 10.33.0](https://pnpm.io/)
-- **Math Rendering**: [KaTeX 0.16.38](https://katex.org/)
-- **Schema Management**: `drizzle-kit`
-
-[↑ Back to top](#letmecook-web-)
+| Category | Technology | Description |
+| :--- | :--- | :--- |
+| **Frontend** | [Next.js 16.2.3](https://nextjs.org/) | React Framework with App Router & Server Actions |
+| | [React 19.2.5](https://react.dev/) | Core UI rendering library |
+| | [Tailwind CSS 4.2.1](https://tailwindcss.com/) | Modern utility-first CSS |
+| | [Framer Motion 12.36.0](https://framer.com/) | Smooth animations & transitions |
+| | [KaTeX 0.16.38](https://katex.org/) | Ultra-fast LaTeX formula rendering |
+| **Backend & ORM** | [PostgreSQL (Neon)](https://neon.tech/) | Serverless database engine |
+| | [Drizzle ORM 0.45.2](https://orm.drizzle.team/) | Type-safe SQL database queries |
+| | [NextAuth.js 5.0.0-beta.30](https://authjs.dev/) | Seamless credentials and provider authentication |
+| **Tooling** | [TypeScript 5.9.3](https://www.typescriptlang.org/) | Strict static typing |
+| | [pnpm 10.33.0](https://pnpm.io/) | Fast, disk space-efficient package manager |
+| | [drizzle-kit](https://orm.drizzle.team/kit-docs/overview) | Database migration generator and explorer |
 
 ---
 
-## 📁 Project Structure
+## 📁 Repository Structure
 
 ```text
 ├── src/
-│   ├── app/                # Next.js App Router: Routes and Server Actions
-│   │   ├── actions/        # Server Actions for DB mutations (Auth, Decks, Cards)
-│   │   ├── api/            # API Route handlers (Auth, NextAuth)
-│   │   └── (routes)        # Pages (Dashboard, Settings, Admin, FAQ)
+│   ├── app/                # Next.js App Router (pages & Server Actions)
+│   │   ├── actions/        # Server Actions (DB mutations: auth, decks, cards)
+│   │   ├── api/            # API Route handlers (Auth handlers)
+│   │   ├── admin/          # Admin Dashboard (public deck management)
+│   │   └── faq/            # FAQ page and Interactive AI Prompt Generator
 │   ├── components/         # React Components
-│   │   ├── dashboard/      # Dashboard-specific views
-│   │   ├── flashcard/      # Flashcard rendering and editing
-│   │   ├── study/          # Study session interface
-│   │   └── ui/             # Reusable Shadcn/Radix UI primitives
-│   ├── db/                 # Database schema (Drizzle) and migrations
-│   ├── hooks/              # Custom React hooks (Study session, Export, Import)
-│   ├── lib/                # Core logic, types, storage adapters, and utilities
-│   │   ├── app-context.tsx # Global State Management (AppProvider)
-│   │   └── storage.ts      # LocalStorage persistence logic for Guest Mode
-│   └── locales/            # i18n JSON files (en, pl)
-├── public/                 # Static assets and preview images
-├── drizzle.config.ts       # Drizzle ORM configuration
-├── next.config.ts          # Next.js configuration
-├── tailwind.config.ts      # Tailwind CSS v4 configuration (CSS-in-JS style)
+│   │   ├── dashboard/      # Decks panel and drag-and-drop file inputs
+│   │   ├── flashcard/      # Flashcard editing & rendering (KaTeX + images)
+│   │   ├── study/          # Active recall study sessions
+│   │   └── ui/             # Reusable UI primitives (buttons, dialogs, etc.)
+│   ├── db/                 # Drizzle schemas, index, and migrations
+│   ├── hooks/              # Custom hooks for study state
+│   ├── lib/                # Core logic, context engines, storage utilities
+│   │   ├── app-context.tsx # Global state engine (AppProvider)
+│   │   └── storage.ts      # LocalStorage adapters & JSON parser logic
+│   └── locales/            # Translation keys (en.json, pl.json)
+├── drizzle.config.ts       # Drizzle CLI & connection settings
 └── tsconfig.json           # TypeScript configuration
 ```
-
-[↑ Back to top](#letmecook-web-)
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-
-- **Node.js**: `18.17.x` or higher
-- **pnpm**: `10.33.0` or higher
+* **Node.js**: `18.17.x` or higher
+* **pnpm**: `10.33.0` or higher
 
 ### Installation
 
-1. **Clone the repository**
-
+1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/letmecook-web.git
-   cd letmecook-web
+   git clone https://github.com/xkony/letmecook.git
+   cd letmecook
    ```
 
-2. **Install dependencies**
-
+2. **Install dependencies**:
    ```bash
    pnpm install
    ```
 
-3. **Environment Setup**
-   Create a `.env.local` file in the root directory:
-
+3. **Set up Environment Variables**:
+   Create a `.env.local` file in the project root:
    ```env
-   DATABASE_URL=your_postgresql_url
-   AUTH_SECRET=your_nextauth_secret
+   DATABASE_URL="postgresql://user:password@host/db?sslmode=require"
+   AUTH_SECRET="your_nextauth_secret_key"
    ```
 
-4. **Database Migration**
-
+4. **Sync the Database Schema**:
+   Push the Drizzle schemas directly to your Neon PostgreSQL instance:
    ```bash
    pnpm drizzle-kit push
    ```
 
-5. **Run Development Server**
+5. **Start Development Server**:
    ```bash
    pnpm dev
    ```
-
-[↑ Back to top](#letmecook-web-)
+   Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ---
 
-## 📖 Usage
+## 📖 Decks Import Formats
 
-### Key Commands
+### 1. JSON Format (Recommended)
+JSON format allows importing cards with text, answers, and optional images. The parser supports multiple case-insensitive key mappings:
 
-- `pnpm dev`: Start development server on `localhost:3000`.
-- `pnpm build`: Create an optimized production build.
-- `pnpm start`: Start the production server.
-- `pnpm lint`: Run ESLint to check for code quality issues.
-
-### Import Format
-
-To import flashcards, use a `.txt` file with the following format (one card per line):
-
-```text
-Question here | Answer here
+```json
+[
+  {
+    "question": "What is the formula for Einstein's mass-energy equivalence?",
+    "answer": "The formula is $E=mc^2$."
+  },
+  {
+    "front": "What is the capital of Poland?",
+    "back": "Warsaw",
+    "img": "https://example.com/poland-flag.png"
+  }
+]
 ```
 
-LaTeX formulas are supported using `$` delimiters, e.g., `$E = mc^2$`.
+> [!IMPORTANT]
+> Because backslashes (`\`) serve as string escapes in JSON, you **must** double-escape backslashes in LaTeX formulas (e.g., use `\\pi` instead of `\pi` and `\\frac` instead of `\frac`).
 
-Images are supported using `[img:RAW_URL]`, e.g., `[img:https://example.com/image.png]`
+### 2. Plain-Text (Fallback)
+You can also upload simple `.txt` files containing one card per line using the pipe (`|`) separator:
 
-[↑ Back to top](#letmecook-web-)
+```text
+How does photosynthesis work? | It converts carbon dioxide and water into oxygen and glucose.
+Wzór na pole koła? | Pole koła to $P = \pi r^2$. [img: https://example.com/circle.png]
+```
+
+---
+
+## 🛠 Available Scripts
+
+* `pnpm dev` – Starts the Next.js development server in Turbopack mode.
+* `pnpm build` – Builds the application for production deployment.
+* `pnpm start` – Runs the built production bundle locally.
+* `pnpm lint` – Checks the codebase for ESLint and styling errors.
 
 ---
 
 ## 📄 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
-
-[↑ Back to top](#letmecook-web-)
+This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
