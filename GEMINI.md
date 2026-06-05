@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # LetMeCook Web - Technical Reference (GEMINI.md)
 
 ## 1. Project Overview
@@ -82,10 +84,10 @@
 - **UI Architecture**: Tailwind CSS 4 utility-first approach with `tw-animate-css` and `framer-motion`.
 
 ## 5. Available Scripts
-- `npm run dev`: Runs `next dev`
-- `npm run build`: Runs `next build`
-- `npm run start`: Runs `next start`
-- `npm run lint`: Runs `eslint`
+- `pnpm dev`: Runs `next dev`
+- `pnpm build`: Runs `next build`
+- `pnpm start`: Runs `next start`
+- `pnpm lint`: Runs `eslint`
 - `pnpm drizzle-kit generate`: Generate migrations.
 - `pnpm drizzle-kit push`: Sync schema to database.
 
@@ -111,3 +113,11 @@ Defined in `.env.local` (referenced in `drizzle.config.ts` and `src/db/index.ts`
 - **Max Decks**: Default limit is 5 decks per user (configurable in `src/lib/constants.ts` and DB `users` table).
 - **Guest Sync**: Guest data does NOT auto-sync to Auth account on login; users must manually export/import via `src/app/actions/migration-actions.ts`.
 - **LocalStorage Debounce**: Guest state saves are debounced by 1000ms to prevent performance hits during study sessions.
+
+## 10. Development Rules & Best Practices
+- **Public vs. Personal Decks**: Public library decks are strictly separated from personal study decks. Public library decks (created via Admin Dashboard) do not appear in the admin's personal deck list on the dashboard. This prevents accidental deletion of library decks when users/admins clean up their personal dashboard. Deleting a public deck must be performed explicitly from the Admin Dashboard, while deleting a personal deck only deletes that user's private deck copy.
+- **Next.js & Vercel Best Practices**: Use Server Actions (`"use server"`) for database writes/mutations. Leverage React `cache()` for server actions that fetch read-only data, and use `revalidatePath` to clear Next.js data caches and trigger UI refreshes on demand.
+- **React Best Practices**: Keep client-side state responsive. Use React Context (`AppProvider`) for global application state. Optimize render cycles by utilizing hooks like `useMemo` and `useCallback` where appropriate. Ensure components remain decoupled, clean, and focus on their respective responsibilities.
+- **Package Manager**: Always use `pnpm` instead of `npm` for scripts execution (e.g., `pnpm build`, `pnpm dev`, `pnpm lint`, `pnpm typecheck`).
+- **Next.js Best Practices**: Always review and strictly apply the principles in the `/next-best-practices` skill documentation (including RSC boundaries, async pattern migrations, dynamic functions, data patterns, and optimal image/font loading) whenever writing, reviewing, or modifying Next.js codebase files.
+

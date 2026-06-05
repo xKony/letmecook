@@ -102,6 +102,7 @@ export async function importDeckFromFile(name: string, fileContent: string) {
             deckId: newDeck.id,
             question: card.question,
             answer: card.answer,
+            image: card.image,
             level: "Nowe",
         }))
     );
