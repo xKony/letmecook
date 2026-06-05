@@ -137,6 +137,7 @@ CRITICAL FORMATTING RULES (Constraint Checklist):
 - Absolute ban on adding any introduction, acknowledgments, comments, or summaries before or after the JSON block.
 - Write mathematical/technical formulas in LaTeX format inside JSON strings (e.g., $E=mc^2$ or for blocks $$...$$).
 - Remember to properly format the JSON — in particular, double-escape characters in LaTeX commands (e.g., \\\\frac, \\\\pi).
+- The only allowed formatting inside string values (besides LaTeX equations) is indeed bold (**text**), italics (*text*), and newline characters (\\\\n) if needed. Do not use other formatting types like bullet points, numbered lists, or headers.
 
 Examples of expected output structure:
 [
@@ -370,6 +371,7 @@ KRYTYCZNE ZASADY FORMATOWANIA (Constraint Checklist):
 - Całkowity zakaz dodawania jakiegokolwiek wstępu, podziękowań, komentarzy czy podsumowań przed i po bloku JSON.
 - Wzory matematyczne/techniczne zapisuj w formacie LaTeX wewnątrz stringów JSON (np. $E=mc^2$ lub dla bloków $$...$$).
 - Pamiętaj o poprawnym formatowaniu JSON — w szczególności o podwójnym uciekaniu znaków w komendach LaTeX (np. \\\\frac, \\\\pi).
+- Jedyne dozwolone formatowanie tekstu wewnątrz wartości (poza równaniami LaTeX) to właśnie takie z pogrubieniami (**tekst**), kursywą (*tekst*) oraz znakami nowej linii (\\\\n) w razie potrzeby. Całkowity zakaz stosowania innych formatowań, w tym list punktowanych, numerowanych czy nagłówków.
 
 Przykłady oczekiwanej struktury wyjściowej:
 [
