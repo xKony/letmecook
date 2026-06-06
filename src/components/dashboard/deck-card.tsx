@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Pencil, Check, X, Download, Trash2, ListTree } from "lucide-react";
 import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { Button } from "@/components/ui/button";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
@@ -19,7 +20,8 @@ interface DeckCardProps {
  * Individual deck card with inline editing and mobile context menu.
  */
 export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps) {
-    const { renameDeck, t } = useApp();
+    const { renameDeck } = useApp();
+    const { t } = useI18n();
     const [isEditing, setIsEditing] = useState(false);
     const [editingName, setEditingName] = useState(deck.name);
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);

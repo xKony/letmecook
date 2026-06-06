@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard as FlashcardType, CardLevel } from "@/lib/types";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { Pencil } from "lucide-react";
 
 import { FlashcardHeader } from "./flashcard/flashcard-header";
@@ -54,7 +54,7 @@ export function FlashcardComponent({
     ttsEnabled,
     onTTSToggle,
 }: FlashcardProps) {
-    const { t } = useApp();
+    const { t } = useI18n();
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
     const { openZoom, closeZoom } = useFlashcardImageZoom(zoomedImage, setZoomedImage);

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Globe, Download, Check, Loader2, BookOpen } from "lucide-react";
 import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { motion } from "framer-motion";
 import { getPublicDecks } from "@/app/actions/admin-actions";
 
@@ -16,7 +17,8 @@ interface PublicDeck {
 }
 
 export function GlobalDecksModal() {
-    const { addDeck, t } = useApp();
+    const { addDeck } = useApp();
+    const { t } = useI18n();
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [decks, setDecks] = useState<PublicDeck[]>([]);

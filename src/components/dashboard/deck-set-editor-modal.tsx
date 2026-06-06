@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Plus, Search, Loader2 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { EditableCard, Deck, Flashcard } from "@/lib/types";
 import { FlashcardContent } from "@/components/flashcard/flashcard-content";
 import { FlashcardZoomModal } from "@/components/flashcard/flashcard-zoom-modal";
@@ -59,7 +60,8 @@ export function DeckSetEditorModal({
     deckName,
     deckId,
 }: DeckSetEditorModalProps) {
-    const { addDeck, syncDeckCards, t } = useApp();
+    const { addDeck, syncDeckCards } = useApp();
+    const { t } = useI18n();
     const [cards, setCards] = useState<EditableCard[]>(initialCards);
     const [name, setName] = useState(deckName);
     const [search, setSearch] = useState("");

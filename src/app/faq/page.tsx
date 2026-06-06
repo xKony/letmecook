@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LatexRenderer } from "@/components/latex-renderer";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 
 type Language = "en" | "pl";
 
@@ -52,7 +52,7 @@ type ContentDict = {
 
 export default function FAQPage() {
   const router = useRouter();
-  const { language, setLanguage, t: globalT } = useApp();
+  const { language, setLanguage, t: globalT } = useI18n();
   const faqLang = language as Language;
   const [openIndex, setOpenIndex] = useState<string | null>("sec-0-item-0");
   const [isCopied, setIsCopied] = useState(false);

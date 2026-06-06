@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { createPublicDeck, getPublicDecks, toggleDeckPublic, getAllUsers, updateUserMaxDecks, deletePublicDeck } from "@/app/actions/admin-actions";
 import { parseQuestionsFile } from "@/lib/storage";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 
 interface PublicDeck {
     id: string;
@@ -42,7 +42,7 @@ interface AdminUser {
 
 export function AdminClient() {
     const router = useRouter();
-    const { t } = useApp();
+    const { t } = useI18n();
     const [decks, setDecks] = useState<PublicDeck[]>([]);
     const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);

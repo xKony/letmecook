@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { useTTS } from "@/hooks/use-tts";
 import { FlashcardComponent } from "@/components/flashcard";
 import { Button } from "@/components/ui/button";
@@ -37,8 +38,8 @@ export function StudySession() {
         resetCurrentDeck, 
         updateCardLevel, 
         updateCard, 
-        t 
     } = useApp();
+    const { t } = useI18n();
     
     const { 
         enabled: ttsEnabled, 

@@ -141,39 +141,54 @@ export async function syncDeckCards(
     );
 
     const idsToDelete = [...existingIds].filter((id) => !payloadIds.has(id));
-    if (idsToDelete.length > 0) {
-        await db.delete(flashcards).where(
-            and(eq(flashcards.deckId, deckId), inArray(flashcards.id, idsToDelete))
-        );
-    }
+    const now = new Date();
+
+    const cardsToUpdate: { id: string; question: string; answer: string; image: string | null }[] = [];
+    const cardsToInsert: { deckId: string; question: string; answer: string; image: string | null; level: string }[] = [];
 
     for (const card of validation.data.cards) {
         const image = card.image?.trim() || null;
         const cardId = card.id;
 
         if (cardId && !isTempCardId(cardId) && existingIds.has(cardId)) {
-            await db.update(flashcards)
-                .set({
-                    question: card.question,
-                    answer: card.answer,
-                    image,
-                    updatedAt: new Date(),
-                })
-                .where(eq(flashcards.id, cardId));
+            cardsToUpdate.push({ id: cardId, question: card.question, answer: card.answer, image });
         } else {
-            await db.insert(flashcards).values({
-                deckId,
-                question: card.question,
-                answer: card.answer,
-                image,
-                level: "Nowe",
-            });
+            cardsToInsert.push({ deckId, question: card.question, answer: card.answer, image, level: "Nowe" });
         }
     }
 
-    await db.update(decks)
-        .set({ updatedAt: new Date() })
-        .where(eq(decks.id, deckId));
+    type BatchQuery = Parameters<typeof db.batch>[0][number];
+    const operations: BatchQuery[] = [];
+
+    if (idsToDelete.length > 0) {
+        operations.push(
+            db.delete(flashcards).where(
+                and(eq(flashcards.deckId, deckId), inArray(flashcards.id, idsToDelete))
+            )
+        );
+    }
+
+    if (cardsToInsert.length > 0) {
+        operations.push(db.insert(flashcards).values(cardsToInsert));
+    }
+
+    for (const card of cardsToUpdate) {
+        operations.push(
+            db.update(flashcards)
+                .set({ question: card.question, answer: card.answer, image: card.image, updatedAt: now })
+                .where(eq(flashcards.id, card.id))
+        );
+    }
+
+    operations.push(
+        db.update(decks).set({ updatedAt: now }).where(eq(decks.id, deckId))
+    );
+
+    if (operations.length === 1) {
+        await operations[0];
+    } else {
+        await db.batch(operations as [BatchQuery, ...BatchQuery[]]);
+    }
 
     revalidatePath("/");
 }

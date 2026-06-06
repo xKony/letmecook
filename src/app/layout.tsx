@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { AppProvider } from "@/lib/app-context";
+import { I18nProvider } from "@/lib/i18n-context";
 import { auth } from "@/lib/auth";
 import "katex/dist/katex.min.css";
 import "./globals.css";
@@ -38,7 +39,9 @@ export default async function RootLayout({
       >
         <AuthProvider session={session}>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-            <AppProvider initialSession={session}>{children}</AppProvider>
+            <I18nProvider>
+              <AppProvider initialSession={session}>{children}</AppProvider>
+            </I18nProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { useDeckImport } from "@/hooks/use-deck-import";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ImportDropZone } from "@/components/dashboard/import-drop-zone";
@@ -23,8 +24,8 @@ export function Dashboard() {
         deleteDeck,
         isGuest,
         maxDecks,
-        t,
     } = useApp();
+    const { t } = useI18n();
 
     const [importPreview, setImportPreview] = useState<{
         cards: EditableCard[];

@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { CardLevel, RATINGS } from "@/lib/types";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { RATING_STYLES } from "@/lib/level-styles";
 import { Button } from "@/components/ui/button";
 
@@ -31,7 +31,7 @@ export function FlashcardRating({
     onReveal,
     onRate,
 }: FlashcardRatingProps) {
-    const { t } = useApp();
+    const { t } = useI18n();
 
     return (
         <div className="mt-6 space-y-4">

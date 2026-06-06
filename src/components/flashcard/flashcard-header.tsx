@@ -2,7 +2,7 @@
 
 import { Volume2, VolumeX } from "lucide-react";
 import { Flashcard as FlashcardType } from "@/lib/types";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { LEVEL_COLORS } from "@/lib/level-styles";
 
 /**
@@ -32,7 +32,7 @@ export function FlashcardHeader({
     ttsEnabled,
     onTTSToggle,
 }: FlashcardHeaderProps) {
-    const { t } = useApp();
+    const { t } = useI18n();
 
     return (
         <>

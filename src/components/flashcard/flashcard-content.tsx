@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ImageOff, ZoomIn } from "lucide-react";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import dynamic from "next/dynamic";
 
 // Dynamically import LatexRenderer as it is only needed when text contains math
@@ -36,7 +36,7 @@ export function FlashcardContent({
     isLarge = false,
     onImageZoom,
 }: FlashcardContentProps) {
-    const { t } = useApp();
+    const { t } = useI18n();
     const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
     if (!text) return null;

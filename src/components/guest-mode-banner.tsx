@@ -4,11 +4,11 @@ import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Cloud, HardDrive, LogIn } from "lucide-react";
 import Link from "next/link";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 
 export function GuestModeBanner() {
     const { data: session, status } = useSession();
-    const { t } = useApp();
+    const { t } = useI18n();
 
     // Don't show banner if loading, logged in, or on login page
     if (status === "loading" || session) {

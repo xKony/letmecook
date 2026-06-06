@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 
 interface ImportDropZoneProps {
     isImporting: boolean;
@@ -29,7 +29,7 @@ export function ImportDropZone({
     handleDrop,
     handleDragOver,
 }: ImportDropZoneProps) {
-    const { t } = useApp();
+    const { t } = useI18n();
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" || e.key === " ") {
