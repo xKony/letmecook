@@ -9,8 +9,12 @@ import { DeckCard } from "@/components/dashboard/deck-card";
 import { Button } from "@/components/ui/button";
 import { Plus, BookOpen } from "lucide-react";
 import { GlobalDecksModal } from "@/components/global-decks-modal";
-import { Deck } from "@/lib/types";
+import { Deck, EditableCard } from "@/lib/types";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
+import {
+    DeckSetEditorModal,
+    deckToEditableCards,
+} from "@/components/dashboard/deck-set-editor-modal";
 
 export function Dashboard() {
     const {
@@ -22,6 +26,12 @@ export function Dashboard() {
         t,
     } = useApp();
 
+    const [importPreview, setImportPreview] = useState<{
+        cards: EditableCard[];
+        name: string;
+    } | null>(null);
+    const [editDeckId, setEditDeckId] = useState<string | null>(null);
+
     const {
         isImporting,
         setIsImporting,
@@ -31,9 +41,12 @@ export function Dashboard() {
         handleFileSelect,
         handleDrop,
         handleDragOver,
-    } = useDeckImport();
+    } = useDeckImport((cards, name) => setImportPreview({ cards, name }));
 
     const [deckToDelete, setDeckToDelete] = useState<Deck | null>(null);
+    const editDeck = editDeckId
+        ? decks.find((deck) => deck.id === editDeckId) ?? null
+        : null;
 
     return (
         <div className="min-h-screen p-4 md:p-8">
@@ -51,6 +64,26 @@ export function Dashboard() {
                 }}
                 onCancel={() => setDeckToDelete(null)}
             />
+
+            <DeckSetEditorModal
+                isOpen={!!importPreview}
+                mode="import"
+                initialCards={importPreview?.cards ?? []}
+                deckName={importPreview?.name ?? ""}
+                onClose={() => setImportPreview(null)}
+            />
+
+            {editDeck && (
+                <DeckSetEditorModal
+                    isOpen={!!editDeck}
+                    mode="edit"
+                    deckId={editDeck.id}
+                    initialCards={deckToEditableCards(editDeck)}
+                    deckName={editDeck.name}
+                    onClose={() => setEditDeckId(null)}
+                />
+            )}
+
             <div className="max-w-4xl mx-auto">
                 <DashboardHeader />
 
@@ -93,6 +126,7 @@ export function Dashboard() {
                                     deck={deck}
                                     onSelect={selectDeck}
                                     onDelete={setDeckToDelete}
+                                    onEditSet={(d) => setEditDeckId(d.id)}
                                 />
                             ))}
                         </div>

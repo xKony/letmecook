@@ -19,6 +19,15 @@ export interface Deck {
     updatedAt: number;
 }
 
+// Card payload for deck set editor (import preview / bulk edit)
+export interface EditableCard {
+    id: string;
+    question: string;
+    answer: string;
+    image?: string;
+    level?: CardLevel;
+}
+
 // Simplified app state - no more profile abstraction
 // Guest mode: decks stored directly in localStorage
 // Authenticated mode: decks fetched from database

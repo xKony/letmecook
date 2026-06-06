@@ -3,19 +3,20 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import type { Session } from "next-auth";
-import { GuestState, Deck, CardLevel } from "@/lib/types";
+import { GuestState, Deck, CardLevel, EditableCard, Flashcard } from "@/lib/types";
 import {
     loadGuestState,
     saveGuestState,
     createDeck as createLocalDeck,
     parseQuestionsFile,
     resetDeckProgress as resetLocalDeckProgress,
+    generateId,
 } from "@/lib/storage";
 import { LOCALSTORAGE_SAVE_DEBOUNCE_MS, MAX_DECKS_PER_USER } from "@/lib/constants";
 
 // Server actions for authenticated users
 import { getMyDecks, getUserMaxDecks, createDeck as createDbDeck, deleteDeck as deleteDbDeck, updateDeck as updateDbDeck } from "@/app/actions/deck-actions";
-import { updateCardLevel as updateDbCardLevel, updateCard as updateDbCard, resetDeckProgress as resetDbDeckProgress } from "@/app/actions/card-actions";
+import { updateCardLevel as updateDbCardLevel, updateCard as updateDbCard, resetDeckProgress as resetDbDeckProgress, syncDeckCards as syncDbDeckCards } from "@/app/actions/card-actions";
 import { Language, getTranslation } from "@/lib/i18n";
 import { transformDbDeck } from "@/lib/utils";
 
@@ -43,7 +44,7 @@ interface AppContextType {
     handleSignOut: () => void;
 
     // Deck actions
-    addDeck: (name: string, content: string | { question: string, answer: string }[]) => void;
+    addDeck: (name: string, content: string | { question: string; answer: string; image?: string }[]) => void;
     selectDeck: (deckId: string) => void;
     closeDeck: () => void;
     deleteDeck: (deckId: string) => void;
@@ -53,7 +54,8 @@ interface AppContextType {
 
     // Card actions
     updateCardLevel: (cardId: string, level: CardLevel) => void;
-    updateCard: (cardId: string, question: string, answer: string) => void;
+    updateCard: (cardId: string, question: string, answer: string, image?: string) => void;
+    syncDeckCards: (deckId: string, cards: EditableCard[]) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -210,8 +212,8 @@ export function AppProvider({
     }, []);
 
     // Add a new deck
-    const addDeck = useCallback(async (name: string, content: string | { question: string, answer: string }[]) => {
-        let parsedCards: { question: string; answer: string }[] = [];
+    const addDeck = useCallback(async (name: string, content: string | { question: string; answer: string; image?: string }[]) => {
+        let parsedCards: { question: string; answer: string; image?: string }[] = [];
 
         if (typeof content === "string") {
             parsedCards = parseQuestionsFile(content);
@@ -365,13 +367,14 @@ export function AppProvider({
     }, [isAuthenticated]);
 
     // Update a single card's question and answer
-    const updateCard = useCallback(async (cardId: string, question: string, answer: string) => {
+    const updateCard = useCallback(async (cardId: string, question: string, answer: string, image?: string) => {
+        const imageValue = image?.trim() || undefined;
         // Optimistically update local state
         const updateLocal = () => {
             setDbDecks((prev) => prev.map((deck) => ({
                 ...deck,
                 cards: deck.cards.map((card) =>
-                    card.id === cardId ? { ...card, question, answer } : card
+                    card.id === cardId ? { ...card, question, answer, image: imageValue } : card
                 ),
                 updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
             })));
@@ -381,7 +384,7 @@ export function AppProvider({
                 decks: prev.decks.map((deck) => ({
                     ...deck,
                     cards: deck.cards.map((card) =>
-                        card.id === cardId ? { ...card, question, answer } : card
+                        card.id === cardId ? { ...card, question, answer, image: imageValue } : card
                     ),
                     updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
                 })),
@@ -392,12 +395,61 @@ export function AppProvider({
 
         if (isAuthenticated) {
             try {
-                await updateDbCard(cardId, question, answer);
+                await updateDbCard(cardId, question, answer, imageValue);
             } catch (error) {
                 console.error("Failed to update card:", error);
             }
         }
     }, [isAuthenticated]);
+
+    const syncDeckCards = useCallback(async (deckId: string, cards: EditableCard[]) => {
+        const buildFlashcards = (existingCards: Flashcard[]): Flashcard[] => {
+            const existingById = new Map(existingCards.map((c) => [c.id, c]));
+            return cards.map((card) => {
+                const image = card.image?.trim() || undefined;
+                if (card.id && !card.id.startsWith("temp-") && existingById.has(card.id)) {
+                    const existing = existingById.get(card.id)!;
+                    return {
+                        ...existing,
+                        question: card.question,
+                        answer: card.answer,
+                        image,
+                    };
+                }
+                return {
+                    id: generateId(),
+                    question: card.question,
+                    answer: card.answer,
+                    image,
+                    level: "Nowe" as CardLevel,
+                };
+            });
+        };
+
+        const updateLocal = () => {
+            const updater = (decks: Deck[]) =>
+                decks.map((deck) =>
+                    deck.id === deckId
+                        ? { ...deck, cards: buildFlashcards(deck.cards), updatedAt: Date.now() }
+                        : deck
+                );
+
+            setDbDecks((prev) => updater(prev));
+            setGuestState((prev) => ({ ...prev, decks: updater(prev.decks) }));
+        };
+
+        updateLocal();
+
+        if (isAuthenticated) {
+            try {
+                await syncDbDeckCards(deckId, cards);
+                await refreshDecks();
+            } catch (error) {
+                console.error("Failed to sync deck cards:", error);
+                throw error;
+            }
+        }
+    }, [isAuthenticated, refreshDecks]);
 
     const value: AppContextType = {
         isAuthenticated,
@@ -420,6 +472,7 @@ export function AppProvider({
         refreshDecks,
         updateCardLevel,
         updateCard,
+        syncDeckCards,
         language,
         setLanguage,
         t,
