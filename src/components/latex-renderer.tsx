@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import katex from "katex";
 import { ensureKatexStyles } from "@/lib/latex";
+import { renderFormattedInlineText } from "@/lib/text-formatting";
 
 interface LatexRendererProps {
     text: string;
@@ -10,10 +11,8 @@ interface LatexRendererProps {
 }
 
 /**
- * Renders text with LaTeX support
- * Supports:
- *   - Inline math: $...$
- *   - Display/block math: $$...$$
+ * Renders text with LaTeX support.
+ * Math content ($...$ / $$...$$) is passed to KaTeX as-is — no newline or escape processing.
  */
 export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
     useEffect(() => {
@@ -23,14 +22,8 @@ export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
     const renderedContent = useMemo(() => {
         if (!text) return null;
 
-        // Split text by LaTeX delimiters, preserving the delimiters
-        // Handle $$ first (display math), then $ (inline math)
-
-        // Regex to match $$...$$ (display) and $...$ (inline) but not escaped \$ 
-        // Process display math first to avoid conflicts
         const remaining = text;
 
-        // First pass: extract display math ($$...$$)
         const displayRegex = /\$\$([\s\S]*?)\$\$/g;
         let match;
         const tempParts: { type: "text" | "display"; content: string; start: number; end: number }[] = [];
@@ -40,11 +33,10 @@ export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
                 type: "display",
                 content: match[1],
                 start: match.index,
-                end: match.index + match[0].length
+                end: match.index + match[0].length,
             });
         }
 
-        // Build result with display math extracted
         let result = "";
         let offset = 0;
         const displayPlaceholders: { placeholder: string; latex: string }[] = [];
@@ -58,8 +50,7 @@ export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
         }
         result += remaining.slice(offset);
 
-        // Second pass: extract inline math ($...$) from result
-        const inlineRegex = /\$([^\$\n]+?)\$/g;
+        const inlineRegex = /\$([^$]*?)\$/g;
         const inlinePlaceholders: { placeholder: string; latex: string }[] = [];
         result = result.replace(inlineRegex, (_, latex) => {
             const placeholder = `%%INLINE_${inlinePlaceholders.length}%%`;
@@ -67,21 +58,17 @@ export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
             return placeholder;
         });
 
-        // Now split by all placeholders and rebuild
-
-        // Split text by placeholders
         const placeholderRegex = /(%%(DISPLAY|INLINE)_\d+%%)/g;
-        const segments = result.split(placeholderRegex).filter(s => s && !s.match(/^(DISPLAY|INLINE)$/));
+        const segments = result.split(placeholderRegex).filter((s) => s && !s.match(/^(DISPLAY|INLINE)$/));
 
         return segments.map((segment, index) => {
-            // Check if this is a display placeholder
-            const displayMatch = displayPlaceholders.find(p => p.placeholder === segment);
+            const displayMatch = displayPlaceholders.find((p) => p.placeholder === segment);
             if (displayMatch) {
                 try {
                     const html = katex.renderToString(displayMatch.latex, {
                         displayMode: true,
                         throwOnError: false,
-                        strict: false
+                        strict: false,
                     });
                     return (
                         <div
@@ -95,14 +82,13 @@ export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
                 }
             }
 
-            // Check if this is an inline placeholder
-            const inlineMatch = inlinePlaceholders.find(p => p.placeholder === segment);
+            const inlineMatch = inlinePlaceholders.find((p) => p.placeholder === segment);
             if (inlineMatch) {
                 try {
                     const html = katex.renderToString(inlineMatch.latex, {
                         displayMode: false,
                         throwOnError: false,
-                        strict: false
+                        strict: false,
                     });
                     return (
                         <span
@@ -115,42 +101,10 @@ export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
                 }
             }
 
-            // Regular text with markdown support (bold ** and italic *)
-            const renderItalics = (textVal: string) => {
-                const italicParts = textVal.split(/(\*[^*]+?\*)/g);
-                if (italicParts.length > 1) {
-                    return italicParts.map((part, idx) => {
-                        if (part.startsWith("*") && part.endsWith("*")) {
-                            const innerText = part.slice(1, -1);
-                            return <em key={idx} className="italic text-foreground/90">{innerText}</em>;
-                        }
-                        return part;
-                    });
-                }
-                return textVal;
-            };
-
-            const renderTextSegment = (textVal: string) => {
-                const boldParts = textVal.split(/(\*\*.*?\*\*)/g);
-                return boldParts.map((boldPart, bpIdx) => {
-                    if (boldPart.startsWith("**") && boldPart.endsWith("**")) {
-                        const innerText = boldPart.slice(2, -2);
-                        return (
-                            <strong key={`b-${bpIdx}`} className="font-bold text-foreground">
-                                {renderItalics(innerText)}
-                            </strong>
-                        );
-                    }
-                    return <span key={`n-${bpIdx}`}>{renderItalics(boldPart)}</span>;
-                });
-            };
-
-            if (segment.trim()) {
-                return <span key={index}>{renderTextSegment(segment)}</span>;
-            }
-            return segment ? <span key={index}>{renderTextSegment(segment)}</span> : null;
+            if (!segment) return null;
+            return <span key={index}>{renderFormattedInlineText(segment)}</span>;
         });
     }, [text]);
 
-    return <span className={`whitespace-pre-wrap ${className}`}>{renderedContent}</span>;
+    return <div className={className}>{renderedContent}</div>;
 }
