@@ -60,7 +60,7 @@ export function FlashcardEditor({
                 className={`w-full p-4 font-bold text-center bg-background border border-input rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${
                     isQuestion 
                         ? "text-xl md:text-2xl min-h-[100px]" 
-                        : "text-lg md:text-xl font-medium min-h-[80px]"
+                        : "text-base md:text-lg font-medium min-h-[80px] md:min-h-[200px]"
                 }`}
                 placeholder={placeholder}
             />

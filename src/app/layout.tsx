@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { AppProvider } from "@/lib/app-context";
+import { DeckEditorSessionProvider } from "@/lib/deck-editor-session-context";
 import { I18nProvider } from "@/lib/i18n-context";
 import { auth } from "@/lib/auth";
 import "./globals.css";
@@ -39,7 +40,9 @@ export default async function RootLayout({
         <AuthProvider session={session}>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <I18nProvider>
-              <AppProvider initialSession={session}>{children}</AppProvider>
+              <AppProvider initialSession={session}>
+                <DeckEditorSessionProvider>{children}</DeckEditorSessionProvider>
+              </AppProvider>
             </I18nProvider>
           </ThemeProvider>
         </AuthProvider>

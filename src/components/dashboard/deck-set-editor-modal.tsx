@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import {
     Dialog,
     DialogContent,
@@ -12,52 +12,31 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, Loader2 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
+import { useDeckEditorSession } from "@/lib/deck-editor-session-context";
 import { EditableCard } from "@/lib/types";
 import { FlashcardZoomModal } from "@/components/flashcard/flashcard-zoom-modal";
 import { generateId } from "@/lib/storage";
 import { DeckEditorCardRow } from "@/components/dashboard/deck-editor-card-row";
 import { DeckEditorPreviewPanel } from "@/components/dashboard/deck-editor-preview-panel";
 
-export type DeckSetEditorMode = "import" | "edit";
-
-interface DeckSetEditorModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    mode: DeckSetEditorMode;
-    initialCards: EditableCard[];
-    deckName: string;
-    deckId?: string;
-}
-
 type PreviewTarget = { cardId: string; field: "question" | "answer" } | null;
 
-export function DeckSetEditorModal({
-    isOpen,
-    onClose,
-    mode,
-    initialCards,
-    deckName,
-    deckId,
-}: DeckSetEditorModalProps) {
+export function DeckSetEditorModal() {
     const { addDeck, syncDeckCards } = useApp();
     const { t } = useI18n();
-    const [cards, setCards] = useState<EditableCard[]>(initialCards);
-    const [name, setName] = useState(deckName);
-    const [search, setSearch] = useState("");
-    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const { session, closeEditor, patchSession, updateSessionCards } = useDeckEditorSession();
     const [preview, setPreview] = useState<PreviewTarget>(null);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    useEffect(() => {
-        if (isOpen) {
-            setCards(initialCards);
-            setName(deckName);
-            setSearch("");
-            setExpandedId(null);
-            setPreview(null);
-        }
-    }, [isOpen, initialCards, deckName]);
+    const isOpen = session !== null;
+    const mode = session?.mode ?? "edit";
+    const deckId = session?.deckId;
+    const deckName = session?.deckName ?? "";
+    const cards = session?.cards ?? [];
+    const search = session?.search ?? "";
+    const expandedId = session?.expandedId ?? null;
+    const importDeckName = session?.deckName ?? "";
 
     const cardIndexById = useMemo(() => {
         const map = new Map<string, number>();
@@ -86,17 +65,27 @@ export function DeckSetEditorModal({
         return cards.find((card) => card.id === preview.cardId) ?? null;
     }, [preview, cards]);
 
-    const updateCard = useCallback((id: string, patch: Partial<EditableCard>) => {
-        setCards((prev) =>
-            prev.map((card) => (card.id === id ? { ...card, ...patch } : card))
-        );
-    }, []);
+    const updateCard = useCallback(
+        (id: string, patch: Partial<EditableCard>) => {
+            updateSessionCards((prev) =>
+                prev.map((card) => (card.id === id ? { ...card, ...patch } : card))
+            );
+        },
+        [updateSessionCards]
+    );
 
-    const deleteCard = useCallback((id: string) => {
-        setCards((prev) => prev.filter((card) => card.id !== id));
-        setExpandedId((current) => (current === id ? null : current));
-        setPreview((current) => (current?.cardId === id ? null : current));
-    }, []);
+    const deleteCard = useCallback(
+        (id: string) => {
+            updateSessionCards((prev) => prev.filter((card) => card.id !== id));
+            if (expandedId === id) {
+                patchSession({ expandedId: null });
+            }
+            if (preview?.cardId === id) {
+                setPreview(null);
+            }
+        },
+        [updateSessionCards, expandedId, preview, patchSession]
+    );
 
     const addCard = useCallback(() => {
         const newCard: EditableCard = {
@@ -104,13 +93,16 @@ export function DeckSetEditorModal({
             question: "",
             answer: "",
         };
-        setCards((prev) => [...prev, newCard]);
-        setExpandedId(newCard.id);
-    }, []);
+        updateSessionCards((prev) => [...prev, newCard]);
+        patchSession({ expandedId: newCard.id });
+    }, [updateSessionCards, patchSession]);
 
-    const handleToggleExpand = useCallback((id: string) => {
-        setExpandedId((current) => (current === id ? null : id));
-    }, []);
+    const handleToggleExpand = useCallback(
+        (id: string) => {
+            patchSession({ expandedId: expandedId === id ? null : id });
+        },
+        [expandedId, patchSession]
+    );
 
     const handlePreviewHover = useCallback((cardId: string, field: "question" | "answer") => {
         setPreview((current) => {
@@ -131,14 +123,14 @@ export function DeckSetEditorModal({
         try {
             if (mode === "import") {
                 await addDeck(
-                    name.trim() || deckName,
+                    importDeckName.trim() || deckName,
                     validCards.map(({ question, answer, image }) => ({
                         question,
                         answer,
                         image: image?.trim() || undefined,
                     }))
                 );
-                onClose();
+                closeEditor();
             } else if (deckId) {
                 await syncDeckCards(
                     deckId,
@@ -147,7 +139,7 @@ export function DeckSetEditorModal({
                         image: card.image?.trim() || undefined,
                     }))
                 );
-                onClose();
+                closeEditor();
             }
         } catch (error) {
             console.error("Failed to save deck:", error);
@@ -159,7 +151,7 @@ export function DeckSetEditorModal({
 
     return (
         <>
-            <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <Dialog open={isOpen} onOpenChange={(open) => !open && closeEditor()}>
                 <DialogContent
                     className="hidden md:grid w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2rem)] lg:max-w-7xl xl:max-w-[90rem] h-[min(92vh,960px)] max-h-[92vh] overflow-hidden p-0 gap-0"
                     showCloseButton
@@ -174,8 +166,8 @@ export function DeckSetEditorModal({
                             {mode === "import" && (
                                 <input
                                     type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
+                                    value={importDeckName}
+                                    onChange={(e) => patchSession({ deckName: e.target.value })}
                                     placeholder={t("deckEditor.deckName")}
                                     className="mt-2 w-full p-2 rounded-lg bg-background border border-input focus:border-primary focus:outline-none text-sm"
                                 />
@@ -189,7 +181,7 @@ export function DeckSetEditorModal({
                                     <input
                                         type="search"
                                         value={search}
-                                        onChange={(e) => setSearch(e.target.value)}
+                                        onChange={(e) => patchSession({ search: e.target.value })}
                                         placeholder={t("deckEditor.searchPlaceholder")}
                                         className="w-full pl-9 pr-3 py-2 rounded-lg bg-background border border-input focus:border-primary focus:outline-none text-sm"
                                     />
@@ -250,7 +242,7 @@ export function DeckSetEditorModal({
                         </div>
 
                         <DialogFooter className="px-6 py-4 border-t border-border shrink-0">
-                            <Button variant="ghost" onClick={onClose} disabled={isSaving}>
+                            <Button variant="ghost" onClick={closeEditor} disabled={isSaving}>
                                 {t("common.cancel")}
                             </Button>
                             <Button

@@ -3,19 +3,18 @@
 import { useState, useRef, useCallback } from "react";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
+import { useDeckEditorSession } from "@/lib/deck-editor-session-context";
 import { parseQuestionsFile } from "@/lib/storage";
 import { isDesktopViewport } from "@/lib/utils";
-import { EditableCard } from "@/lib/types";
 import { parsedToEditableCards } from "@/lib/deck-editor";
 
 /**
  * Hook for managing deck file importing (Drag and Drop & File Input)
  */
-export function useDeckImport(
-    onDesktopImportPreview?: (cards: EditableCard[], name: string) => void
-) {
+export function useDeckImport() {
     const { addDeck } = useApp();
     const { t } = useI18n();
+    const { openImportEditor } = useDeckEditorSession();
     const [isImporting, setIsImporting] = useState(false);
     const [deckName, setDeckName] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,18 +30,15 @@ export function useDeckImport(
             const name =
                 optionalName?.trim() || fileName.replace(/\.(txt|json)$/, "");
 
-            if (isDesktopViewport() && onDesktopImportPreview) {
-                onDesktopImportPreview(parsedToEditableCards(parsedCards), name);
+            if (isDesktopViewport()) {
+                openImportEditor(parsedToEditableCards(parsedCards), name);
             } else {
                 addDeck(name, content);
             }
         },
-        [addDeck, onDesktopImportPreview, t]
+        [addDeck, openImportEditor, t]
     );
 
-    /**
-     * Handles file selection from the hidden input
-     */
     const handleFileSelect = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
             const file = e.target.files?.[0];
@@ -64,9 +60,6 @@ export function useDeckImport(
         [deckName, processFileContent]
     );
 
-    /**
-     * Handles file drop onto the drop zone
-     */
     const handleDrop = useCallback(
         (e: React.DragEvent) => {
             e.preventDefault();
@@ -87,9 +80,6 @@ export function useDeckImport(
         [processFileContent]
     );
 
-    /**
-     * Prevents default browser behavior for drag over
-     */
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
     }, []);
