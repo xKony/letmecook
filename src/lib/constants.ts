@@ -5,7 +5,17 @@
  * Duration in milliseconds for long press detection on mobile devices
  * Used in flashcard.tsx for edit mode activation
  */
-export const FLASHCARD_LONG_PRESS_MS = 1000;
+export const FLASHCARD_LONG_PRESS_MS = 600;
+
+/**
+ * Max finger movement (px) before cancelling long-press on flashcards
+ */
+export const FLASHCARD_TOUCH_MOVE_CANCEL_PX = 12;
+
+/**
+ * Delay before hiding the desktop edit pencil after mouse leaves (ms)
+ */
+export const FLASHCARD_EDIT_HINT_HIDE_MS = 650;
 
 /**
  * Duration in milliseconds for long press detection in dashboard
