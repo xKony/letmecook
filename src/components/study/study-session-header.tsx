@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { X, Clock, Hash, Shuffle, RotateCcw } from "lucide-react";
+import { X, Clock, Hash, Shuffle, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardLevel } from "@/lib/types";
 import { LEVEL_COLORS } from "@/lib/level-styles";
@@ -12,6 +12,7 @@ interface StudySessionHeaderProps {
     formattedTime: string;
     isShuffled: boolean;
     activeFilter: CardLevel | null;
+    searchQuery: string;
     onClose: () => void;
     onShowStats: () => void;
     onShowGoto: () => void;
@@ -41,6 +42,7 @@ export function StudySessionHeader({
     formattedTime,
     isShuffled,
     activeFilter,
+    searchQuery,
     onClose,
     onShowStats,
     onShowGoto,
@@ -80,6 +82,12 @@ export function StudySessionHeader({
                 {activeFilter && (
                     <span className={`px-2 py-0.5 rounded-full text-xs ${LEVEL_COLORS[activeFilter].bg} ${LEVEL_COLORS[activeFilter].text}`}>
                         {t(`levels.${activeFilter}`)}
+                    </span>
+                )}
+                {searchQuery.trim() && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground max-w-[8rem]">
+                        <Search className="w-3 h-3 shrink-0" aria-hidden="true" />
+                        <span className="truncate">{searchQuery.trim()}</span>
                     </span>
                 )}
                 <span>{t("study.cardCounter", { current: currentIndex + 1, total: totalCards })}</span>
