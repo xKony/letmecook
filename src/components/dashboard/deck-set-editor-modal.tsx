@@ -9,13 +9,14 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Plus, Search, Loader2 } from "lucide-react";
+import { Plus, Search, Loader2 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
 import { EditableCard } from "@/lib/types";
-import { FlashcardContent } from "@/components/flashcard/flashcard-content";
 import { FlashcardZoomModal } from "@/components/flashcard/flashcard-zoom-modal";
 import { generateId } from "@/lib/storage";
+import { DeckEditorCardRow } from "@/components/dashboard/deck-editor-card-row";
+import { DeckEditorPreviewPanel } from "@/components/dashboard/deck-editor-preview-panel";
 
 export type DeckSetEditorMode = "import" | "edit";
 
@@ -58,19 +59,32 @@ export function DeckSetEditorModal({
         }
     }, [isOpen, initialCards, deckName]);
 
-    const filteredCards = useMemo(() => {
-        const query = search.trim().toLowerCase();
-        if (!query) return cards;
-        return cards.filter(
-            (card) =>
-                card.question.toLowerCase().includes(query) ||
-                card.answer.toLowerCase().includes(query)
-        );
-    }, [cards, search]);
+    const cardIndexById = useMemo(() => {
+        const map = new Map<string, number>();
+        cards.forEach((card, index) => map.set(card.id, index));
+        return map;
+    }, [cards]);
 
-    const previewCard = preview
-        ? cards.find((card) => card.id === preview.cardId)
-        : null;
+    const filteredCardsWithIndex = useMemo(() => {
+        const query = search.trim().toLowerCase();
+        const filtered = query
+            ? cards.filter(
+                  (card) =>
+                      card.question.toLowerCase().includes(query) ||
+                      card.answer.toLowerCase().includes(query)
+              )
+            : cards;
+
+        return filtered.map((card) => ({
+            card,
+            index: cardIndexById.get(card.id) ?? 0,
+        }));
+    }, [cards, search, cardIndexById]);
+
+    const previewCard = useMemo(() => {
+        if (!preview) return null;
+        return cards.find((card) => card.id === preview.cardId) ?? null;
+    }, [preview, cards]);
 
     const updateCard = useCallback((id: string, patch: Partial<EditableCard>) => {
         setCards((prev) =>
@@ -80,9 +94,9 @@ export function DeckSetEditorModal({
 
     const deleteCard = useCallback((id: string) => {
         setCards((prev) => prev.filter((card) => card.id !== id));
-        if (expandedId === id) setExpandedId(null);
-        if (preview?.cardId === id) setPreview(null);
-    }, [expandedId, preview]);
+        setExpandedId((current) => (current === id ? null : current));
+        setPreview((current) => (current?.cardId === id ? null : current));
+    }, []);
 
     const addCard = useCallback(() => {
         const newCard: EditableCard = {
@@ -92,6 +106,21 @@ export function DeckSetEditorModal({
         };
         setCards((prev) => [...prev, newCard]);
         setExpandedId(newCard.id);
+    }, []);
+
+    const handleToggleExpand = useCallback((id: string) => {
+        setExpandedId((current) => (current === id ? null : id));
+    }, []);
+
+    const handlePreviewHover = useCallback((cardId: string, field: "question" | "answer") => {
+        setPreview((current) => {
+            if (current?.cardId === cardId && current?.field === field) return current;
+            return { cardId, field };
+        });
+    }, []);
+
+    const handleImageZoom = useCallback((url: string) => {
+        setZoomedImage(url);
     }, []);
 
     const handlePrimaryAction = async () => {
@@ -127,9 +156,6 @@ export function DeckSetEditorModal({
             setIsSaving(false);
         }
     };
-
-    const truncate = (text: string, max = 160) =>
-        text.length > max ? `${text.slice(0, max)}…` : text;
 
     return (
         <>
@@ -171,189 +197,55 @@ export function DeckSetEditorModal({
                                 <span className="text-sm text-muted-foreground shrink-0">
                                     {t("deckEditor.resultsCount", {
                                         total: cards.length,
-                                        filtered: filteredCards.length,
+                                        filtered: filteredCardsWithIndex.length,
                                     })}
                                 </span>
                             </div>
                         </DialogHeader>
 
                         <div className="flex flex-1 min-h-0 overflow-hidden">
-                            <div className="flex-[1.15] min-w-0 overflow-y-auto p-5 space-y-3 border-r border-border">
-                                {filteredCards.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground text-center py-8">
-                                        {t("deckEditor.noResults")}
-                                    </p>
-                                ) : (
-                                    filteredCards.map((card) => {
-                                        const cardIndex = cards.findIndex((c) => c.id === card.id);
-                                        const isExpanded = expandedId === card.id;
-
-                                        return (
-                                            <div
-                                                key={card.id}
-                                                className="rounded-lg border border-border bg-card/50 overflow-hidden"
-                                            >
-                                                <div className="flex items-start gap-3 p-4">
-                                                    <span className="text-xs font-mono text-muted-foreground pt-0.5 shrink-0 w-16">
-                                                        {t("deckEditor.cardNumber", {
-                                                            number: cardIndex + 1,
-                                                        })}
-                                                    </span>
-                                                    <div className="flex-1 min-w-0 space-y-2">
-                                                        <div
-                                                            className="text-sm leading-relaxed cursor-default rounded px-1.5 py-1 -mx-1.5 hover:bg-muted/60 transition-colors"
-                                                            onMouseEnter={() =>
-                                                                setPreview({
-                                                                    cardId: card.id,
-                                                                    field: "question",
-                                                                })
-                                                            }
-                                                        >
-                                                            <span className="font-semibold text-indigo-400">
-                                                                {t("deckEditor.question")}:
-                                                            </span>{" "}
-                                                            <span className="text-foreground/90">
-                                                                {truncate(card.question) || "—"}
-                                                            </span>
-                                                        </div>
-                                                        <div
-                                                            className="text-sm leading-relaxed cursor-default rounded px-1.5 py-1 -mx-1.5 hover:bg-muted/60 transition-colors"
-                                                            onMouseEnter={() =>
-                                                                setPreview({
-                                                                    cardId: card.id,
-                                                                    field: "answer",
-                                                                })
-                                                            }
-                                                        >
-                                                            <span className="font-semibold text-emerald-400">
-                                                                {t("deckEditor.answer")}:
-                                                            </span>{" "}
-                                                            <span className="text-foreground/90">
-                                                                {truncate(card.answer) || "—"}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 shrink-0">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            onClick={() =>
-                                                                setExpandedId(
-                                                                    isExpanded ? null : card.id
-                                                                )
-                                                            }
-                                                            aria-label={t("common.rename")}
-                                                        >
-                                                            <Pencil className="w-3.5 h-3.5" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-destructive hover:text-destructive"
-                                                            onClick={() => deleteCard(card.id)}
-                                                            aria-label={t("deckEditor.deleteCard")}
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-
-                                                {isExpanded && (
-                                                    <div className="px-4 pb-4 space-y-3 border-t border-border/50 pt-4 ml-[4.75rem] mr-12">
-                                                        <label className="block text-xs font-medium text-muted-foreground">
-                                                            {t("deckEditor.question")}
-                                                        </label>
-                                                        <textarea
-                                                            value={card.question}
-                                                            onChange={(e) =>
-                                                                updateCard(card.id, {
-                                                                    question: e.target.value,
-                                                                })
-                                                            }
-                                                            rows={3}
-                                                            className="w-full p-3 text-sm rounded-lg bg-background border border-input focus:border-primary focus:outline-none resize-y min-h-[4.5rem]"
-                                                        />
-                                                        <label className="block text-xs font-medium text-muted-foreground">
-                                                            {t("deckEditor.answer")}
-                                                        </label>
-                                                        <textarea
-                                                            value={card.answer}
-                                                            onChange={(e) =>
-                                                                updateCard(card.id, {
-                                                                    answer: e.target.value,
-                                                                })
-                                                            }
-                                                            rows={5}
-                                                            className="w-full p-3 text-sm rounded-lg bg-background border border-input focus:border-primary focus:outline-none resize-y min-h-[6rem]"
-                                                        />
-                                                        <label className="block text-xs font-medium text-muted-foreground">
-                                                            {t("deckEditor.imageUrl")}
-                                                        </label>
-                                                        <input
-                                                            type="url"
-                                                            value={card.image ?? ""}
-                                                            onChange={(e) =>
-                                                                updateCard(card.id, {
-                                                                    image: e.target.value,
-                                                                })
-                                                            }
-                                                            placeholder={t(
-                                                                "deckEditor.imageUrlPlaceholder"
-                                                            )}
-                                                            className="w-full p-3 text-sm rounded-lg bg-background border border-input focus:border-primary focus:outline-none"
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })
-                                )}
-
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={addCard}
-                                    className="w-full gap-2 mt-2"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    {t("deckEditor.addCard")}
-                                </Button>
+                            <div className="flex-[1.15] min-w-0 flex flex-col min-h-0 border-r border-border">
+                                <div className="flex-1 min-h-0 overflow-y-auto p-5">
+                                    {filteredCardsWithIndex.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground text-center py-8">
+                                            {t("deckEditor.noResults")}
+                                        </p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {filteredCardsWithIndex.map(({ card, index }) => (
+                                                <DeckEditorCardRow
+                                                    key={card.id}
+                                                    card={card}
+                                                    cardIndex={index}
+                                                    isExpanded={expandedId === card.id}
+                                                    onToggleExpand={handleToggleExpand}
+                                                    onDelete={deleteCard}
+                                                    onUpdate={updateCard}
+                                                    onPreviewHover={handlePreviewHover}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="shrink-0 px-5 pb-5 pt-2 border-t border-border/50 bg-background">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={addCard}
+                                        className="w-full gap-2"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        {t("deckEditor.addCard")}
+                                    </Button>
+                                </div>
                             </div>
 
                             <div className="w-[38%] min-w-[280px] max-w-[480px] shrink-0 p-5 overflow-y-auto bg-muted/20">
-                                {!previewCard ? (
-                                    <p className="text-sm text-muted-foreground text-center py-16 px-4">
-                                        {t("deckEditor.hoverHint")}
-                                    </p>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <h4 className="text-sm font-semibold text-muted-foreground">
-                                            {preview?.field === "question"
-                                                ? t("deckEditor.previewQuestion")
-                                                : t("deckEditor.previewAnswer")}
-                                        </h4>
-                                        <div className="bg-card rounded-xl border border-border p-6 min-h-[200px] flex items-center justify-center">
-                                            <FlashcardContent
-                                                text={
-                                                    preview?.field === "question"
-                                                        ? previewCard.question
-                                                        : previewCard.answer
-                                                }
-                                                isLarge={preview?.field === "question"}
-                                                onImageZoom={setZoomedImage}
-                                            />
-                                        </div>
-                                        {previewCard.image && (
-                                            <div className="bg-card rounded-xl border border-border p-4 flex items-center justify-center">
-                                                <FlashcardContent
-                                                    text={`[img:${previewCard.image}]`}
-                                                    onImageZoom={setZoomedImage}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                <DeckEditorPreviewPanel
+                                    previewField={preview?.field ?? null}
+                                    card={previewCard}
+                                    onImageZoom={handleImageZoom}
+                                />
                             </div>
                         </div>
 
