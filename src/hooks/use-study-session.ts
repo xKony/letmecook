@@ -44,16 +44,15 @@ export function useStudySession(deck: Deck | null) {
     const filteredCards = useMemo(() => {
         if (!deck) return [];
 
-        let cards = deck.cards;
-        if (activeFilter) {
-            cards = cards.filter((c) => c.level === activeFilter);
-        }
-        if (searchQuery.trim()) {
-            cards = cards.filter((c) => cardMatchesSearch(c, searchQuery));
-        }
+        if (!activeFilter) return deck.cards;
+        return deck.cards.filter((c) => c.level === activeFilter);
+    }, [deck, activeFilter]);
 
-        return cards;
-    }, [deck, activeFilter, searchQuery]);
+    const searchResults = useMemo(() => {
+        if (!deck || !searchQuery.trim()) return [];
+
+        return filteredCards.filter((c) => cardMatchesSearch(c, searchQuery));
+    }, [deck, filteredCards, searchQuery]);
 
     const playOrder = useMemo(() => {
         let cardIds = filteredCards.map((c) => c.id);
@@ -178,6 +177,7 @@ export function useStudySession(deck: Deck | null) {
         playIndex,
         playOrder,
         filteredCards,
+        searchResults,
         currentCard,
         isShuffled,
         activeFilter,

@@ -5,18 +5,10 @@ import { useEffect } from "react";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
 import { Dashboard } from "@/components/dashboard";
+import { StudySession } from "@/components/study-session";
 import { GuestModeBanner } from "@/components/guest-mode-banner";
 import type { Session } from "next-auth";
 import { Deck } from "@/lib/types";
-
-const StudySession = dynamic(() => import("@/components/study-session").then(mod => mod.StudySession), {
-    loading: () => (
-        <div className="min-h-screen flex items-center justify-center">
-            <div className="animate-pulse text-muted-foreground text-lg">Preparing Study Session...</div>
-        </div>
-    ),
-    ssr: false
-});
 
 const DeckSetEditorModal = dynamic(
     () => import("@/components/dashboard/deck-set-editor-modal").then((m) => m.DeckSetEditorModal),

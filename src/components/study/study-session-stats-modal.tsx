@@ -21,7 +21,8 @@ interface StudySessionStatsModalProps {
     activeFilter: CardLevel | null;
     searchQuery: string;
     totalCards: number;
-    filteredCards: Flashcard[];
+    filteredCardCount: number;
+    searchResults: Flashcard[];
     playOrder: string[];
     onSearchChange: (query: string) => void;
     onFilterSelect: (level: CardLevel | null) => void;
@@ -41,7 +42,8 @@ export function StudySessionStatsModal({
     activeFilter,
     searchQuery,
     totalCards,
-    filteredCards,
+    filteredCardCount,
+    searchResults,
     playOrder,
     onSearchChange,
     onFilterSelect,
@@ -49,7 +51,8 @@ export function StudySessionStatsModal({
     onClearFilters,
     t,
 }: StudySessionStatsModalProps) {
-    const hasSearch = searchQuery.trim().length > 0;
+    const trimmedSearch = searchQuery.trim();
+    const hasSearch = trimmedSearch.length > 0;
     const hasActiveFilters = activeFilter !== null || hasSearch;
 
     const playIndexById = useMemo(() => {
@@ -57,6 +60,8 @@ export function StudySessionStatsModal({
         playOrder.forEach((cardId, index) => map.set(cardId, index));
         return map;
     }, [playOrder]);
+
+    const searchScopeCount = activeFilter ? filteredCardCount : totalCards;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -80,11 +85,11 @@ export function StudySessionStatsModal({
                             aria-label={t("study.searchPlaceholder")}
                         />
                     </div>
-                    {(hasSearch || activeFilter) && (
+                    {hasSearch && (
                         <p className="text-xs text-muted-foreground">
                             {t("study.resultsCount", {
-                                total: totalCards,
-                                filtered: filteredCards.length,
+                                total: searchScopeCount,
+                                filtered: searchResults.length,
                             })}
                         </p>
                     )}
@@ -92,12 +97,12 @@ export function StudySessionStatsModal({
 
                 {hasSearch && (
                     <div className="shrink-0 max-h-36 overflow-y-auto -mx-1 px-1 space-y-1">
-                        {filteredCards.length === 0 ? (
+                        {searchResults.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-3">
-                                {t("study.noSearchResults")}
+                                {t("study.noSearchResultsFor", { query: trimmedSearch })}
                             </p>
                         ) : (
-                            filteredCards.map((card) => {
+                            searchResults.map((card) => {
                                 const index = playIndexById.get(card.id);
                                 if (index === undefined) return null;
                                 return (

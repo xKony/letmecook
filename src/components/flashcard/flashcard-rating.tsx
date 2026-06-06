@@ -34,14 +34,14 @@ export function FlashcardRating({
     const { t } = useI18n();
 
     return (
-        <div className="mt-6 space-y-4">
-            <AnimatePresence mode="wait">
+        <div className="relative z-10 mt-6 space-y-4 w-full">
+            <AnimatePresence mode="wait" initial={false}>
                 {!isRevealed ? (
                     <motion.div
                         key="reveal"
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
+                        exit={{ opacity: 0, scale: 0.95, pointerEvents: "none" }}
                     >
                         <Button
                             onClick={onReveal}
@@ -55,8 +55,8 @@ export function FlashcardRating({
                         key="rating"
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="grid grid-cols-2 md:grid-cols-4 gap-3"
+                        exit={{ opacity: 0, scale: 0.95, pointerEvents: "none" }}
+                        className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-3"
                     >
                         {RATINGS.map((rating) => (
                             <Button
