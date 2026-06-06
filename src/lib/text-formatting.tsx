@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 function renderItalics(textVal: string) {
     const italicParts = textVal.split(/(\*[^*]+?\*)/g);
     if (italicParts.length > 1) {
@@ -29,6 +31,18 @@ function renderTextSegment(textVal: string) {
 
 /** Lightweight text renderer for content without LaTeX (no KaTeX bundle). */
 export function PlainTextContent({ text, className = "" }: { text: string; className?: string }) {
-    if (!text.trim()) return null;
-    return <span className={`whitespace-pre-wrap ${className}`}>{renderTextSegment(text)}</span>;
+    if (!text) return null;
+
+    const lines = text.split("\n");
+
+    return (
+        <span className={className}>
+            {lines.map((line, lineIndex) => (
+                <Fragment key={lineIndex}>
+                    {lineIndex > 0 && <br />}
+                    {renderTextSegment(line)}
+                </Fragment>
+            ))}
+        </span>
+    );
 }

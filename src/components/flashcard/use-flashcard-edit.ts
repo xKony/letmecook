@@ -132,8 +132,7 @@ export function useFlashcardEdit({
 
     const handleSaveQuestion = useCallback(() => {
         if (onUpdateCard && editQuestion.trim()) {
-            const sanitizedQuestion = editQuestion.replace(/[\r\n]+/g, " ").trim();
-            onUpdateCard(card.id, sanitizedQuestion, card.answer);
+            onUpdateCard(card.id, editQuestion.trim(), card.answer);
         }
         setIsEditingQuestion(false);
         setShowMobileEditMenu(false);
@@ -141,8 +140,7 @@ export function useFlashcardEdit({
 
     const handleSaveAnswer = useCallback(() => {
         if (onUpdateCard) {
-            const sanitizedAnswer = editAnswer.replace(/[\r\n]+/g, " ").trim();
-            onUpdateCard(card.id, card.question, sanitizedAnswer);
+            onUpdateCard(card.id, card.question, editAnswer.trim());
         }
         setIsEditingAnswer(false);
         setShowMobileEditMenu(false);
