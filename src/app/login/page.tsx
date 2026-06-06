@@ -6,9 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, User, ArrowRight, Loader2, CheckCircle } from "lucide-react";
-import { registerUser } from "@/app/actions/auth-actions";
-import { signIn } from "next-auth/react";
+import { registerUser, loginUser } from "@/app/actions/auth-actions";
 import { useApp } from "@/lib/app-context";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 function LoginForm() {
     const router = useRouter();
@@ -35,51 +35,44 @@ function LoginForm() {
         setIsLoading(true);
 
         const formData = new FormData(e.currentTarget);
-        const email = formData.get("email") as string;
-        const password = formData.get("password") as string;
+        const redirectTo = searchParams.get("from") || "/";
 
+        const redirectAfterAuth = () => {
+            setSuccess(isLogin ? "Login successful! Redirecting..." : "Account created! Redirecting...");
+            router.refresh();
+            setTimeout(() => {
+                router.push(redirectTo);
+            }, 500);
+        };
 
         try {
             if (isLogin) {
-                const result = await signIn("credentials", {
-                    email,
-                    password,
-                    redirect: false,
-                });
+                const result = await loginUser(formData);
 
                 if (result?.error) {
-                    setError("Invalid email or password");
-                } else {
-                    setSuccess("Login successful! Redirecting...");
-                    router.refresh();
-                    setTimeout(() => {
-                        router.push("/");
-                    }, 500);
+                    setError(result.error);
+                } else if (result?.success) {
+                    redirectAfterAuth();
                 }
             } else {
                 const result = await registerUser(formData);
                 if (result?.error) {
                     setError(result.error);
                 } else if (result?.success) {
-                    const loginResult = await signIn("credentials", {
-                        email,
-                        password,
-                        redirect: false,
-                    });
+                    const loginResult = await loginUser(formData);
 
                     if (loginResult?.error) {
                         setError("Account created but login failed. Please sign in.");
                         setIsLogin(true);
-                    } else {
-                        setSuccess("Account created! Redirecting...");
-                        router.refresh();
-                        setTimeout(() => {
-                            router.push("/");
-                        }, 500);
+                    } else if (loginResult?.success) {
+                        redirectAfterAuth();
                     }
                 }
             }
         } catch (err) {
+            if (isRedirectError(err)) {
+                throw err;
+            }
             console.error("Auth error:", err);
             setError("An unexpected error occurred");
         } finally {
