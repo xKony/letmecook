@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Pencil, Check, X, Download, Trash2, ListTree } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
@@ -136,14 +135,9 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
             >
                 <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
-                        <AnimatePresence mode="wait">
-                            {isEditing ? (
-                                <motion.div
-                                    key="editing"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="flex items-center gap-2"
+                        {isEditing ? (
+                                <div
+                                    className="animate-fade-in flex items-center gap-2"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <input
@@ -173,14 +167,9 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                                     >
                                         <X className="w-4 h-4" />
                                     </Button>
-                                </motion.div>
+                                </div>
                             ) : (
-                                <motion.div
-                                    key="display"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                >
+                                <div className="animate-fade-in">
                                     <div className="flex items-center gap-2 min-w-0">
                                         <h3 className="text-lg font-semibold group-hover:text-primary transition-colors truncate max-w-[200px] sm:max-w-none">
                                             {deck.name}
@@ -198,9 +187,8 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                                     <p className="text-sm text-muted-foreground">
                                         {t("dashboard.cardsCount", { count: deck.cards.length })}
                                     </p>
-                                </motion.div>
+                                </div>
                             )}
-                        </AnimatePresence>
                     </div>
                     {!isEditing && (
                         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
@@ -257,23 +245,13 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                 </div>
             </div>
 
-            {/* Mobile Context Menu */}
-            <AnimatePresence>
-                {isContextMenuOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm md:hidden"
+            {isContextMenuOpen && (
+                    <div
+                        className="animate-overlay-in fixed inset-0 z-50 bg-background/80 backdrop-blur-sm md:hidden"
                         onClick={() => setIsContextMenuOpen(false)}
                     >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                            className="absolute left-4 right-4 bottom-8 bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
+                        <div
+                            className="animate-modal-up absolute left-4 right-4 bottom-8 bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="p-4 border-b border-border">
@@ -315,10 +293,9 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                             >
                                 {t("common.cancel")}
                             </button>
-                        </motion.div>
-                    </motion.div>
+                        </div>
+                    </div>
                 )}
-            </AnimatePresence>
         </>
     );
 }

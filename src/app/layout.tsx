@@ -5,7 +5,6 @@ import { AuthProvider } from "@/components/auth-provider";
 import { AppProvider } from "@/lib/app-context";
 import { I18nProvider } from "@/lib/i18n-context";
 import { auth } from "@/lib/auth";
-import "katex/dist/katex.min.css";
 import "./globals.css";
 
 const geistSans = Geist({

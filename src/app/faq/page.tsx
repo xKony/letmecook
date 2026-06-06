@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,8 +17,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { LatexRenderer } from "@/components/latex-renderer";
 import { useI18n } from "@/lib/i18n-context";
+
+const LatexRenderer = dynamic(
+  () => import("@/components/latex-renderer").then((m) => m.LatexRenderer),
+  { ssr: true }
+);
 
 type Language = "en" | "pl";
 

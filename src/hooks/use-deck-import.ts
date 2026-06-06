@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n-context";
 import { parseQuestionsFile } from "@/lib/storage";
 import { isDesktopViewport } from "@/lib/utils";
 import { EditableCard } from "@/lib/types";
-import { parsedToEditableCards } from "@/components/dashboard/deck-set-editor-modal";
+import { parsedToEditableCards } from "@/lib/deck-editor";
 
 /**
  * Hook for managing deck file importing (Drag and Drop & File Input)

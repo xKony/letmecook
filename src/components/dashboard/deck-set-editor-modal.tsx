@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Plus, Search, Loader2 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
-import { EditableCard, Deck, Flashcard } from "@/lib/types";
+import { EditableCard } from "@/lib/types";
 import { FlashcardContent } from "@/components/flashcard/flashcard-content";
 import { FlashcardZoomModal } from "@/components/flashcard/flashcard-zoom-modal";
 import { generateId } from "@/lib/storage";
@@ -29,28 +29,6 @@ interface DeckSetEditorModalProps {
 }
 
 type PreviewTarget = { cardId: string; field: "question" | "answer" } | null;
-
-export function deckToEditableCards(deck: Deck): EditableCard[] {
-    return deck.cards.map((card) => ({
-        id: card.id,
-        question: card.question,
-        answer: card.answer,
-        image: card.image,
-        level: card.level,
-    }));
-}
-
-export function parsedToEditableCards(
-    cards: Omit<Flashcard, "id" | "level">[]
-): EditableCard[] {
-    const base = Date.now();
-    return cards.map((card, index) => ({
-        id: `temp-${base}-${index}`,
-        question: card.question,
-        answer: card.answer,
-        image: card.image,
-    }));
-}
 
 export function DeckSetEditorModal({
     isOpen,

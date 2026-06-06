@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { ImageOff, ZoomIn } from "lucide-react";
 import { useI18n } from "@/lib/i18n-context";
+import { containsMath } from "@/lib/latex";
+import { PlainTextContent } from "@/lib/text-formatting";
 import dynamic from "next/dynamic";
 
-// Dynamically import LatexRenderer as it is only needed when text contains math
-const LatexRenderer = dynamic(() => import("@/components/latex-renderer").then(mod => mod.LatexRenderer), {
-    ssr: true,
-});
+const LatexRenderer = dynamic(
+    () => import("@/components/latex-renderer").then((mod) => mod.LatexRenderer),
+    { ssr: true }
+);
 
 /**
  * Props for the FlashcardContent component.
@@ -82,9 +84,11 @@ export function FlashcardContent({
                     );
                 }
 
-                // Regular text part - render with LaTeX support
                 if (part.trim()) {
-                    return <LatexRenderer key={index} text={part} />;
+                    if (containsMath(part)) {
+                        return <LatexRenderer key={index} text={part} />;
+                    }
+                    return <PlainTextContent key={index} text={part} />;
                 }
                 return null;
             })}
