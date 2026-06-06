@@ -84,7 +84,7 @@ export function FlashcardContent({
                     );
                 }
 
-                if (part.trim()) {
+                if (part.length > 0) {
                     if (containsMath(part)) {
                         return <LatexRenderer key={index} text={part} />;
                     }

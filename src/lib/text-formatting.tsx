@@ -1,6 +1,6 @@
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 
-function renderItalics(textVal: string) {
+function renderItalics(textVal: string): ReactNode {
     const italicParts = textVal.split(/(\*[^*]+?\*)/g);
     if (italicParts.length > 1) {
         return italicParts.map((part, idx) => {
@@ -14,7 +14,8 @@ function renderItalics(textVal: string) {
     return textVal;
 }
 
-function renderTextSegment(textVal: string) {
+/** Bold/italic markdown for a single line — no newline expansion. */
+export function renderFormattedInlineText(textVal: string): ReactNode {
     const boldParts = textVal.split(/(\*\*.*?\*\*)/g);
     return boldParts.map((boldPart, bpIdx) => {
         if (boldPart.startsWith("**") && boldPart.endsWith("**")) {
@@ -29,18 +30,29 @@ function renderTextSegment(textVal: string) {
     });
 }
 
+/**
+ * Expand literal \n escape sequences for plain text only.
+ * Skips LaTeX commands like \neq, \nu, \nabla (backslash-n followed by a letter).
+ */
+function expandPlainTextNewlines(text: string): string {
+    return text
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/(?<!\\)\\n(?![a-zA-Z])/g, "\n");
+}
+
 /** Lightweight text renderer for content without LaTeX (no KaTeX bundle). */
 export function PlainTextContent({ text, className = "" }: { text: string; className?: string }) {
     if (!text) return null;
 
-    const lines = text.split("\n");
+    const lines = expandPlainTextNewlines(text).split("\n");
 
     return (
         <span className={className}>
             {lines.map((line, lineIndex) => (
                 <Fragment key={lineIndex}>
                     {lineIndex > 0 && <br />}
-                    {renderTextSegment(line)}
+                    {renderFormattedInlineText(line)}
                 </Fragment>
             ))}
         </span>
