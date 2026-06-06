@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n-context";
 import { Button } from "@/components/ui/button";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
+import { downloadDeckJson } from "@/lib/deck-export";
 
 interface DeckCardProps {
     deck: Deck;
@@ -66,24 +67,9 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
         }
     };
 
-    /**
-     * Exports deck to a .txt file
-     */
     const handleExport = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        const content = deck.cards
-            .map((card) => `${card.question} | ${card.answer}`)
-            .join("\n");
-
-        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${deck.name}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        downloadDeckJson(deck);
         setIsContextMenuOpen(false);
     }, [deck]);
 
