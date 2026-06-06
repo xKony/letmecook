@@ -5,12 +5,7 @@ import { ImageOff, ZoomIn } from "lucide-react";
 import { useI18n } from "@/lib/i18n-context";
 import { containsMath } from "@/lib/latex";
 import { PlainTextContent } from "@/lib/text-formatting";
-import dynamic from "next/dynamic";
-
-const LatexRenderer = dynamic(
-    () => import("@/components/latex-renderer").then((mod) => mod.LatexRenderer),
-    { ssr: true }
-);
+import { LatexRenderer } from "@/components/latex-renderer";
 
 /**
  * Props for the FlashcardContent component.
