@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,8 +17,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { LatexRenderer } from "@/components/latex-renderer";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
+
+const LatexRenderer = dynamic(
+  () => import("@/components/latex-renderer").then((m) => m.LatexRenderer),
+  { ssr: true }
+);
 
 type Language = "en" | "pl";
 
@@ -52,7 +57,7 @@ type ContentDict = {
 
 export default function FAQPage() {
   const router = useRouter();
-  const { language, setLanguage, t: globalT } = useApp();
+  const { language, setLanguage, t: globalT } = useI18n();
   const faqLang = language as Language;
   const [openIndex, setOpenIndex] = useState<string | null>("sec-0-item-0");
   const [isCopied, setIsCopied] = useState(false);

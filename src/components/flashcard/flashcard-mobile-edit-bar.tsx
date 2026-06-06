@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 
 interface FlashcardMobileEditBarProps {
     isOpen: boolean;
@@ -24,7 +24,7 @@ export function FlashcardMobileEditBar({
     onEditAnswer,
     onDismiss,
 }: FlashcardMobileEditBarProps) {
-    const { t } = useApp();
+    const { t } = useI18n();
 
     return (
         <AnimatePresence>

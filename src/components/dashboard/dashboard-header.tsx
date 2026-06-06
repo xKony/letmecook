@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { User, HelpCircle, Shield, Settings, LogIn, LogOut } from "lucide-react";
 import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Component as LanguageSelectorDropdown } from "@/components/ui/language-selector-dropdown";
@@ -18,8 +19,8 @@ export function DashboardHeader() {
         isGuest,
         isAdmin,
         authUser,
-        t,
     } = useApp();
+    const { t } = useI18n();
 
     // Get display name
     const displayName = isAuthenticated

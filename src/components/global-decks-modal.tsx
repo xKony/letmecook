@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Globe, Download, Check, Loader2, BookOpen } from "lucide-react";
 import { useApp } from "@/lib/app-context";
-import { motion } from "framer-motion";
+import { useI18n } from "@/lib/i18n-context";
 import { getPublicDecks } from "@/app/actions/admin-actions";
 
 interface PublicDeck {
@@ -16,7 +16,8 @@ interface PublicDeck {
 }
 
 export function GlobalDecksModal() {
-    const { addDeck, t } = useApp();
+    const { addDeck } = useApp();
+    const { t } = useI18n();
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [decks, setDecks] = useState<PublicDeck[]>([]);
@@ -81,12 +82,10 @@ export function GlobalDecksModal() {
                     ) : (
                         <div className="grid gap-3">
                             {decks.map((deck, idx) => (
-                                <motion.div
+                                <div
                                     key={deck.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.03 }}
-                                    className="flex items-center justify-between p-4 rounded-xl border border-border bg-card/50 hover:bg-card/80 transition-colors"
+                                    className="deck-card-animate flex items-center justify-between p-4 rounded-xl border border-border bg-card/50 hover:bg-card/80 transition-colors"
+                                    style={{ animationDelay: `${idx * 30}ms` }}
                                 >
                                     <div className="min-w-0 flex-1">
                                         <h3 className="font-semibold truncate">{deck.name}</h3>
@@ -116,7 +115,7 @@ export function GlobalDecksModal() {
                                             </>
                                         )}
                                     </Button>
-                                </motion.div>
+                                </div>
                             ))}
                         </div>
                     )}

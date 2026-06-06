@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
 import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { Dashboard } from "@/components/dashboard";
 import { GuestModeBanner } from "@/components/guest-mode-banner";
 import type { Session } from "next-auth";
@@ -30,7 +31,8 @@ interface AppMainProps {
  * It also syncs server-side fetched data into the global AppProvider context.
  */
 export function AppMain({ initialDecks, initialMaxDecks }: AppMainProps) {
-    const { currentDeck, isLoading, authLoading, isGuest, setInitialData, t } = useApp();
+    const { currentDeck, isLoading, authLoading, isGuest, setInitialData } = useApp();
+    const { t } = useI18n();
 
     // Sync initial data from server to context
     useEffect(() => {

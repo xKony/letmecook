@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { useDeckImport } from "@/hooks/use-deck-import";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ImportDropZone } from "@/components/dashboard/import-drop-zone";
@@ -11,10 +13,12 @@ import { Plus, BookOpen } from "lucide-react";
 import { GlobalDecksModal } from "@/components/global-decks-modal";
 import { Deck, EditableCard } from "@/lib/types";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
-import {
-    DeckSetEditorModal,
-    deckToEditableCards,
-} from "@/components/dashboard/deck-set-editor-modal";
+import { deckToEditableCards } from "@/lib/deck-editor";
+
+const DeckSetEditorModal = dynamic(
+    () => import("@/components/dashboard/deck-set-editor-modal").then((m) => m.DeckSetEditorModal),
+    { ssr: false }
+);
 
 export function Dashboard() {
     const {
@@ -23,8 +27,8 @@ export function Dashboard() {
         deleteDeck,
         isGuest,
         maxDecks,
-        t,
     } = useApp();
+    const { t } = useI18n();
 
     const [importPreview, setImportPreview] = useState<{
         cards: EditableCard[];

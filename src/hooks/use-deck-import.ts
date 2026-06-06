@@ -2,10 +2,11 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { parseQuestionsFile } from "@/lib/storage";
 import { isDesktopViewport } from "@/lib/utils";
 import { EditableCard } from "@/lib/types";
-import { parsedToEditableCards } from "@/components/dashboard/deck-set-editor-modal";
+import { parsedToEditableCards } from "@/lib/deck-editor";
 
 /**
  * Hook for managing deck file importing (Drag and Drop & File Input)
@@ -13,7 +14,8 @@ import { parsedToEditableCards } from "@/components/dashboard/deck-set-editor-mo
 export function useDeckImport(
     onDesktopImportPreview?: (cards: EditableCard[], name: string) => void
 ) {
-    const { addDeck, t } = useApp();
+    const { addDeck } = useApp();
+    const { t } = useI18n();
     const [isImporting, setIsImporting] = useState(false);
     const [deckName, setDeckName] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);

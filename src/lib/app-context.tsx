@@ -17,7 +17,6 @@ import { LOCALSTORAGE_SAVE_DEBOUNCE_MS, MAX_DECKS_PER_USER } from "@/lib/constan
 // Server actions for authenticated users
 import { getMyDecks, getUserMaxDecks, createDeck as createDbDeck, deleteDeck as deleteDbDeck, updateDeck as updateDbDeck } from "@/app/actions/deck-actions";
 import { updateCardLevel as updateDbCardLevel, updateCard as updateDbCard, resetDeckProgress as resetDbDeckProgress, syncDeckCards as syncDbDeckCards } from "@/app/actions/card-actions";
-import { Language, getTranslation } from "@/lib/i18n";
 import { transformDbDeck } from "@/lib/utils";
 
 interface AppContextType {
@@ -27,9 +26,6 @@ interface AppContextType {
     isAdmin: boolean;
     authUser: { id: string; email: string; name?: string | null } | null;
     authLoading: boolean;
-    language: Language;
-    setLanguage: (lang: Language) => void;
-    t: (key: string, params?: Record<string, string | number>) => string;
 
     // App state
     decks: Deck[];
@@ -81,25 +77,7 @@ export function AppProvider({
     const [guestState, setGuestState] = useState<GuestState>({ decks: [] });
     const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false); // Start as NOT loading if we have server data
-    const [language, setLanguageState] = useState<Language>("en");
     const hasInitializedAuthData = useRef(false);
-
-    // Initialize language from localStorage
-    useEffect(() => {
-        const savedLang = localStorage.getItem("language") as Language;
-        if (savedLang === "en" || savedLang === "pl") {
-            setLanguageState(savedLang);
-        }
-    }, []);
-
-    const setLanguage = useCallback((lang: Language) => {
-        setLanguageState(lang);
-        localStorage.setItem("language", lang);
-    }, []);
-
-    const t = useCallback((key: string, params?: Record<string, string | number>) => {
-        return getTranslation(language, key, params);
-    }, [language]);
 
     // Auth state derived from session or initialSession
     const currentSession = session || initialSession;
@@ -172,6 +150,14 @@ export function AppProvider({
         if (!currentDeckId) return null;
         return decks.find((d) => d.id === currentDeckId) || null;
     }, [currentDeckId, decks]);
+
+    const updateActiveDecks = useCallback((updater: (decks: Deck[]) => Deck[]) => {
+        if (isAuthenticated) {
+            setDbDecks(updater);
+        } else {
+            setGuestState((prev) => ({ ...prev, decks: updater(prev.decks) }));
+        }
+    }, [isAuthenticated]);
 
     // Refresh decks from database (for authenticated users)
     const refreshDecks = useCallback(async () => {
@@ -331,67 +317,34 @@ export function AppProvider({
 
     // Update a single card's level
     const updateCardLevel = useCallback(async (cardId: string, level: CardLevel) => {
-        // Optimistically update local state for responsiveness
-        const updateLocal = () => {
-            setDbDecks((prev) => prev.map((deck) => ({
-                ...deck,
-                cards: deck.cards.map((card) =>
-                    card.id === cardId ? { ...card, level } : card
-                ),
-                updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-            })));
-
-            setGuestState((prev) => ({
-                ...prev,
-                decks: prev.decks.map((deck) => ({
-                    ...deck,
-                    cards: deck.cards.map((card) =>
-                        card.id === cardId ? { ...card, level } : card
-                    ),
-                    updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-                })),
-            }));
-        };
-
-        // Always update local state first
-        updateLocal();
+        updateActiveDecks((decks) => decks.map((deck) => ({
+            ...deck,
+            cards: deck.cards.map((card) =>
+                card.id === cardId ? { ...card, level } : card
+            ),
+            updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
+        })));
 
         if (isAuthenticated) {
             try {
-                // Background DB update
                 await updateDbCardLevel(cardId, level);
             } catch (error) {
                 console.error("Failed to update card level:", error);
             }
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, updateActiveDecks]);
 
     // Update a single card's question and answer
     const updateCard = useCallback(async (cardId: string, question: string, answer: string, image?: string) => {
         const imageValue = image?.trim() || undefined;
-        // Optimistically update local state
-        const updateLocal = () => {
-            setDbDecks((prev) => prev.map((deck) => ({
-                ...deck,
-                cards: deck.cards.map((card) =>
-                    card.id === cardId ? { ...card, question, answer, image: imageValue } : card
-                ),
-                updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-            })));
 
-            setGuestState((prev) => ({
-                ...prev,
-                decks: prev.decks.map((deck) => ({
-                    ...deck,
-                    cards: deck.cards.map((card) =>
-                        card.id === cardId ? { ...card, question, answer, image: imageValue } : card
-                    ),
-                    updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-                })),
-            }));
-        };
-
-        updateLocal();
+        updateActiveDecks((decks) => decks.map((deck) => ({
+            ...deck,
+            cards: deck.cards.map((card) =>
+                card.id === cardId ? { ...card, question, answer, image: imageValue } : card
+            ),
+            updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
+        })));
 
         if (isAuthenticated) {
             try {
@@ -400,7 +353,7 @@ export function AppProvider({
                 console.error("Failed to update card:", error);
             }
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, updateActiveDecks]);
 
     const syncDeckCards = useCallback(async (deckId: string, cards: EditableCard[]) => {
         const buildFlashcards = (existingCards: Flashcard[]): Flashcard[] => {
@@ -426,19 +379,13 @@ export function AppProvider({
             });
         };
 
-        const updateLocal = () => {
-            const updater = (decks: Deck[]) =>
-                decks.map((deck) =>
-                    deck.id === deckId
-                        ? { ...deck, cards: buildFlashcards(deck.cards), updatedAt: Date.now() }
-                        : deck
-                );
-
-            setDbDecks((prev) => updater(prev));
-            setGuestState((prev) => ({ ...prev, decks: updater(prev.decks) }));
-        };
-
-        updateLocal();
+        updateActiveDecks((decks) =>
+            decks.map((deck) =>
+                deck.id === deckId
+                    ? { ...deck, cards: buildFlashcards(deck.cards), updatedAt: Date.now() }
+                    : deck
+            )
+        );
 
         if (isAuthenticated) {
             try {
@@ -449,9 +396,9 @@ export function AppProvider({
                 throw error;
             }
         }
-    }, [isAuthenticated, refreshDecks]);
+    }, [isAuthenticated, refreshDecks, updateActiveDecks]);
 
-    const value: AppContextType = {
+    const value = useMemo<AppContextType>(() => ({
         isAuthenticated,
         isGuest,
         isAdmin,
@@ -473,10 +420,29 @@ export function AppProvider({
         updateCardLevel,
         updateCard,
         syncDeckCards,
-        language,
-        setLanguage,
-        t,
-    };
+    }), [
+        isAuthenticated,
+        isGuest,
+        isAdmin,
+        authUser,
+        authLoading,
+        decks,
+        currentDeck,
+        isLoading,
+        maxDecks,
+        setInitialData,
+        handleSignOut,
+        addDeck,
+        selectDeck,
+        closeDeck,
+        deleteDeck,
+        renameDeck,
+        resetCurrentDeck,
+        refreshDecks,
+        updateCardLevel,
+        updateCard,
+        syncDeckCards,
+    ]);
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

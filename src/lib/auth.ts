@@ -5,6 +5,8 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { getClientIP } from "@/lib/get-client-ip";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     adapter: DrizzleAdapter(db),
@@ -23,6 +25,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) {
+                    return null;
+                }
+
+                const ip = await getClientIP();
+                const rateLimit = await checkRateLimit(`login:${ip}`, RATE_LIMITS.login);
+                if (!rateLimit.success) {
                     return null;
                 }
 

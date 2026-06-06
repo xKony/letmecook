@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import katex from "katex";
+import { ensureKatexStyles } from "@/lib/latex";
 
 interface LatexRendererProps {
     text: string;
@@ -15,6 +16,10 @@ interface LatexRendererProps {
  *   - Display/block math: $$...$$
  */
 export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
+    useEffect(() => {
+        ensureKatexStyles();
+    }, []);
+
     const renderedContent = useMemo(() => {
         if (!text) return null;
 
