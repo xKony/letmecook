@@ -68,6 +68,7 @@
     "deckStats": "Deck Stats",
     "searchPlaceholder": "Search questions and answers...",
     "noSearchResults": "No cards match your search",
+    "noSearchResultsFor": "No questions or answers containing \"{{query}}\"",
     "resultsCount": "{{total}} cards / {{filtered}} results",
     "clickToFilter": "Click a level to filter cards",
     "showAll": "Show All Cards ({{count}})",

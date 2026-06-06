@@ -52,6 +52,7 @@ export function StudySession() {
         playIndex,
         playOrder,
         filteredCards,
+        searchResults,
         currentCard,
         isShuffled,
         activeFilter,
@@ -138,10 +139,8 @@ export function StudySession() {
         return (
             <StudySessionEmptyState
                 activeFilter={activeFilter}
-                hasSearch={searchQuery.trim().length > 0}
                 totalCardsInDeck={currentDeck.cards.length}
-                onResetFilter={clearFilters}
-                onBackToDashboard={closeDeck}
+                onResetFilter={() => setActiveFilter(null)}
                 t={t}
             />
         );
@@ -184,7 +183,8 @@ export function StudySession() {
                 activeFilter={activeFilter}
                 searchQuery={searchQuery}
                 totalCards={currentDeck.cards.length}
-                filteredCards={filteredCards}
+                searchResults={searchResults}
+                filteredCardCount={filteredCards.length}
                 playOrder={playOrder}
                 onSearchChange={setSearchQuery}
                 onFilterSelect={(level) => {
@@ -228,7 +228,6 @@ export function StudySession() {
                 formattedTime={formatTime(seconds)}
                 isShuffled={isShuffled}
                 activeFilter={activeFilter}
-                searchQuery={searchQuery}
                 onClose={closeDeck}
                 onShowStats={() => setShowStatsModal(true)}
                 onShowGoto={() => setShowGotoModal(true)}
