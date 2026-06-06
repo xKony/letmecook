@@ -51,18 +51,23 @@ export function StudySession() {
     const {
         playIndex,
         playOrder,
+        filteredCards,
         currentCard,
         isShuffled,
         activeFilter,
+        searchQuery,
         isRevealed,
         stats,
         maxCount,
         setIsRevealed,
         setActiveFilter,
+        setSearchQuery,
+        clearFilters,
         handleNext,
         handlePrev,
         handleShuffle,
         handleGoto,
+        handleGotoByCardId,
         restart,
     } = useStudySession(currentDeck);
 
@@ -133,8 +138,9 @@ export function StudySession() {
         return (
             <StudySessionEmptyState
                 activeFilter={activeFilter}
+                hasSearch={searchQuery.trim().length > 0}
                 totalCardsInDeck={currentDeck.cards.length}
-                onResetFilter={() => setActiveFilter(null)}
+                onResetFilter={clearFilters}
                 onBackToDashboard={closeDeck}
                 t={t}
             />
@@ -176,9 +182,21 @@ export function StudySession() {
                 stats={stats}
                 maxCount={maxCount}
                 activeFilter={activeFilter}
+                searchQuery={searchQuery}
                 totalCards={currentDeck.cards.length}
+                filteredCards={filteredCards}
+                playOrder={playOrder}
+                onSearchChange={setSearchQuery}
                 onFilterSelect={(level) => {
                     setActiveFilter(level);
+                    setShowStatsModal(false);
+                }}
+                onCardSelect={(cardId) => {
+                    handleGotoByCardId(cardId);
+                    setShowStatsModal(false);
+                }}
+                onClearFilters={() => {
+                    clearFilters();
                     setShowStatsModal(false);
                 }}
                 t={t}
@@ -210,6 +228,7 @@ export function StudySession() {
                 formattedTime={formatTime(seconds)}
                 isShuffled={isShuffled}
                 activeFilter={activeFilter}
+                searchQuery={searchQuery}
                 onClose={closeDeck}
                 onShowStats={() => setShowStatsModal(true)}
                 onShowGoto={() => setShowGotoModal(true)}

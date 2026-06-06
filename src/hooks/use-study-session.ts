@@ -9,10 +9,20 @@ import { CardLevel, Flashcard, Deck } from "@/lib/types";
  * @param deck The current deck being studied.
  * @returns An object containing the play order, current index, current card, and session actions.
  */
+function cardMatchesSearch(card: Flashcard, query: string): boolean {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return true;
+    return (
+        card.question.toLowerCase().includes(normalized) ||
+        card.answer.toLowerCase().includes(normalized)
+    );
+}
+
 export function useStudySession(deck: Deck | null) {
     const [playIndex, setPlayIndex] = useState(0);
     const [isShuffled, setIsShuffled] = useState(false);
     const [activeFilter, setActiveFilter] = useState<CardLevel | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
     const [isRevealed, setIsRevealed] = useState(false);
     const [shuffleSeed, setShuffleSeed] = useState(0);
 
@@ -31,15 +41,22 @@ export function useStudySession(deck: Deck | null) {
     /**
      * The stable play order derived from the deck, filter, and shuffle state.
      */
-    const playOrder = useMemo(() => {
+    const filteredCards = useMemo(() => {
         if (!deck) return [];
 
-        let filteredCards = deck.cards;
+        let cards = deck.cards;
         if (activeFilter) {
-            filteredCards = deck.cards.filter(c => c.level === activeFilter);
+            cards = cards.filter((c) => c.level === activeFilter);
+        }
+        if (searchQuery.trim()) {
+            cards = cards.filter((c) => cardMatchesSearch(c, searchQuery));
         }
 
-        let cardIds = filteredCards.map(c => c.id);
+        return cards;
+    }, [deck, activeFilter, searchQuery]);
+
+    const playOrder = useMemo(() => {
+        let cardIds = filteredCards.map((c) => c.id);
 
         if (isShuffled) {
             // shuffleSeed is used to trigger a re-run of this memo even if other deps don't change
@@ -49,7 +66,7 @@ export function useStudySession(deck: Deck | null) {
         }
 
         return cardIds;
-    }, [deck, activeFilter, isShuffled, shuffleSeed, fisherYatesShuffle]);
+    }, [filteredCards, isShuffled, shuffleSeed, fisherYatesShuffle]);
 
     // Adjust state during render when play order changes
     // This is the recommended way to sync state from other state/props during render
@@ -136,6 +153,21 @@ export function useStudySession(deck: Deck | null) {
         return false;
     }, [playOrder.length]);
 
+    const handleGotoByCardId = useCallback((cardId: string) => {
+        const index = playOrder.indexOf(cardId);
+        if (index >= 0) {
+            setPlayIndex(index);
+            setIsRevealed(false);
+            return true;
+        }
+        return false;
+    }, [playOrder]);
+
+    const clearFilters = useCallback(() => {
+        setActiveFilter(null);
+        setSearchQuery("");
+    }, []);
+
     const restart = useCallback(() => {
         setShuffleSeed((prev) => prev + 1);
         setPlayIndex(0);
@@ -145,19 +177,24 @@ export function useStudySession(deck: Deck | null) {
     return {
         playIndex,
         playOrder,
+        filteredCards,
         currentCard,
         isShuffled,
         activeFilter,
+        searchQuery,
         isRevealed,
         stats,
         maxCount,
         setPlayIndex,
         setIsRevealed,
         setActiveFilter,
+        setSearchQuery,
+        clearFilters,
         handleNext,
         handlePrev,
         handleShuffle,
         handleGoto,
+        handleGotoByCardId,
         restart,
     };
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { BarChart3 } from "lucide-react";
+import React, { useMemo } from "react";
+import { BarChart3, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { 
     Dialog, 
@@ -10,7 +10,7 @@ import {
     DialogTitle 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CardLevel } from "@/lib/types";
+import { CardLevel, Flashcard } from "@/lib/types";
 import { LEVEL_COLORS, ALL_LEVELS } from "@/lib/level-styles";
 
 interface StudySessionStatsModalProps {
@@ -19,22 +19,19 @@ interface StudySessionStatsModalProps {
     stats: Record<CardLevel, number>;
     maxCount: number;
     activeFilter: CardLevel | null;
+    searchQuery: string;
     totalCards: number;
+    filteredCards: Flashcard[];
+    playOrder: string[];
+    onSearchChange: (query: string) => void;
     onFilterSelect: (level: CardLevel | null) => void;
+    onCardSelect: (cardId: string) => void;
+    onClearFilters: () => void;
     t: (key: string, options?: Record<string, string | number>) => string;
 }
 
 /**
- * Modal displaying deck statistics and allowing the user to filter cards by level.
- * 
- * @param isOpen Whether the modal is open.
- * @param onClose Callback to close the modal.
- * @param stats Object mapping card levels to their counts in the deck.
- * @param maxCount The maximum count among all levels.
- * @param activeFilter The currently active card level filter.
- * @param totalCards Total number of cards in the deck.
- * @param onFilterSelect Callback triggered when a filter level is selected.
- * @param t Translation function.
+ * Modal displaying deck statistics, search, and allowing the user to filter cards by level.
  */
 export function StudySessionStatsModal({
     isOpen,
@@ -42,13 +39,28 @@ export function StudySessionStatsModal({
     stats,
     maxCount,
     activeFilter,
+    searchQuery,
     totalCards,
+    filteredCards,
+    playOrder,
+    onSearchChange,
     onFilterSelect,
+    onCardSelect,
+    onClearFilters,
     t,
 }: StudySessionStatsModalProps) {
+    const hasSearch = searchQuery.trim().length > 0;
+    const hasActiveFilters = activeFilter !== null || hasSearch;
+
+    const playIndexById = useMemo(() => {
+        const map = new Map<string, number>();
+        playOrder.forEach((cardId, index) => map.set(cardId, index));
+        return map;
+    }, [playOrder]);
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <BarChart3 className="w-5 h-5" aria-hidden="true" />
@@ -56,7 +68,63 @@ export function StudySessionStatsModal({
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-3 mt-4">
+                <div className="space-y-2 mt-2 shrink-0">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                            type="search"
+                            value={searchQuery}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                            placeholder={t("study.searchPlaceholder")}
+                            className="w-full pl-9 pr-3 py-2 rounded-lg bg-background border border-input focus:border-primary focus:outline-none text-sm"
+                            aria-label={t("study.searchPlaceholder")}
+                        />
+                    </div>
+                    {(hasSearch || activeFilter) && (
+                        <p className="text-xs text-muted-foreground">
+                            {t("study.resultsCount", {
+                                total: totalCards,
+                                filtered: filteredCards.length,
+                            })}
+                        </p>
+                    )}
+                </div>
+
+                {hasSearch && (
+                    <div className="shrink-0 max-h-36 overflow-y-auto -mx-1 px-1 space-y-1">
+                        {filteredCards.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-3">
+                                {t("study.noSearchResults")}
+                            </p>
+                        ) : (
+                            filteredCards.map((card) => {
+                                const index = playIndexById.get(card.id);
+                                if (index === undefined) return null;
+                                return (
+                                    <button
+                                        key={card.id}
+                                        type="button"
+                                        onClick={() => onCardSelect(card.id)}
+                                        className="w-full text-left p-2.5 rounded-lg hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                    >
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <span className="text-xs text-muted-foreground tabular-nums">
+                                                #{index + 1}
+                                            </span>
+                                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[card.level].bg} ${LEVEL_COLORS[card.level].text}`}>
+                                                {t(`levels.${card.level}`)}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm font-medium line-clamp-1">{card.question}</p>
+                                        <p className="text-xs text-muted-foreground line-clamp-1">{card.answer}</p>
+                                    </button>
+                                );
+                            })
+                        )}
+                    </div>
+                )}
+
+                <div className="space-y-3 mt-2 overflow-y-auto min-h-0">
                     {ALL_LEVELS.map((level) => {
                         const count = stats[level] || 0;
                         const percentage = (count / maxCount) * 100;
@@ -93,14 +161,14 @@ export function StudySessionStatsModal({
                     })}
                 </div>
 
-                <div className="border-t border-border pt-4 mt-2">
+                <div className="border-t border-border pt-4 mt-2 shrink-0">
                     <p className="text-xs text-muted-foreground mb-3">
                         {t("study.clickToFilter")}
                     </p>
                     <Button
-                        variant={activeFilter === null ? "default" : "outline"}
+                        variant={hasActiveFilters ? "outline" : "default"}
                         className="w-full"
-                        onClick={() => onFilterSelect(null)}
+                        onClick={onClearFilters}
                     >
                         {t("study.showAll", { count: totalCards })}
                     </Button>
