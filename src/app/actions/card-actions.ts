@@ -3,8 +3,9 @@
 import { db } from "@/db";
 import { flashcards, decks, deckPermissions } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { syncDeckCardsSchema } from "@/lib/validations";
 
 // ============================================
 // Helper: Check if user can edit deck's cards
@@ -77,7 +78,7 @@ export async function updateCardLevel(cardId: string, level: string) {
 // UPDATE: Card content
 // ============================================
 
-export async function updateCard(cardId: string, question: string, answer: string) {
+export async function updateCard(cardId: string, question: string, answer: string, image?: string) {
     const user = await requireAuth();
 
     const card = await db.query.flashcards.findFirst({
@@ -96,6 +97,7 @@ export async function updateCard(cardId: string, question: string, answer: strin
         .set({
             question,
             answer,
+            image: image || null,
             updatedAt: new Date(),
         })
         .where(eq(flashcards.id, cardId));
@@ -103,6 +105,77 @@ export async function updateCard(cardId: string, question: string, answer: strin
     await db.update(decks)
         .set({ updatedAt: new Date() })
         .where(eq(decks.id, card.deckId));
+}
+
+function isTempCardId(id: string): boolean {
+    return id.startsWith("temp-");
+}
+
+// ============================================
+// SYNC: Bulk update deck cards (editor)
+// ============================================
+
+export async function syncDeckCards(
+    deckId: string,
+    cards: { id: string; question: string; answer: string; image?: string; level?: string }[]
+) {
+    const user = await requireAuth();
+
+    const validation = syncDeckCardsSchema.safeParse({ deckId, cards });
+    if (!validation.success) {
+        throw new Error(validation.error.issues[0]?.message || "Invalid input");
+    }
+
+    if (!(await canEditDeck(deckId, user.id))) {
+        throw new Error("Permission denied");
+    }
+
+    const existingCards = await db.query.flashcards.findMany({
+        where: eq(flashcards.deckId, deckId),
+    });
+    const existingIds = new Set(existingCards.map((c) => c.id));
+    const payloadIds = new Set(
+        validation.data.cards
+            .map((c) => c.id)
+            .filter((id): id is string => !!id && !isTempCardId(id))
+    );
+
+    const idsToDelete = [...existingIds].filter((id) => !payloadIds.has(id));
+    if (idsToDelete.length > 0) {
+        await db.delete(flashcards).where(
+            and(eq(flashcards.deckId, deckId), inArray(flashcards.id, idsToDelete))
+        );
+    }
+
+    for (const card of validation.data.cards) {
+        const image = card.image?.trim() || null;
+        const cardId = card.id;
+
+        if (cardId && !isTempCardId(cardId) && existingIds.has(cardId)) {
+            await db.update(flashcards)
+                .set({
+                    question: card.question,
+                    answer: card.answer,
+                    image,
+                    updatedAt: new Date(),
+                })
+                .where(eq(flashcards.id, cardId));
+        } else {
+            await db.insert(flashcards).values({
+                deckId,
+                question: card.question,
+                answer: card.answer,
+                image,
+                level: "Nowe",
+            });
+        }
+    }
+
+    await db.update(decks)
+        .set({ updatedAt: new Date() })
+        .where(eq(decks.id, deckId));
+
+    revalidatePath("/");
 }
 
 // ============================================

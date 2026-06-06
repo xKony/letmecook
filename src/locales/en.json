@@ -36,7 +36,29 @@
     "publicLibraryTitle": "Public Deck Library",
     "importCopy": "Import Copy",
     "noPublicDecks": "No public decks available yet.",
-    "checkLater": "Check back later!"
+    "checkLater": "Check back later!",
+    "editDeckSet": "Edit set"
+  },
+  "deckEditor": {
+    "titleImport": "Import preview",
+    "titleEdit": "Edit deck set",
+    "searchPlaceholder": "Search questions and answers...",
+    "resultsCount": "{{total}} cards / {{filtered}} results",
+    "acceptImport": "Accept and create deck",
+    "saveChanges": "Save changes",
+    "addCard": "Add card",
+    "deleteCard": "Delete card",
+    "imageUrl": "Image URL",
+    "imageUrlPlaceholder": "https://example.com/image.png",
+    "previewQuestion": "Question preview",
+    "previewAnswer": "Answer preview",
+    "noResults": "No cards match your search",
+    "parseError": "Could not parse file — no valid cards found.",
+    "hoverHint": "Hover over a question or answer to see a preview",
+    "question": "Question",
+    "answer": "Answer",
+    "cardNumber": "Card {{number}}",
+    "deckName": "Deck name"
   },
   "study": {
     "endOfDeck": "End of Deck",

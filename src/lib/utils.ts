@@ -6,6 +6,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function isDesktopViewport(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(min-width: 768px)").matches;
+}
+
 // Helper to transform DB deck to local Deck type
 export function transformDbDeck(dbDeck: {
     id: string;

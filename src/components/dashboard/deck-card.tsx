@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pencil, Check, X, Download, Trash2 } from "lucide-react";
+import { Pencil, Check, X, Download, Trash2, ListTree } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { Button } from "@/components/ui/button";
 import { Deck } from "@/lib/types";
@@ -12,12 +12,13 @@ interface DeckCardProps {
     deck: Deck;
     onSelect: (id: string) => void;
     onDelete: (deck: Deck) => void;
+    onEditSet?: (deck: Deck) => void;
 }
 
 /**
  * Individual deck card with inline editing and mobile context menu.
  */
-export function DeckCard({ deck, onSelect, onDelete }: DeckCardProps) {
+export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps) {
     const { renameDeck, t } = useApp();
     const [isEditing, setIsEditing] = useState(false);
     const [editingName, setEditingName] = useState(deck.name);
@@ -201,6 +202,21 @@ export function DeckCard({ deck, onSelect, onDelete }: DeckCardProps) {
                     </div>
                     {!isEditing && (
                         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                            {onEditSet && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onEditSet(deck);
+                                    }}
+                                    className="hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                                    title={t("dashboard.editDeckSet")}
+                                    aria-label={t("dashboard.editDeckSet")}
+                                >
+                                    <ListTree className="w-4 h-4" />
+                                </Button>
+                            )}
                             <Button
                                 variant="ghost"
                                 size="icon"

@@ -36,7 +36,29 @@
     "publicLibraryTitle": "Biblioteka Publicznych Talii",
     "importCopy": "Importuj kopię",
     "noPublicDecks": "Brak publicznych talii.",
-    "checkLater": "Zajrzyj później!"
+    "checkLater": "Zajrzyj później!",
+    "editDeckSet": "Edytuj zestaw"
+  },
+  "deckEditor": {
+    "titleImport": "Podgląd importu",
+    "titleEdit": "Edycja zestawu",
+    "searchPlaceholder": "Szukaj w pytaniach i odpowiedziach...",
+    "resultsCount": "{{total}} kart / {{filtered}} wyników",
+    "acceptImport": "Zaakceptuj i utwórz talię",
+    "saveChanges": "Zapisz zmiany",
+    "addCard": "Dodaj kartę",
+    "deleteCard": "Usuń kartę",
+    "imageUrl": "URL obrazu",
+    "imageUrlPlaceholder": "https://example.com/image.png",
+    "previewQuestion": "Podgląd pytania",
+    "previewAnswer": "Podgląd odpowiedzi",
+    "noResults": "Brak kart pasujących do wyszukiwania",
+    "parseError": "Nie udało się sparsować pliku — brak poprawnych kart.",
+    "hoverHint": "Najedź na pytanie lub odpowiedź, aby zobaczyć podgląd",
+    "question": "Pytanie",
+    "answer": "Odpowiedź",
+    "cardNumber": "Karta {{number}}",
+    "deckName": "Nazwa talii"
   },
   "study": {
     "endOfDeck": "Koniec talii",
