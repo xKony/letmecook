@@ -35,6 +35,8 @@ interface FlashcardProps {
     ttsEnabled: boolean;
     /** Callback to toggle TTS state. */
     onTTSToggle: () => void;
+    /** Original question number in the deck (1-based import order). */
+    questionNumber?: number;
 }
 
 /**
@@ -53,6 +55,7 @@ export function FlashcardComponent({
     onUpdateCard,
     ttsEnabled,
     onTTSToggle,
+    questionNumber,
 }: FlashcardProps) {
     const { t } = useI18n();
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -108,10 +111,18 @@ export function FlashcardComponent({
                 <motion.div
                     animate={{ y: isRevealed ? -10 : 0 }}
                     transition={{ duration: 0.3 }}
-                    className="flex-1 flex items-center justify-center relative group"
+                    className="flex-1 flex flex-col items-center justify-center relative group"
                     onMouseEnter={() => showEditHintFor("question")}
                     onMouseLeave={scheduleHideEditHint}
                 >
+                    {questionNumber != null && (
+                        <span
+                            className="mb-3 text-xs font-medium text-muted-foreground/60 tabular-nums"
+                            aria-label={t("study.questionNumber", { number: questionNumber })}
+                        >
+                            {questionNumber}
+                        </span>
+                    )}
                     <AnimatePresence mode="wait">
                         {isEditingQuestion ? (
                             <FlashcardEditor
