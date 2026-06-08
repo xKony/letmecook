@@ -5,6 +5,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { signIn, auth } from "@/lib/auth";
+import { AuthError } from "next-auth";
 import { getClientIP } from "@/lib/get-client-ip";
 import { checkRateLimit, getRateLimitState, RATE_LIMITS } from "@/lib/rate-limit";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
@@ -77,7 +78,7 @@ export async function loginUser(
             redirect: false,
         });
 
-        if (result && "error" in result && result.error) {
+        if (result?.error) {
             return { error: "Invalid email or password" };
         }
 
@@ -86,7 +87,11 @@ export async function loginUser(
         if (isRedirectError(error)) {
             throw error;
         }
-        return { error: "Invalid email or password" };
+        if (error instanceof AuthError) {
+            return { error: "Invalid email or password" };
+        }
+        console.error("Login error:", error);
+        return { error: "An unexpected error occurred. Please try again." };
     }
 }
 
