@@ -152,7 +152,7 @@ export function StudySession() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col p-4 md:p-8">
+        <div className="h-[100dvh] flex flex-col overflow-hidden p-4 md:p-8">
             {/* Confirmation Modals */}
             <ConfirmationModal
                 isOpen={showRestartModal}
@@ -247,24 +247,26 @@ export function StudySession() {
             />
 
             <main
-                className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col items-center justify-start md:justify-center py-4 pb-32 md:pb-4"
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
                 aria-label={t("study.cardArea")}
             >
-                <AnimatePresence mode="wait">
-                    {currentCard && (
-                        <FlashcardComponent
-                            key={currentCard.id}
-                            card={currentCard}
-                            deckName={currentDeck.name}
-                            isRevealed={isRevealed}
-                            onReveal={onReveal}
-                            onRate={onRate}
-                            onUpdateCard={updateCard}
-                            ttsEnabled={ttsEnabled}
-                            onTTSToggle={toggleTTS}
-                        />
-                    )}
-                </AnimatePresence>
+                <div className="min-h-full flex flex-col items-center justify-center py-4 pb-32 md:pb-4 w-full">
+                    <AnimatePresence mode="wait">
+                        {currentCard && (
+                            <FlashcardComponent
+                                key={currentCard.id}
+                                card={currentCard}
+                                deckName={currentDeck.name}
+                                isRevealed={isRevealed}
+                                onReveal={onReveal}
+                                onRate={onRate}
+                                onUpdateCard={updateCard}
+                                ttsEnabled={ttsEnabled}
+                                onTTSToggle={toggleTTS}
+                            />
+                        )}
+                    </AnimatePresence>
+                </div>
             </main>
 
             {/* Bottom Navigation */}
