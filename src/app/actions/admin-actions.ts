@@ -5,6 +5,16 @@ import { decks, flashcards, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { cardSchema, LIMITS } from "@/lib/validations";
+
+const replacePublicDeckCardsSchema = z.object({
+    deckId: z.string().uuid("Invalid deck ID"),
+    cards: z
+        .array(cardSchema)
+        .min(1, "At least one card is required")
+        .max(LIMITS.CARDS_PER_DECK_MAX, `Maximum ${LIMITS.CARDS_PER_DECK_MAX} cards per deck`),
+});
 
 // ============================================
 // Helper: Require admin access
@@ -193,6 +203,87 @@ export async function updateUserMaxDecks(userId: string, maxDecks: number) {
         .where(eq(users.id, userId));
 
     revalidatePath("/admin");
+}
+
+// ============================================
+// Admin: Replace public deck cards in-place
+// ============================================
+
+export async function replacePublicDeckFromPersonalDeck(
+    publicDeckId: string,
+    sourceDeckId: string
+) {
+    const admin = await requireAdmin();
+
+    const [publicDeck, sourceDeck] = await Promise.all([
+        db.query.decks.findFirst({
+            where: eq(decks.id, publicDeckId),
+            with: { flashcards: true },
+        }),
+        db.query.decks.findFirst({
+            where: eq(decks.id, sourceDeckId),
+            with: { flashcards: true },
+        }),
+    ]);
+
+    if (!publicDeck) {
+        throw new Error("Public deck not found");
+    }
+
+    if (!publicDeck.isPublic) {
+        throw new Error("Target deck is not in the public library");
+    }
+
+    if (!sourceDeck) {
+        throw new Error("Source deck not found");
+    }
+
+    if (sourceDeck.ownerId !== admin.id) {
+        throw new Error("You can only use your own decks as the source");
+    }
+
+    if (sourceDeck.isPublic) {
+        throw new Error("Use a personal deck from your dashboard as the source");
+    }
+
+    if (sourceDeck.flashcards.length === 0) {
+        throw new Error("Source deck has no cards");
+    }
+
+    const cards = sourceDeck.flashcards.map((card) => ({
+        question: card.question,
+        answer: card.answer,
+        image: card.image || undefined,
+    }));
+
+    const validation = replacePublicDeckCardsSchema.safeParse({
+        deckId: publicDeckId,
+        cards,
+    });
+    if (!validation.success) {
+        throw new Error(validation.error.issues[0]?.message || "Invalid input");
+    }
+
+    const normalizedCards = validation.data.cards.map((card) => ({
+        deckId: publicDeckId,
+        question: card.question,
+        answer: card.answer,
+        image: card.image?.trim() || null,
+        level: "Nowe",
+    }));
+
+    await db.delete(flashcards).where(eq(flashcards.deckId, publicDeckId));
+    await db.insert(flashcards).values(normalizedCards);
+    await db.update(decks).set({ updatedAt: new Date() }).where(eq(decks.id, publicDeckId));
+
+    revalidatePath("/");
+    revalidatePath("/admin");
+
+    return {
+        publicDeckName: publicDeck.name,
+        sourceDeckName: sourceDeck.name,
+        cardCount: normalizedCards.length,
+    };
 }
 
 // ============================================

@@ -37,7 +37,11 @@
     "importCopy": "Importuj kopię",
     "noPublicDecks": "Brak publicznych talii.",
     "checkLater": "Zajrzyj później!",
-    "editDeckSet": "Edytuj zestaw"
+    "editDeckSet": "Edytuj zestaw",
+    "replaceInLibrary": "Podmień w bibliotece",
+    "replaceInLibraryDescription": "Podmień publiczną talię w bibliotece zawartością \"{{name}}\" ({{count}} kart). Użytkownicy, którzy już ją zaimportowali, zachowają swoją kopię.",
+    "replaceInLibraryConfirm": "Podmienić \"{{target}}\" w bibliotece na \"{{source}}\" ({{count}} kart)? Już zaimportowane kopie się nie zmienią.",
+    "replaceInLibrarySuccess": "Podmieniono \"{{target}}\" na \"{{source}}\" ({{count}} kart)"
   },
   "deckEditor": {
     "titleImport": "Podgląd importu",

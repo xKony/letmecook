@@ -20,5 +20,5 @@ export function LatexRenderer({ text, className = "" }: LatexRendererProps) {
 
     const renderedContent = useMemo(() => renderLatexContent(text), [text]);
 
-    return <div className={className}>{renderedContent}</div>;
+    return <div className={`whitespace-pre-wrap ${className}`.trim()}>{renderedContent}</div>;
 }

@@ -48,7 +48,7 @@ export function PlainTextContent({ text, className = "" }: { text: string; class
     const lines = expandPlainTextNewlines(text).split("\n");
 
     return (
-        <span className={className}>
+        <span className={`whitespace-pre-wrap ${className}`.trim()}>
             {lines.map((line, lineIndex) => (
                 <Fragment key={lineIndex}>
                     {lineIndex > 0 && <br />}

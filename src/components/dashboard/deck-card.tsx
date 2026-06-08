@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Pencil, Check, X, Download, Trash2, ListTree } from "lucide-react";
+import { Pencil, Check, X, Download, Trash2, ListTree, Globe } from "lucide-react";
 import { useApp } from "@/lib/app-context";
+import { ReplaceInLibraryDialog } from "@/components/dashboard/replace-in-library-dialog";
 import { useI18n } from "@/lib/i18n-context";
 import { Button } from "@/components/ui/button";
 import { Deck } from "@/lib/types";
@@ -20,11 +21,12 @@ interface DeckCardProps {
  * Individual deck card with inline editing and mobile context menu.
  */
 export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps) {
-    const { renameDeck } = useApp();
+    const { renameDeck, isAdmin } = useApp();
     const { t } = useI18n();
     const [isEditing, setIsEditing] = useState(false);
     const [editingName, setEditingName] = useState(deck.name);
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+    const [showReplaceInLibrary, setShowReplaceInLibrary] = useState(false);
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     /**
@@ -178,6 +180,21 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                     </div>
                     {!isEditing && (
                         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                            {isAdmin && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowReplaceInLibrary(true);
+                                    }}
+                                    className="hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                                    title={t("dashboard.replaceInLibrary")}
+                                    aria-label={t("dashboard.replaceInLibrary")}
+                                >
+                                    <Globe className="w-4 h-4" />
+                                </Button>
+                            )}
                             {onEditSet && (
                                 <Button
                                     variant="ghost"
@@ -255,6 +272,18 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                                     <Pencil className="w-5 h-5 text-muted-foreground" />
                                     <span>{t("common.rename")}</span>
                                 </button>
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => {
+                                            setShowReplaceInLibrary(true);
+                                            setIsContextMenuOpen(false);
+                                        }}
+                                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left"
+                                    >
+                                        <Globe className="w-5 h-5 text-muted-foreground" />
+                                        <span>{t("dashboard.replaceInLibrary")}</span>
+                                    </button>
+                                )}
                                 <button
                                     onClick={handleExport}
                                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left"
@@ -282,6 +311,12 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                         </div>
                     </div>
                 )}
+
+            <ReplaceInLibraryDialog
+                sourceDeck={deck}
+                isOpen={showReplaceInLibrary}
+                onClose={() => setShowReplaceInLibrary(false)}
+            />
         </>
     );
 }

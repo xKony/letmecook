@@ -37,7 +37,11 @@
     "importCopy": "Import Copy",
     "noPublicDecks": "No public decks available yet.",
     "checkLater": "Check back later!",
-    "editDeckSet": "Edit set"
+    "editDeckSet": "Edit set",
+    "replaceInLibrary": "Replace in library",
+    "replaceInLibraryDescription": "Replace a public library deck with \"{{name}}\" ({{count}} cards). Users who already imported it keep their copy.",
+    "replaceInLibraryConfirm": "Replace \"{{target}}\" in the library with \"{{source}}\" ({{count}} cards)? Already-imported copies will not change.",
+    "replaceInLibrarySuccess": "Replaced \"{{target}}\" with \"{{source}}\" ({{count}} cards)"
   },
   "deckEditor": {
     "titleImport": "Import preview",

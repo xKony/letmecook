@@ -12,6 +12,7 @@ import {
   Check,
   Languages,
   BookOpen,
+  Keyboard,
   Settings2,
   AlertTriangle,
   Sparkles,
@@ -310,6 +311,45 @@ QUESTIONS:
           ],
         },
         {
+          title: "Keyboard Controls",
+          icon: <Keyboard className="w-5 h-5" />,
+          items: [
+            {
+              question: "Can I use keyboard shortcuts during study sessions?",
+              answer: (
+                <div className="space-y-4">
+                  <p>
+                    Yes! You can use the following shortcuts to speed up your learning:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <strong>Space:</strong> Reveal the answer.
+                    </li>
+                    <li>
+                      <strong>Left Arrow:</strong> Go to the previous card.
+                    </li>
+                    <li>
+                      <strong>Right Arrow:</strong> Go to the next card.
+                    </li>
+                    <li>
+                      <strong>G Key:</strong> Open the &apos;Go to card&apos; dialog.
+                    </li>
+                    <li>
+                      <strong>Numbers 1, 2, 3, 4 (after revealing):</strong> Quickly rate your mastery:
+                      <ul className="list-none pl-4 mt-1 space-y-1 text-sm">
+                        <li><span className="font-mono bg-muted px-1.5 py-0.5 rounded mr-2">1</span> Don&apos;t know</li>
+                        <li><span className="font-mono bg-muted px-1.5 py-0.5 rounded mr-2">2</span> Somewhat</li>
+                        <li><span className="font-mono bg-muted px-1.5 py-0.5 rounded mr-2">3</span> Know</li>
+                        <li><span className="font-mono bg-muted px-1.5 py-0.5 rounded mr-2">4</span> Mastered 100%</li>
+                      </ul>
+                    </li>
+                  </ul>
+                </div>
+              ),
+            },
+          ],
+        },
+        {
           title: "Ethical Considerations",
           icon: <AlertTriangle className="w-5 h-5" />,
           items: [
@@ -516,6 +556,45 @@ PYTANIA:
               question: "Czy mogę używać obrazów do nauki wzrokowej?",
               answer:
                 "Jak najbardziej. Możesz zamieszczać surowe obrazy (raw-format) bezpośrednio w pytaniach i odpowiedziach, aby studiować m.in. modele biologiczne czy inne schematy. Wystarczy, że podasz na fiszce bezpośredni link do obrazka (np. udostępniony link z Dropboxa kończący się na `?raw=1` lub bezpośredni link z platformy Imgur: `i.imgur.com/image.png`). Aplikacja inteligentnie rozpozna poprawne adresy URL i wyrenderuje zamieszczone tam zdjęcia.",
+            },
+          ],
+        },
+        {
+          title: "Sterowanie klawiaturą",
+          icon: <Keyboard className="w-5 h-5" />,
+          items: [
+            {
+              question: "Czy mogę sterować aplikacją za pomocą klawiatury?",
+              answer: (
+                <div className="space-y-4">
+                  <p>
+                    Tak! Podczas sesji nauki możesz korzystać z wygodnych skrótów klawiszowych, aby przyspieszyć swoją naukę:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <strong>Spacja:</strong> Odkryj odpowiedź na karcie.
+                    </li>
+                    <li>
+                      <strong>Strzałka w lewo:</strong> Przejdź do poprzedniej fiszki.
+                    </li>
+                    <li>
+                      <strong>Strzałka w prawo:</strong> Przejdź do następnej fiszki.
+                    </li>
+                    <li>
+                      <strong>Klawisz G:</strong> Otwórz okno skoku do konkretnej karty.
+                    </li>
+                    <li>
+                      <strong>Cyfry 1, 2, 3, 4 (po odkryciu karty):</strong> Szybkie ocenianie stopnia opanowania:
+                      <ul className="list-none pl-4 mt-1 space-y-1 text-sm">
+                        <li><span className="font-mono bg-muted px-1.5 py-0.5 rounded mr-2">1</span> Nie umiem</li>
+                        <li><span className="font-mono bg-muted px-1.5 py-0.5 rounded mr-2">2</span> W miarę</li>
+                        <li><span className="font-mono bg-muted px-1.5 py-0.5 rounded mr-2">3</span> Umiem</li>
+                        <li><span className="font-mono bg-muted px-1.5 py-0.5 rounded mr-2">4</span> Opanowane 100%</li>
+                      </ul>
+                    </li>
+                  </ul>
+                </div>
+              ),
             },
           ],
         },
