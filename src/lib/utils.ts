@@ -22,6 +22,7 @@ export function transformDbDeck(dbDeck: {
         id: string;
         question: string;
         answer: string;
+        image?: string | null;
         level: string;
         sortOrder?: number;
         createdAt: Date;
@@ -40,6 +41,7 @@ export function transformDbDeck(dbDeck: {
             id: card.id,
             question: card.question,
             answer: card.answer,
+            image: card.image || undefined,
             level: card.level as CardLevel,
             sortOrder: card.sortOrder,
         })),

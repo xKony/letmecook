@@ -119,6 +119,14 @@ export function DeckSetEditorModal() {
         const validCards = cards.filter((card) => card.question.trim());
         if (validCards.length === 0) return;
 
+        const blankCount = cards.length - validCards.length;
+        if (blankCount > 0) {
+            const confirmed = window.confirm(
+                t("deckEditor.dropBlankCardsConfirm", { count: blankCount })
+            );
+            if (!confirmed) return;
+        }
+
         setIsSaving(true);
         try {
             if (mode === "import") {
