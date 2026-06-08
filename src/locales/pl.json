@@ -62,7 +62,8 @@
     "question": "Pytanie",
     "answer": "Odpowiedź",
     "cardNumber": "Karta {{number}}",
-    "deckName": "Nazwa talii"
+    "deckName": "Nazwa talii",
+    "dropBlankCardsConfirm": "{{count}} kart nie ma pytania i zostanie usuniętych. Kontynuować?"
   },
   "study": {
     "endOfDeck": "Koniec talii",

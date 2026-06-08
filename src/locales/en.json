@@ -62,7 +62,8 @@
     "question": "Question",
     "answer": "Answer",
     "cardNumber": "Card {{number}}",
-    "deckName": "Deck name"
+    "deckName": "Deck name",
+    "dropBlankCardsConfirm": "{{count}} card(s) have no question and will be removed. Continue?"
   },
   "study": {
     "endOfDeck": "End of Deck",

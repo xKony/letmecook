@@ -71,6 +71,7 @@ export function StudySession() {
         handleShuffle,
         handleGoto,
         handleGotoByCardId,
+        advanceAfterRating,
         restart,
     } = useStudySession(currentDeck);
 
@@ -113,11 +114,10 @@ export function StudySession() {
      * Handle rating a card and moving to the next one.
      */
     const onRate = useCallback((level: CardLevel) => {
-        if (currentCard) {
-            updateCardLevel(currentCard.id, level);
-        }
-        handleNext(() => setShowRestartModal(true));
-    }, [currentCard, updateCardLevel, handleNext]);
+        if (!currentCard) return;
+        updateCardLevel(currentCard.id, level);
+        advanceAfterRating(currentCard.id, level, () => setShowRestartModal(true));
+    }, [currentCard, updateCardLevel, advanceAfterRating]);
 
     // Keyboard shortcuts hook
     useSessionShortcuts(
