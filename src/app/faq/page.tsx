@@ -153,25 +153,7 @@ Examples of expected output structure:
     "image": "https://images.unsplash.com/photo.png"
   },
   {
-    "question": "Who painted the Mona Lisa?",
-    "answer": "Leonardo da Vinci",
-    "image": "https://i.imgur.com/image.jpg"
-  },
-  {
-    "question": "Wzór na pole koła o promieniu $r$?",
-    "answer": "Wzór to $P = \\\\pi r^2$.",
-    "image": "https://example.com/circle.png"
-  },
-  {
-    "question": "Jakie są pierwiastki równania kwadratowego $ax^2 + bx + c = 0$?",
-    "answer": "Pierwiastki wyznaczamy ze wzoru: $$x = \\\\frac{-b \\\\pm \\\\sqrt{b^2 - 4ac}}{2a}$$"
-  },
-  {
-    "question": "Zapisz definicję całki oznaczonej Newtona-Leibniza w bloku LaTeX.",
-    "answer": "Całka oznaczona reprezentuje pole pod wykresem: $$\\int_{a}^{b} f(x) \\\\, dx = F(b) - F(a)$$"
-  },
-  {
-    "question": "Jak zapisać ułamek $\\\\frac{a}{b}$ w LaTeX?",
+    "question": "How to write a fraction $\\\\frac{a}{b}$ in LaTeX?",
     "answer": "We use the \`\\\\frac{a}{b}\` command, which we write in JSON with a double backslash as \`$\\\\frac{a}{b}$\`."
   }
 ]
@@ -421,27 +403,9 @@ KRYTYCZNE ZASADY FORMATOWANIA (Constraint Checklist):
 Przykłady oczekiwanej struktury wyjściowej:
 [
   {
-    "question": "What is the mitochondria?",
-    "answer": "The powerhouse of the cell, responsible for generating ATP.",
-    "image": "https://images.unsplash.com/photo.png"
-  },
-  {
-    "question": "Who painted the Mona Lisa?",
-    "answer": "Leonardo da Vinci",
-    "image": "https://i.imgur.com/image.jpg"
-  },
-  {
     "question": "Wzór na pole koła o promieniu $r$?",
     "answer": "Wzór to $P = \\\\pi r^2$.",
     "image": "https://example.com/circle.png"
-  },
-  {
-    "question": "Jakie są pierwiastki równania kwadratowego $ax^2 + bx + c = 0$?",
-    "answer": "Pierwiastki wyznaczamy ze wzoru: $$x = \\\\frac{-b \\\\pm \\\\sqrt{b^2 - 4ac}}{2a}$$"
-  },
-  {
-    "question": "Zapisz definicję całki oznaczonej Newtona-Leibniza w bloku LaTeX.",
-    "answer": "Całka oznaczona reprezentuje pole pod wykresem: $$\\int_{a}^{b} f(x) \\\\, dx = F(b) - F(a)$$"
   },
   {
     "question": "Jak zapisać ułamek $\\\\frac{a}{b}$ w LaTeX?",
