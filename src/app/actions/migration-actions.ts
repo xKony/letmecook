@@ -15,6 +15,7 @@ interface LocalStorageDeck {
         question: string;
         answer: string;
         level: string;
+        sortOrder?: number;
     }[];
     createdAt: number;
     updatedAt: number;
@@ -53,11 +54,12 @@ export async function importLocalStorageDecks(exportData: LocalStorageExport) {
             // Create the flashcards
             if (localDeck.cards.length > 0) {
                 await db.insert(flashcards).values(
-                    localDeck.cards.map((card) => ({
+                    localDeck.cards.map((card, index) => ({
                         deckId: newDeck.id,
                         question: card.question,
                         answer: card.answer,
                         level: card.level,
+                        sortOrder: card.sortOrder ?? index,
                     }))
                 );
             }
@@ -98,12 +100,13 @@ export async function importDeckFromFile(name: string, fileContent: string) {
     }).returning();
 
     await db.insert(flashcards).values(
-        parsedCards.map((card) => ({
+        parsedCards.map((card, index) => ({
             deckId: newDeck.id,
             question: card.question,
             answer: card.answer,
             image: card.image,
             level: "Nowe",
+            sortOrder: index,
         }))
     );
 

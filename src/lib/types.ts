@@ -1,6 +1,13 @@
 // Card progress levels (matching Python implementation)
 export type CardLevel = "Nowe" | "Nie umiem" | "W miarę" | "Umiem" | "Opanowane 100%";
 
+// Parsed/imported card before persistence
+export type ParsedFlashcard = {
+    question: string;
+    answer: string;
+    image?: string;
+};
+
 // Single flashcard
 export interface Flashcard {
     id: string;
@@ -8,6 +15,8 @@ export interface Flashcard {
     answer: string;
     image?: string;
     level: CardLevel;
+    /** Stable import order (0-based). */
+    sortOrder: number;
 }
 
 // A deck of flashcards

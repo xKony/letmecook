@@ -143,17 +143,17 @@ export async function syncDeckCards(
     const idsToDelete = [...existingIds].filter((id) => !payloadIds.has(id));
     const now = new Date();
 
-    const cardsToUpdate: { id: string; question: string; answer: string; image: string | null }[] = [];
-    const cardsToInsert: { deckId: string; question: string; answer: string; image: string | null; level: string }[] = [];
+    const cardsToUpdate: { id: string; question: string; answer: string; image: string | null; sortOrder: number }[] = [];
+    const cardsToInsert: { deckId: string; question: string; answer: string; image: string | null; level: string; sortOrder: number }[] = [];
 
-    for (const card of validation.data.cards) {
+    for (const [index, card] of validation.data.cards.entries()) {
         const image = card.image?.trim() || null;
         const cardId = card.id;
 
         if (cardId && !isTempCardId(cardId) && existingIds.has(cardId)) {
-            cardsToUpdate.push({ id: cardId, question: card.question, answer: card.answer, image });
+            cardsToUpdate.push({ id: cardId, question: card.question, answer: card.answer, image, sortOrder: index });
         } else {
-            cardsToInsert.push({ deckId, question: card.question, answer: card.answer, image, level: "Nowe" });
+            cardsToInsert.push({ deckId, question: card.question, answer: card.answer, image, level: "Nowe", sortOrder: index });
         }
     }
 
@@ -175,7 +175,13 @@ export async function syncDeckCards(
     for (const card of cardsToUpdate) {
         operations.push(
             db.update(flashcards)
-                .set({ question: card.question, answer: card.answer, image: card.image, updatedAt: now })
+                .set({
+                    question: card.question,
+                    answer: card.answer,
+                    image: card.image,
+                    sortOrder: card.sortOrder,
+                    updatedAt: now,
+                })
                 .where(eq(flashcards.id, card.id))
         );
     }
@@ -204,11 +210,21 @@ export async function addCard(deckId: string, question: string, answer: string) 
         throw new Error("Permission denied");
     }
 
+    const existingCards = await db.query.flashcards.findMany({
+        where: eq(flashcards.deckId, deckId),
+        columns: { sortOrder: true },
+    });
+    const nextSortOrder = existingCards.reduce(
+        (max, card) => Math.max(max, card.sortOrder ?? 0),
+        -1
+    ) + 1;
+
     const [newCard] = await db.insert(flashcards).values({
         deckId,
         question,
         answer,
         level: "Nowe",
+        sortOrder: nextSortOrder,
     }).returning();
 
     await db.update(decks)

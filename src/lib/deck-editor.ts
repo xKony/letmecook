@@ -1,4 +1,4 @@
-import { Deck, EditableCard, Flashcard } from "@/lib/types";
+import { Deck, EditableCard, ParsedFlashcard } from "@/lib/types";
 
 export function deckToEditableCards(deck: Deck): EditableCard[] {
     return deck.cards.map((card) => ({
@@ -11,7 +11,7 @@ export function deckToEditableCards(deck: Deck): EditableCard[] {
 }
 
 export function parsedToEditableCards(
-    cards: Omit<Flashcard, "id" | "level">[]
+    cards: ParsedFlashcard[]
 ): EditableCard[] {
     const base = Date.now();
     return cards.map((card, index) => ({
