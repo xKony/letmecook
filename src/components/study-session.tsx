@@ -257,6 +257,9 @@ export function StudySession() {
                                 key={currentCard.id}
                                 card={currentCard}
                                 deckName={currentDeck.name}
+                                questionNumber={
+                                    currentDeck.cards.findIndex((c) => c.id === currentCard.id) + 1
+                                }
                                 isRevealed={isRevealed}
                                 onReveal={onReveal}
                                 onRate={onRate}

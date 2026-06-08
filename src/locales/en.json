@@ -85,6 +85,7 @@
     "noCardsMatch": "No cards match the filter \"{{filter}}\"",
     "noDeckSelected": "No deck selected",
     "cardCounter": "Card {{current}} / {{total}}",
+    "questionNumber": "Question {{number}}",
     "previous": "Previous",
     "next": "Next",
     "reveal": "Show Answer (Space)",
