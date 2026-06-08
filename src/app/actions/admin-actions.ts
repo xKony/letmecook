@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { decks, flashcards, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { cardSchema, LIMITS } from "@/lib/validations";
@@ -55,12 +55,13 @@ export async function createPublicDeck(
 
     if (cards.length > 0) {
         await db.insert(flashcards).values(
-            cards.map((card) => ({
+            cards.map((card, index) => ({
                 deckId: newDeck.id,
                 question: card.question,
                 answer: card.answer,
                 image: card.image,
                 level: "Nowe",
+                sortOrder: index,
             }))
         );
     }
@@ -89,7 +90,9 @@ export async function getPublicDecks() {
                     answer: true,
                     image: true,
                     level: true,
-                }
+                    sortOrder: true,
+                },
+                orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
             },
             owner: {
                 columns: {
@@ -218,11 +221,19 @@ export async function replacePublicDeckFromPersonalDeck(
     const [publicDeck, sourceDeck] = await Promise.all([
         db.query.decks.findFirst({
             where: eq(decks.id, publicDeckId),
-            with: { flashcards: true },
+            with: {
+                flashcards: {
+                    orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
+                },
+            },
         }),
         db.query.decks.findFirst({
             where: eq(decks.id, sourceDeckId),
-            with: { flashcards: true },
+            with: {
+                flashcards: {
+                    orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
+                },
+            },
         }),
     ]);
 
@@ -264,12 +275,13 @@ export async function replacePublicDeckFromPersonalDeck(
         throw new Error(validation.error.issues[0]?.message || "Invalid input");
     }
 
-    const normalizedCards = validation.data.cards.map((card) => ({
+    const normalizedCards = validation.data.cards.map((card, index) => ({
         deckId: publicDeckId,
         question: card.question,
         answer: card.answer,
         image: card.image?.trim() || null,
         level: "Nowe",
+        sortOrder: index,
     }));
 
     await db.delete(flashcards).where(eq(flashcards.deckId, publicDeckId));

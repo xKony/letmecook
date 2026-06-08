@@ -11,6 +11,7 @@ interface ExportDeck {
         question: string;
         answer: string;
         level: string;
+        sortOrder: number;
     }[];
     createdAt: number;
     updatedAt: number;
@@ -37,6 +38,7 @@ export function useExportDecks() {
                     question: card.question,
                     answer: card.answer,
                     level: card.level,
+                    sortOrder: card.sortOrder,
                 })),
                 createdAt: deck.createdAt,
                 updatedAt: deck.updatedAt,

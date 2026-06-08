@@ -27,6 +27,7 @@ import { StudySessionGotoModal } from "./study/study-session-goto-modal";
 import { StudySessionBreakModal } from "./study/study-session-break-modal";
 import { StudySessionEmptyState } from "./study/study-session-empty-state";
 import { ensureKatexStyles } from "@/lib/latex";
+import { getQuestionNumber } from "@/lib/flashcard-order";
 
 /**
  * The main study session component that orchestrates the flashcard learning experience.
@@ -257,9 +258,7 @@ export function StudySession() {
                                 key={currentCard.id}
                                 card={currentCard}
                                 deckName={currentDeck.name}
-                                questionNumber={
-                                    currentDeck.cards.findIndex((c) => c.id === currentCard.id) + 1
-                                }
+                                questionNumber={getQuestionNumber(currentCard)}
                                 isRevealed={isRevealed}
                                 onReveal={onReveal}
                                 onRate={onRate}

@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { Deck, CardLevel } from "@/lib/types";
+import { backfillLegacySortOrder, sortFlashcardsByOrder } from "@/lib/flashcard-order";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -22,18 +23,25 @@ export function transformDbDeck(dbDeck: {
         question: string;
         answer: string;
         level: string;
+        sortOrder?: number;
+        createdAt: Date;
     }[];
 }): Deck {
+    const orderedCards = sortFlashcardsByOrder(
+        backfillLegacySortOrder(dbDeck.flashcards)
+    );
+
     return {
         id: dbDeck.id,
         name: dbDeck.name,
         createdAt: dbDeck.createdAt.getTime(),
         updatedAt: dbDeck.updatedAt.getTime(),
-        cards: dbDeck.flashcards.map((card) => ({
+        cards: orderedCards.map((card) => ({
             id: card.id,
             question: card.question,
             answer: card.answer,
             level: card.level as CardLevel,
+            sortOrder: card.sortOrder,
         })),
     };
 }

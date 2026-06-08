@@ -18,6 +18,7 @@ import { LOCALSTORAGE_SAVE_DEBOUNCE_MS, MAX_DECKS_PER_USER } from "@/lib/constan
 import { getMyDecks, getUserMaxDecks, createDeck as createDbDeck, deleteDeck as deleteDbDeck, updateDeck as updateDbDeck } from "@/app/actions/deck-actions";
 import { updateCardLevel as updateDbCardLevel, updateCard as updateDbCard, resetDeckProgress as resetDbDeckProgress, syncDeckCards as syncDbDeckCards } from "@/app/actions/card-actions";
 import { transformDbDeck } from "@/lib/utils";
+import { normalizeDeckCards } from "@/lib/flashcard-order";
 
 interface AppContextType {
     // Auth state
@@ -148,7 +149,12 @@ export function AppProvider({
     // Get current deck
     const currentDeck = useMemo(() => {
         if (!currentDeckId) return null;
-        return decks.find((d) => d.id === currentDeckId) || null;
+        const deck = decks.find((d) => d.id === currentDeckId);
+        if (!deck) return null;
+        return {
+            ...deck,
+            cards: normalizeDeckCards(deck.cards),
+        };
     }, [currentDeckId, decks]);
 
     const updateActiveDecks = useCallback((updater: (decks: Deck[]) => Deck[]) => {
@@ -358,7 +364,7 @@ export function AppProvider({
     const syncDeckCards = useCallback(async (deckId: string, cards: EditableCard[]) => {
         const buildFlashcards = (existingCards: Flashcard[]): Flashcard[] => {
             const existingById = new Map(existingCards.map((c) => [c.id, c]));
-            return cards.map((card) => {
+            return cards.map((card, index) => {
                 const image = card.image?.trim() || undefined;
                 if (card.id && !card.id.startsWith("temp-") && existingById.has(card.id)) {
                     const existing = existingById.get(card.id)!;
@@ -367,6 +373,7 @@ export function AppProvider({
                         question: card.question,
                         answer: card.answer,
                         image,
+                        sortOrder: index,
                     };
                 }
                 return {
@@ -375,6 +382,7 @@ export function AppProvider({
                     answer: card.answer,
                     image,
                     level: "Nowe" as CardLevel,
+                    sortOrder: index,
                 };
             });
         };
