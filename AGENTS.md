@@ -17,9 +17,9 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 
 ## 2. Exact Versions (Source: package.json)
 - **Runtime**: Node.js `18.17+`
-- **Package Manager**: `pnpm@10.33.0`
-- **Framework**: Next.js `16.2.3`
-- **Library**: React `19.2.5`
+- **Package Manager**: `pnpm@11.8.0`
+- **Framework**: Next.js `16.2.6`
+- **Library**: React `19.2.6`
 - **Language**: TypeScript `5.9.3`
 
 ### Production Dependencies
@@ -35,11 +35,11 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 - `framer-motion`: `^12.36.0`
 - `katex`: `^0.16.38`
 - `lucide-react`: `^0.563.0`
-- `next`: `16.2.3`
+- `next`: `16.2.6`
 - `next-auth`: `5.0.0-beta.30`
 - `next-themes`: `^0.4.6`
-- `react`: `19.2.5`
-- `react-dom`: `19.2.5`
+- `react`: `19.2.6`
+- `react-dom`: `19.2.6`
 - `tailwind-merge`: `^3.5.0`
 - `zod`: `^4.3.6`
 
@@ -50,9 +50,9 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 - `@types/react`: `19.2.14`
 - `@types/react-dom`: `19.2.3`
 - `dotenv`: `^17.3.1`
-- `drizzle-kit`: `^0.31.9`
+- `drizzle-kit`: `^0.31.10`
 - `eslint`: `^9.39.4`
-- `eslint-config-next`: `16.2.3`
+- `eslint-config-next`: `16.2.6`
 - `tailwindcss`: `^4.2.1`
 - `tw-animate-css`: `^1.4.0`
 - `typescript`: `^5.9.3`
@@ -108,6 +108,7 @@ Defined in `.env.local` (referenced in `drizzle.config.ts` and `src/db/index.ts`
 - `AUTH_SECRET`: NextAuth.js encryption secret (Required for Auth Mode).
 
 ## 7. Key Configuration
+- **pnpm**: Pinned via `packageManager` in `package.json` (`pnpm@11.8.0`). Dependency overrides live in `pnpm-workspace.yaml`.
 - **Tailwind v4**: Configured via `@import "tailwindcss"` in `globals.css` with inline theme extensions.
 - **TypeScript**: Strict mode enabled, `paths` alias `@/*` -> `./src/*`.
 - **Drizzle**: PostgreSQL dialect with schema located at `src/db/schema.ts`.
