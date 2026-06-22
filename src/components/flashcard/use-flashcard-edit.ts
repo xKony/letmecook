@@ -32,6 +32,9 @@ export function useFlashcardEdit({
     const [editAnswer, setEditAnswer] = useState(card.answer);
     const [showEditHint, setShowEditHint] = useState<"question" | "answer" | null>(null);
     const [showMobileEditMenu, setShowMobileEditMenu] = useState(false);
+    const [syncedCardKey, setSyncedCardKey] = useState(
+        () => `${card.id}:${card.question}:${card.answer}`
+    );
 
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const hideEditHintTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -64,15 +67,20 @@ export function useFlashcardEdit({
         }, FLASHCARD_EDIT_HINT_HIDE_MS);
     }, [clearHideEditHintTimer]);
 
-    useEffect(() => {
+    const cardKey = `${card.id}:${card.question}:${card.answer}`;
+    if (cardKey !== syncedCardKey) {
+        setSyncedCardKey(cardKey);
         setShowMobileEditMenu(false);
         setIsEditingQuestion(false);
         setIsEditingAnswer(false);
         setEditQuestion(card.question);
         setEditAnswer(card.answer);
         setShowEditHint(null);
+    }
+
+    useEffect(() => {
         clearHideEditHintTimer();
-    }, [card.id, card.question, card.answer, clearHideEditHintTimer]);
+    }, [cardKey, clearHideEditHintTimer]);
 
     useEffect(() => {
         return () => clearHideEditHintTimer();

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { Deck, EditableCard } from "@/lib/types";
 import { deckToEditableCards } from "@/lib/deck-editor";
 import { useApp } from "@/lib/app-context";
@@ -79,14 +79,12 @@ export function DeckEditorSessionProvider({ children }: { children: React.ReactN
         []
     );
 
-    useEffect(() => {
-        if (session?.mode === "edit" && session.deckId) {
-            const deckStillExists = decks.some((deck) => deck.id === session.deckId);
-            if (!deckStillExists) {
-                setSession(null);
-            }
+    if (session?.mode === "edit" && session.deckId) {
+        const deckStillExists = decks.some((deck) => deck.id === session.deckId);
+        if (!deckStillExists) {
+            setSession(null);
         }
-    }, [decks, session?.deckId, session?.mode]);
+    }
 
     const value = useMemo(
         () => ({

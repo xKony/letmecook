@@ -17,7 +17,10 @@
     "retry": "Retry",
     "ok": "OK",
     "go": "Go",
-    "restart": "Restart"
+    "restart": "Restart",
+    "menu": "Menu",
+    "language": "Language",
+    "theme": "Theme"
   },
   "dashboard": {
     "title": "LetMeCook 🍳",

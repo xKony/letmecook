@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from "react";
 import { CardLevel, Flashcard, Deck } from "@/lib/types";
 
 /**
@@ -25,10 +25,16 @@ function getFilteredCardIds(deck: Deck, activeFilter: CardLevel | null): string[
     return cards.map((c) => c.id);
 }
 
-function fisherYatesShuffle<T>(array: T[]): T[] {
+function fisherYatesShuffle<T>(array: T[], seed = 0): T[] {
     const shuffled = [...array];
+    let state = seed || 1;
+    const next = () => {
+        state = (state * 1664525 + 1013904223) >>> 0;
+        return state / 0x100000000;
+    };
+
     for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(next() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
@@ -36,12 +42,34 @@ function fisherYatesShuffle<T>(array: T[]): T[] {
 
 export function useStudySession(deck: Deck | null) {
     const [playIndex, setPlayIndex] = useState(0);
-    const [playOrder, setPlayOrder] = useState<string[]>([]);
     const [isShuffled, setIsShuffled] = useState(false);
     const [activeFilter, setActiveFilter] = useState<CardLevel | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isRevealed, setIsRevealed] = useState(false);
     const [shuffleSeed, setShuffleSeed] = useState(0);
+
+    const playOrderContextKey = deck
+        ? `${deck.id}:${activeFilter ?? "all"}:${isShuffled}:${shuffleSeed}`
+        : "none";
+
+    const basePlayOrder = useMemo(() => {
+        if (!deck) return [];
+        let order = getFilteredCardIds(deck, activeFilter);
+        if (isShuffled) {
+            order = fisherYatesShuffle(order, shuffleSeed);
+        }
+        return order;
+    }, [deck, activeFilter, isShuffled, shuffleSeed]);
+
+    const [playOrder, setPlayOrder] = useState<string[]>([]);
+    const [syncedPlayOrderContextKey, setSyncedPlayOrderContextKey] = useState<string | null>(null);
+
+    if (playOrderContextKey !== syncedPlayOrderContextKey) {
+        setSyncedPlayOrderContextKey(playOrderContextKey);
+        setPlayOrder(basePlayOrder);
+        setPlayIndex(0);
+        setIsRevealed(false);
+    }
 
     const filteredCardIds = useMemo(() => {
         if (!deck) return [];
@@ -59,49 +87,14 @@ export function useStudySession(deck: Deck | null) {
         return filteredCards.filter((c) => cardMatchesSearch(c, searchQuery));
     }, [deck, filteredCards, searchQuery]);
 
-    // Rebuild play order only when deck, filter, or shuffle mode changes — not on card level updates.
-    const playOrderContextRef = useRef({
-        deckId: "",
-        filter: null as CardLevel | null,
-        shuffled: false,
-        seed: 0,
-    });
+    // Keep refs in sync for advanceAfterRating without updating them during render.
     const playOrderRef = useRef(playOrder);
     const playIndexRef = useRef(playIndex);
-    playOrderRef.current = playOrder;
-    playIndexRef.current = playIndex;
 
-    useEffect(() => {
-        if (!deck) {
-            setPlayOrder([]);
-            setPlayIndex(0);
-            return;
-        }
-
-        const ctx = playOrderContextRef.current;
-        const contextChanged =
-            ctx.deckId !== deck.id ||
-            ctx.filter !== activeFilter ||
-            ctx.shuffled !== isShuffled ||
-            ctx.seed !== shuffleSeed;
-
-        if (!contextChanged) return;
-
-        let order = getFilteredCardIds(deck, activeFilter);
-        if (isShuffled) {
-            order = fisherYatesShuffle(order);
-        }
-
-        setPlayOrder(order);
-        setPlayIndex(0);
-        setIsRevealed(false);
-        playOrderContextRef.current = {
-            deckId: deck.id,
-            filter: activeFilter,
-            shuffled: isShuffled,
-            seed: shuffleSeed,
-        };
-    }, [deck, activeFilter, isShuffled, shuffleSeed]);
+    useLayoutEffect(() => {
+        playOrderRef.current = playOrder;
+        playIndexRef.current = playIndex;
+    }, [playOrder, playIndex]);
 
     /**
      * Find a card by ID within the current deck.
