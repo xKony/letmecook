@@ -33,7 +33,7 @@ export function DeckSetEditorModal() {
     const mode = session?.mode ?? "edit";
     const deckId = session?.deckId;
     const deckName = session?.deckName ?? "";
-    const cards = session?.cards ?? [];
+    const cards = useMemo(() => session?.cards ?? [], [session?.cards]);
     const search = session?.search ?? "";
     const expandedId = session?.expandedId ?? null;
     const importDeckName = session?.deckName ?? "";

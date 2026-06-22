@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 import { Language, getTranslation } from "@/lib/i18n";
 
 interface I18nContextType {
@@ -11,15 +11,14 @@ interface I18nContextType {
 
 const I18nContext = createContext<I18nContextType | null>(null);
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-    const [language, setLanguageState] = useState<Language>("en");
+function getInitialLanguage(): Language {
+    if (typeof window === "undefined") return "en";
+    const savedLang = localStorage.getItem("language") as Language;
+    return savedLang === "en" || savedLang === "pl" ? savedLang : "en";
+}
 
-    useEffect(() => {
-        const savedLang = localStorage.getItem("language") as Language;
-        if (savedLang === "en" || savedLang === "pl") {
-            setLanguageState(savedLang);
-        }
-    }, []);
+export function I18nProvider({ children }: { children: React.ReactNode }) {
+    const [language, setLanguageState] = useState<Language>(getInitialLanguage);
 
     const setLanguage = useCallback((lang: Language) => {
         setLanguageState(lang);
