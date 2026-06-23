@@ -205,6 +205,9 @@ export function useStudySession(deck: Deck | null) {
                 onSessionEnd?.();
             }
 
+            playOrderRef.current = nextOrder;
+            playIndexRef.current = nextIndex;
+
             setPlayOrder(nextOrder);
             setPlayIndex(nextIndex);
             setIsRevealed(false);

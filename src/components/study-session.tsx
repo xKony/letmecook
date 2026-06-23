@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, startTransition } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
@@ -104,7 +104,7 @@ export function StudySession() {
      * Handle revealing the card answer and triggering TTS if enabled.
      */
     const onReveal = useCallback(() => {
-        startTransition(() => setIsRevealed(true));
+        setIsRevealed(true);
         if (currentCard && ttsEnabled) {
             speak(currentCard.answer);
         }
