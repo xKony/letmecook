@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
-import { createDeckSchema } from "@/lib/validations";
+import { createDeckSchema, updateDeckSchema } from "@/lib/validations";
 import { cache } from "react";
 
 // ============================================
@@ -246,14 +246,19 @@ export async function updateDeck(deckId: string, data: { name?: string; isPublic
         throw new Error("Permission denied");
     }
 
+    const validation = updateDeckSchema.safeParse(data);
+    if (!validation.success) {
+        throw new Error(validation.error.issues[0]?.message || "Invalid input");
+    }
+
     // Only owner can change visibility
-    if (data.isPublic !== undefined && access !== "owner") {
+    if (validation.data.isPublic !== undefined && access !== "owner") {
         throw new Error("Only owner can change visibility");
     }
 
     await db.update(decks)
         .set({
-            ...data,
+            ...validation.data,
             updatedAt: new Date(),
         })
         .where(eq(decks.id, deckId));

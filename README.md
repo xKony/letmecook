@@ -1,165 +1,227 @@
-# LetMeCook Web 🍳
+# LetMeCook
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/yourusername/letmecook-web)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D18.17-brightgreen.svg)](https://nodejs.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-16.2.3-black.svg)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19.2.5-blue.svg)](https://react.dev/)
-[![Tailwind](https://img.shields.io/badge/Tailwind-4.2.1-38B2AC.svg)](https://tailwindcss.com/)
+Local-first active recall flashcards. Study as a guest in the browser, or sync decks to Postgres when you sign in.
 
-**LetMeCook Web** is a high-performance, local-first Active Recall study tool built with **Next.js 16** and **React 19**. It empowers users to master any subject through an efficient flashcard system featuring dual-mode persistence, LaTeX support, and a sleek, animated interface.
+**[Live demo](https://letmecook-eight.vercel.app)** · **[MIT License](LICENSE)** · **[FAQ / study guide](https://letmecook-eight.vercel.app/faq)**
 
----
-
-## ✨ Features
-
-- **🧠 Active Recall System**: Five-level mastery tracking (New, Don't know, Somewhat, I know, Mastered) to optimize memory retention.
-- **🔒 Dual-Mode Persistence**:
-  - **Guest Mode**: Privacy-focused storage in the browser's `LocalStorage`.
-  - **Authenticated Mode**: Persistent synchronization with a PostgreSQL (Neon) database.
-- **📁 Smart Importing**: Seamlessly import flashcards from `.txt` files (Format: `Question | Answer`).
-- **🧬 LaTeX Support**: Full support for mathematical and technical formulas rendered via **KaTeX**.
-- **🎨 Modern UI/UX**: Styled with **Tailwind CSS 4** and fluidly animated with **Framer Motion**.
-- **🌍 Internationalization**: Native support for **English** and **Polski** locales.
-- **🌗 Theme Support**: Full support for Light and Dark modes via `next-themes`.
-- **🛠 Admin Dashboard**: Centralized management for public decks and user permissions.
-- **🚀 Data Migration**: Built-in functionality to migrate Guest data to an Authenticated account.
-
-[↑ Back to top](#letmecook-web-)
+[![Next.js](https://img.shields.io/badge/Next.js-16.2.6-black?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2.6-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-10.33-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
 
 ---
 
-## 🛠 Tech Stack
+## Features
 
-### Framework & UI
-
-- **Framework**: [Next.js 16.2.3](https://nextjs.org/) (App Router)
-- **Library**: [React 19.2.5](https://react.dev/)
-- **Styling**: [Tailwind CSS 4.2.1](https://tailwindcss.com/)
-- **Animations**: [Framer Motion 12.36.0](https://www.framer.com/motion/)
-- **Icons**: [Lucide React 0.563.0](https://lucide.dev/)
-- **Components**: [Radix UI](https://www.radix-ui.com/)
-
-### Backend & Auth
-
-- **Database**: [PostgreSQL (Neon)](https://neon.tech/)
-- **ORM**: [Drizzle ORM 0.45.1](https://orm.drizzle.team/)
-- **Authentication**: [NextAuth.js 5.0.0-beta.30](https://authjs.dev/)
-- **Security**: `bcryptjs` for password hashing
-
-### Tooling
-
-- **Language**: [TypeScript 5.9.3](https://www.typescriptlang.org/)
-- **Package Manager**: [pnpm 10.33.0](https://pnpm.io/)
-- **Math Rendering**: [KaTeX 0.16.38](https://katex.org/)
-- **Schema Management**: `drizzle-kit`
-
-[↑ Back to top](#letmecook-web-)
+- **Active recall** — rate each card after you reveal the answer; progress drives what you review next
+- **Guest or account** — LocalStorage by default; Neon/Postgres when authenticated
+- **Guest → account migration** — import local decks into a signed-in profile
+- **Import / export** — pipe-separated `.txt` or flexible JSON decks
+- **LaTeX** — KaTeX inline (`$...$`) and display (`$$...$$`) math
+- **Images** — embed with `[img:https://...]` (HTTPS only; localhost HTTP allowed in dev)
+- **Public library** — browse and copy admin-published decks
+- **i18n** — English and Polish
+- **Themes** — light / dark / system
+- **Admin tools** — publish public decks and raise per-user deck limits
 
 ---
 
-## 📁 Project Structure
+## How it works
 
-```text
-├── src/
-│   ├── app/                # Next.js App Router: Routes and Server Actions
-│   │   ├── actions/        # Server Actions for DB mutations (Auth, Decks, Cards)
-│   │   ├── api/            # API Route handlers (Auth, NextAuth)
-│   │   └── (routes)        # Pages (Dashboard, Settings, Admin, FAQ)
-│   ├── components/         # React Components
-│   │   ├── dashboard/      # Dashboard-specific views
-│   │   ├── flashcard/      # Flashcard rendering and editing
-│   │   ├── study/          # Study session interface
-│   │   └── ui/             # Reusable Shadcn/Radix UI primitives
-│   ├── db/                 # Database schema (Drizzle) and migrations
-│   ├── hooks/              # Custom React hooks (Study session, Export, Import)
-│   ├── lib/                # Core logic, types, storage adapters, and utilities
-│   │   ├── app-context.tsx # Global State Management (AppProvider)
-│   │   └── storage.ts      # LocalStorage persistence logic for Guest Mode
-│   └── locales/            # i18n JSON files (en, pl)
-├── public/                 # Static assets and preview images
-├── drizzle.config.ts       # Drizzle ORM configuration
-├── next.config.ts          # Next.js configuration
-├── tailwind.config.ts      # Tailwind CSS v4 configuration (CSS-in-JS style)
-└── tsconfig.json           # TypeScript configuration
+| Mode | Storage | Notes |
+| --- | --- | --- |
+| **Guest** | Browser `localStorage` | No account. Data stays on that device/browser. |
+| **Authenticated** | Neon Postgres via server actions | Decks sync across sessions. Default cap: **5 decks** (admins can raise this). |
+
+Study flow: open a deck → flip cards → rate with keyboard shortcuts `1`–`4` (or on-screen buttons) → levels update immediately (optimistic UI; authenticated mode also writes to the DB).
+
+### Mastery levels
+
+Levels are stored with Polish labels (UI strings are localized):
+
+| Level | Meaning | Shortcut |
+| --- | --- | --- |
+| `Nowe` | New / unseen | — |
+| `Nie umiem` | Don't know | `1` |
+| `W miarę` | Somewhat | `2` |
+| `Umiem` | I know | `3` |
+| `Opanowane 100%` | Mastered | `4` |
+
+---
+
+## Stack
+
+| Layer | Choice |
+| --- | --- |
+| App | Next.js 16 (App Router), React 19, TypeScript |
+| UI | Tailwind CSS 4, Radix, Framer Motion, Lucide |
+| Data | Drizzle ORM + Neon Postgres (HTTP driver) |
+| Auth | Auth.js / NextAuth v5 — credentials provider, JWT sessions |
+| Validation | Zod (auth, decks, cards, imports) |
+| Math | KaTeX |
+
+Mutations for signed-in users live in `src/app/actions/` (auth, decks, cards, admin, migration). Guest writes go through `src/lib/storage.ts` and `AppProvider`.
+
+---
+
+## Routes
+
+| Path | Description |
+| --- | --- |
+| `/` | Dashboard and in-page study session |
+| `/login` | Sign in / register |
+| `/settings` | Display name, password, sign out |
+| `/admin` | Public decks + user deck limits (admins only) |
+| `/faq` | Study guide and LLM flashcard prompt |
+| `/api/auth/*` | Auth.js handlers |
+
+---
+
+## Quick start
+
+**Requirements:** Node.js 18.17+, pnpm 10.33+
+
+```bash
+git clone https://github.com/xKony/letmecook.git
+cd letmecook
+pnpm install
+cp .env.example .env.local
 ```
 
-[↑ Back to top](#letmecook-web-)
+### Environment
 
----
+| Variable | Required | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | Neon / Postgres connection string |
+| `AUTH_SECRET` | Yes | Auth.js secret (`openssl rand -base64 32`) |
+| `AUTH_URL` | No | Public site URL (set in production if Auth.js needs it) |
 
-## 🚀 Getting Started
+Example `.env.local`:
 
-### Prerequisites
-
-- **Node.js**: `18.17.x` or higher
-- **pnpm**: `10.33.0` or higher
-
-### Installation
-
-1. **Clone the repository**
-
-   ```bash
-   git clone https://github.com/yourusername/letmecook-web.git
-   cd letmecook-web
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   pnpm install
-   ```
-
-3. **Environment Setup**
-   Create a `.env.local` file in the root directory:
-
-   ```env
-   DATABASE_URL=your_postgresql_url
-   AUTH_SECRET=your_nextauth_secret
-   ```
-
-4. **Database Migration**
-
-   ```bash
-   pnpm drizzle-kit push
-   ```
-
-5. **Run Development Server**
-   ```bash
-   pnpm dev
-   ```
-
-[↑ Back to top](#letmecook-web-)
-
----
-
-## 📖 Usage
-
-### Key Commands
-
-- `pnpm dev`: Start development server on `localhost:3000`.
-- `pnpm build`: Create an optimized production build.
-- `pnpm start`: Start the production server.
-- `pnpm lint`: Run ESLint to check for code quality issues.
-
-### Import Format
-
-To import flashcards, use a `.txt` file with the following format (one card per line):
-
-```text
-Question here | Answer here
+```env
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
+AUTH_SECRET=
+# AUTH_URL=https://your-domain.example
 ```
 
-LaTeX formulas are supported using `$` delimiters, e.g., `$E = mc^2$`.
+The app **fails fast** if `DATABASE_URL` is missing — do not rely on a dummy URL.
 
-Images are supported using `[img:RAW_URL]`, e.g., `[img:https://example.com/image.png]`
+### Database & run
 
-[↑ Back to top](#letmecook-web-)
+```bash
+pnpm drizzle-kit push
+# or apply SQL migrations:
+pnpm drizzle-kit migrate
+
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+| Command | Description |
+| --- | --- |
+| `pnpm dev` | Dev server |
+| `pnpm build` | Production build |
+| `pnpm start` | Run production build |
+| `pnpm lint` | ESLint |
 
 ---
 
-## 📄 License
+## Deploy
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+Designed for **Vercel** + **Neon**:
 
-[↑ Back to top](#letmecook-web-)
+1. Create a Neon database and copy `DATABASE_URL`.
+2. Import the GitHub repo into Vercel.
+3. Set `DATABASE_URL` and `AUTH_SECRET` (and optionally `AUTH_URL`) in the project env.
+4. Run migrations against Neon (`drizzle-kit push` or `migrate` from a machine with the URL).
+5. Deploy.
+
+---
+
+## Import format
+
+### Pipe-separated text
+
+One card per line (`question | answer`). Extra `|` characters stay in the answer.
+
+```text
+What is the capital of France? | Paris
+Area of a circle? | $A = \pi r^2$
+Diagram | See figure [img:https://example.com/circle.png]
+```
+
+### JSON
+
+Arrays of cards, or objects with a `cards` / `decks` field. Common key aliases are accepted (`question`/`q`/`front`, `answer`/`a`/`back`, etc.):
+
+```json
+[
+  { "question": "2 + 2?", "answer": "4" },
+  { "question": "Circle area", "answer": "$A = \\pi r^2$", "image": "https://example.com/circle.png" }
+]
+```
+
+### Content limits (server-enforced)
+
+| Field | Limit |
+| --- | --- |
+| Deck name | 100 characters |
+| Cards per deck | 500 |
+| Question | 5,000 characters |
+| Answer | 10,000 characters |
+| Password | 8–128 characters |
+| Decks per user | 5 by default (`users.max_decks`) |
+
+Image URLs must be `https://` (or `http://localhost` in development).
+
+---
+
+## Admin
+
+1. Register a normal account.
+2. In Postgres, set admin:
+
+```sql
+UPDATE users SET is_admin = true WHERE email = 'you@example.com';
+```
+
+3. Sign out and back in (or wait ~1 minute for the JWT admin flag to refresh).
+4. Open `/admin` to publish public decks and adjust users’ `max_decks`.
+
+---
+
+## Project layout
+
+```text
+src/
+  app/
+    actions/       # Server actions (auth, decks, cards, admin, migration)
+    admin/         # Admin UI
+    api/auth/      # Auth.js route handlers
+    faq/           # Study guide
+    login/         # Credentials UI
+    settings/      # Profile / password
+  components/      # Dashboard, study, flashcards, UI primitives
+  db/              # Drizzle schema + migrations
+  hooks/           # Study session, import/export, TTS
+  lib/             # Auth, AppProvider, storage, Zod, rate limits, i18n
+  locales/         # en.json, pl.json
+```
+
+Guest state key: `letmecook_guest_state` in `localStorage`.
+
+---
+
+## Security notes
+
+- Passwords are hashed with **bcryptjs**.
+- Auth and password-change endpoints are **rate-limited** (in-memory; best-effort on multi-instance serverless).
+- Public library responses omit owner emails.
+- Prefer HTTPS image embeds; untrusted schemes are rejected in the renderer.
+
+---
+
+## License
+
+[MIT](LICENSE) © 2026 xKony

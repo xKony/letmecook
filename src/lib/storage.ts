@@ -1,30 +1,56 @@
 import { GuestState, Deck, Flashcard, CardLevel } from "./types";
+import { sanitizeImageUrl } from "./image-url";
 
 const STORAGE_KEY = "letmecook_guest_state";
 const LEGACY_KEY = "letmecook_app_state"; // Old profile-based storage
+const VALID_LEVELS = new Set<CardLevel>([
+    "Nowe",
+    "Nie umiem",
+    "W miarę",
+    "Umiem",
+    "Opanowane 100%",
+]);
 
-// Generate unique ID
 export function generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
-// Get initial empty state
 function getInitialState(): GuestState {
     return {
         decks: [],
     };
 }
 
-// Validate GuestState structure at runtime
+function isValidCard(card: unknown): card is Flashcard {
+    if (typeof card !== "object" || card === null) return false;
+    const c = card as Record<string, unknown>;
+    return (
+        typeof c.id === "string" &&
+        typeof c.question === "string" &&
+        typeof c.answer === "string" &&
+        typeof c.level === "string" &&
+        VALID_LEVELS.has(c.level as CardLevel) &&
+        (c.image === undefined || typeof c.image === "string")
+    );
+}
+
+function isValidDeck(deck: unknown): deck is Deck {
+    if (typeof deck !== "object" || deck === null) return false;
+    const d = deck as Record<string, unknown>;
+    return (
+        typeof d.id === "string" &&
+        typeof d.name === "string" &&
+        Array.isArray(d.cards) &&
+        d.cards.every(isValidCard) &&
+        typeof d.createdAt === "number" &&
+        typeof d.updatedAt === "number"
+    );
+}
+
 function isValidGuestState(data: unknown): data is GuestState {
     if (typeof data !== "object" || data === null) return false;
-
     const obj = data as Record<string, unknown>;
-
-    // Validate decks array
-    if (!Array.isArray(obj.decks)) return false;
-
-    return true;
+    return Array.isArray(obj.decks) && obj.decks.every(isValidDeck);
 }
 
 // Migrate from legacy profile-based storage to new flat structure
@@ -74,11 +100,23 @@ export function loadGuestState(): GuestState {
             if (isValidGuestState(parsed)) {
                 return parsed;
             }
+
+            // Salvage: valid decks from a partially corrupt payload
+            if (parsed && typeof parsed === "object" && Array.isArray(parsed.decks)) {
+                const validDecks = parsed.decks.filter(isValidDeck);
+                if (validDecks.length > 0) {
+                    console.warn("Salvaged valid decks from partially invalid guest state");
+                    return { decks: validDecks };
+                }
+            }
             
             // Salvage: If it's just an array of decks, wrap it
             if (Array.isArray(parsed)) {
-                console.log("Salvaged decks from array-format storage");
-                return { decks: parsed };
+                const validDecks = parsed.filter(isValidDeck);
+                if (validDecks.length > 0) {
+                    console.log("Salvaged decks from array-format storage");
+                    return { decks: validDecks };
+                }
             }
 
             console.warn("Invalid guest state structure, checking for legacy data");
@@ -115,17 +153,17 @@ export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "lev
         const parsed = JSON.parse(content);
         
         // Helper to extract cards from a raw JSON array
-        const extractCards = (arr: any[]): Omit<Flashcard, "id" | "level">[] => {
-            return arr.map((item: any) => {
-                // Support multiple key mappings case-insensitively
-                const q = item.question ?? item.Question ?? item.q ?? item.Q ?? item.front ?? item.Front ?? item.text ?? item.Text ?? item.prompt ?? item.Prompt ?? "";
-                const a = item.answer ?? item.Answer ?? item.a ?? item.A ?? item.back ?? item.Back ?? item.definition ?? item.Definition ?? item.response ?? item.Response ?? "";
-                const img = item.image ?? item.Image ?? item.img ?? item.Img ?? undefined;
+        const extractCards = (arr: unknown[]): Omit<Flashcard, "id" | "level">[] => {
+            return arr.map((item) => {
+                const row = (item && typeof item === "object" ? item : {}) as Record<string, unknown>;
+                const q = row.question ?? row.Question ?? row.q ?? row.Q ?? row.front ?? row.Front ?? row.text ?? row.Text ?? row.prompt ?? row.Prompt ?? "";
+                const a = row.answer ?? row.Answer ?? row.a ?? row.A ?? row.back ?? row.Back ?? row.definition ?? row.Definition ?? row.response ?? row.Response ?? "";
+                const img = row.image ?? row.Image ?? row.img ?? row.Img ?? undefined;
                 
                 return {
                     question: String(q),
                     answer: String(a),
-                    image: img ? String(img) : undefined,
+                    image: sanitizeImageUrl(img ? String(img) : undefined),
                 };
             }).filter((card) => card.question.trim());
         };

@@ -3,34 +3,19 @@
 import { useState } from "react";
 import { ImageOff, ZoomIn } from "lucide-react";
 import { useApp } from "@/lib/app-context";
+import { isAllowedImageUrl } from "@/lib/image-url";
 import dynamic from "next/dynamic";
 
-// Dynamically import LatexRenderer as it is only needed when text contains math
 const LatexRenderer = dynamic(() => import("@/components/latex-renderer").then(mod => mod.LatexRenderer), {
     ssr: true,
 });
 
-/**
- * Props for the FlashcardContent component.
- */
 interface FlashcardContentProps {
-    /** The text content to render (may contain [img:URL] and LaTeX). */
     text: string;
-    /** Whether to render with large styling (e.g., for the question). */
     isLarge?: boolean;
-    /** Callback when an image is clicked for zooming. */
     onImageZoom: (url: string) => void;
 }
 
-/**
- * Renders the content of a flashcard, supporting:
- * 1. Plain text
- * 2. LaTeX formulas (via LatexRenderer)
- * 3. Inline images with syntax [img:URL]
- * 
- * @param props - Component props.
- * @returns The rendered content.
- */
 export function FlashcardContent({
     text,
     isLarge = false,
@@ -41,7 +26,6 @@ export function FlashcardContent({
 
     if (!text) return null;
 
-    // Split by [img:...] pattern, keeping the delimiters
     const parts = text.split(/(\[img:.*?\])/g);
 
     return (
@@ -50,8 +34,9 @@ export function FlashcardContent({
                 const imgMatch = part.match(/\[img:(.*?)\]/);
                 
                 if (imgMatch) {
-                    const imageUrl = imgMatch[1];
-                    const hasError = imageErrors.has(imageUrl);
+                    const imageUrl = imgMatch[1].trim();
+                    const allowed = isAllowedImageUrl(imageUrl);
+                    const hasError = !allowed || imageErrors.has(imageUrl);
 
                     if (hasError) {
                         return (
@@ -68,6 +53,7 @@ export function FlashcardContent({
                             <img
                                 src={imageUrl}
                                 alt="Flashcard image"
+                                referrerPolicy="no-referrer"
                                 className={`rounded-lg cursor-zoom-in shadow-md hover:shadow-lg transition-all active:scale-[0.98] ${isLarge ? 'max-h-48' : 'max-h-32'}`}
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -82,7 +68,6 @@ export function FlashcardContent({
                     );
                 }
 
-                // Regular text part - render with LaTeX support
                 if (part.trim()) {
                     return <LatexRenderer key={index} text={part} />;
                 }

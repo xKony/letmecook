@@ -7,11 +7,15 @@ import bcrypt from "bcryptjs";
 import { signIn, auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+    registerSchema,
+    loginSchema,
+    changePasswordSchema,
+    changeNameSchema,
+} from "@/lib/validations";
 
-// Get client IP from request headers
 async function getClientIP(): Promise<string> {
     const headersList = await headers();
-    // Check common headers for real IP (when behind proxy/load balancer)
     const forwardedFor = headersList.get("x-forwarded-for");
     if (forwardedFor) {
         return forwardedFor.split(",")[0].trim();
@@ -20,27 +24,28 @@ async function getClientIP(): Promise<string> {
     if (realIP) {
         return realIP;
     }
-    // Fallback for localhost/direct connection
     return "localhost";
 }
 
 export async function registerUser(formData: FormData) {
-    // Rate limiting
     const ip = await getClientIP();
     const rateLimit = await checkRateLimit(`register:${ip}`, RATE_LIMITS.register);
     if (!rateLimit.success) {
         return { error: `Too many registration attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.` };
     }
 
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+    const validation = registerSchema.safeParse({
+        name: (formData.get("name") as string) || undefined,
+        email: formData.get("email"),
+        password: formData.get("password"),
+    });
 
-    if (!email || !password) {
-        return { error: "Email and password are required" };
+    if (!validation.success) {
+        return { error: validation.error.issues[0]?.message || "Invalid input" };
     }
 
-    // Check if user already exists
+    const { name, email, password } = validation.data;
+
     const existingUser = await db.query.users.findFirst({
         where: eq(users.email, email),
     });
@@ -49,10 +54,8 @@ export async function registerUser(formData: FormData) {
         return { error: "Email already registered" };
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
     try {
         await db.insert(users).values({
             name: name || null,
@@ -68,15 +71,22 @@ export async function registerUser(formData: FormData) {
 }
 
 export async function loginUser(formData: FormData) {
-    // Rate limiting
     const ip = await getClientIP();
     const rateLimit = await checkRateLimit(`login:${ip}`, RATE_LIMITS.login);
     if (!rateLimit.success) {
         return { error: `Too many login attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.` };
     }
 
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+    const validation = loginSchema.safeParse({
+        email: formData.get("email"),
+        password: formData.get("password"),
+    });
+
+    if (!validation.success) {
+        return { error: validation.error.issues[0]?.message || "Invalid input" };
+    }
+
+    const { email, password } = validation.data;
 
     try {
         await signIn("credentials", {
@@ -86,7 +96,6 @@ export async function loginUser(formData: FormData) {
         });
         return { success: true };
     } catch (error) {
-        // Handle redirect error (this is expected for successful login)
         if ((error as Error).message?.includes("NEXT_REDIRECT")) {
             throw error;
         }
@@ -101,22 +110,17 @@ export async function changePassword(currentPassword: string, newPassword: strin
         return { error: "Not authenticated" };
     }
 
-    // Rate limiting (by user ID for authenticated users)
     const rateLimit = await checkRateLimit(`password:${session.user.id}`, RATE_LIMITS.passwordChange);
     if (!rateLimit.success) {
         return { error: `Too many password change attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.` };
     }
 
-    if (!currentPassword || !newPassword) {
-        return { error: "Both passwords are required" };
-    }
-
-    if (newPassword.length < 6) {
-        return { error: "New password must be at least 6 characters" };
+    const validation = changePasswordSchema.safeParse({ currentPassword, newPassword });
+    if (!validation.success) {
+        return { error: validation.error.issues[0]?.message || "Invalid input" };
     }
 
     try {
-        // Get current user with password
         const user = await db.query.users.findFirst({
             where: eq(users.id, session.user.id),
         });
@@ -125,17 +129,14 @@ export async function changePassword(currentPassword: string, newPassword: strin
             return { error: "User not found or no password set" };
         }
 
-        // Verify current password
-        const isValid = await bcrypt.compare(currentPassword, user.password);
+        const isValid = await bcrypt.compare(validation.data.currentPassword, user.password);
 
         if (!isValid) {
             return { error: "Current password is incorrect" };
         }
 
-        // Hash new password
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const hashedPassword = await bcrypt.hash(validation.data.newPassword, 10);
 
-        // Update password
         await db.update(users)
             .set({ password: hashedPassword })
             .where(eq(users.id, session.user.id));
@@ -154,18 +155,14 @@ export async function changeName(newName: string) {
         return { error: "Not authenticated" };
     }
 
-    const trimmedName = newName.trim();
-    if (!trimmedName) {
-        return { error: "Name cannot be empty" };
-    }
-
-    if (trimmedName.length > 50) {
-        return { error: "Name must be 50 characters or less" };
+    const validation = changeNameSchema.safeParse({ name: newName });
+    if (!validation.success) {
+        return { error: validation.error.issues[0]?.message || "Invalid input" };
     }
 
     try {
         await db.update(users)
-            .set({ name: trimmedName })
+            .set({ name: validation.data.name })
             .where(eq(users.id, session.user.id));
 
         return { success: true };
@@ -174,4 +171,3 @@ export async function changeName(newName: string) {
         return { error: "Failed to change name" };
     }
 }
-

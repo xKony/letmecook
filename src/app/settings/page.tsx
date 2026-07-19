@@ -214,7 +214,7 @@ export default function SettingsPage() {
                                 type="password"
                                 name="newPassword"
                                 required
-                                minLength={6}
+                                minLength={8}
                                 className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />
                         </div>
@@ -227,7 +227,7 @@ export default function SettingsPage() {
                                 type="password"
                                 name="confirmPassword"
                                 required
-                                minLength={6}
+                                minLength={8}
                                 className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />
                         </div>

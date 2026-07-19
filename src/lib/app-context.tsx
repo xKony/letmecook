@@ -327,14 +327,16 @@ export function AppProvider({
         }
     }, [currentDeckId, isAuthenticated]);
 
-    // Update a single card's level
     const updateCardLevel = useCallback(async (cardId: string, level: CardLevel) => {
-        // Optimistically update local state for responsiveness
-        const updateLocal = () => {
+        const previousLevel = (isAuthenticated ? dbDecks : guestState.decks)
+            .flatMap((d) => d.cards)
+            .find((c) => c.id === cardId)?.level;
+
+        const applyLevel = (nextLevel: CardLevel) => {
             setDbDecks((prev) => prev.map((deck) => ({
                 ...deck,
                 cards: deck.cards.map((card) =>
-                    card.id === cardId ? { ...card, level } : card
+                    card.id === cardId ? { ...card, level: nextLevel } : card
                 ),
                 updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
             })));
@@ -344,34 +346,38 @@ export function AppProvider({
                 decks: prev.decks.map((deck) => ({
                     ...deck,
                     cards: deck.cards.map((card) =>
-                        card.id === cardId ? { ...card, level } : card
+                        card.id === cardId ? { ...card, level: nextLevel } : card
                     ),
                     updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
                 })),
             }));
         };
 
-        // Always update local state first
-        updateLocal();
+        applyLevel(level);
 
         if (isAuthenticated) {
             try {
-                // Background DB update
                 await updateDbCardLevel(cardId, level);
             } catch (error) {
                 console.error("Failed to update card level:", error);
+                if (previousLevel) {
+                    applyLevel(previousLevel);
+                }
+                alert("Failed to save card progress. Please try again.");
             }
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, dbDecks, guestState.decks]);
 
-    // Update a single card's question and answer
     const updateCard = useCallback(async (cardId: string, question: string, answer: string) => {
-        // Optimistically update local state
-        const updateLocal = () => {
+        const previous = (isAuthenticated ? dbDecks : guestState.decks)
+            .flatMap((d) => d.cards)
+            .find((c) => c.id === cardId);
+
+        const applyContent = (nextQuestion: string, nextAnswer: string) => {
             setDbDecks((prev) => prev.map((deck) => ({
                 ...deck,
                 cards: deck.cards.map((card) =>
-                    card.id === cardId ? { ...card, question, answer } : card
+                    card.id === cardId ? { ...card, question: nextQuestion, answer: nextAnswer } : card
                 ),
                 updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
             })));
@@ -381,23 +387,27 @@ export function AppProvider({
                 decks: prev.decks.map((deck) => ({
                     ...deck,
                     cards: deck.cards.map((card) =>
-                        card.id === cardId ? { ...card, question, answer } : card
+                        card.id === cardId ? { ...card, question: nextQuestion, answer: nextAnswer } : card
                     ),
                     updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
                 })),
             }));
         };
 
-        updateLocal();
+        applyContent(question, answer);
 
         if (isAuthenticated) {
             try {
                 await updateDbCard(cardId, question, answer);
             } catch (error) {
                 console.error("Failed to update card:", error);
+                if (previous) {
+                    applyContent(previous.question, previous.answer);
+                }
+                alert("Failed to save card changes. Please try again.");
             }
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, dbDecks, guestState.decks]);
 
     const value: AppContextType = {
         isAuthenticated,
