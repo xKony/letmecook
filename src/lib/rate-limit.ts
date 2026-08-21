@@ -73,6 +73,36 @@ export async function checkRateLimit(
     return { success: true, remaining: maxRequests - entry.count, resetIn };
 }
 
+/**
+ * Read current rate-limit state without consuming a request slot.
+ */
+export function getRateLimitState(
+    identifier: string,
+    config: RateLimitConfig
+): RateLimitResult {
+    const { windowMs, maxRequests } = config;
+    const now = Date.now();
+    const entry = rateLimitStore.get(identifier);
+
+    if (!entry) {
+        return { success: true, remaining: maxRequests, resetIn: Math.ceil(windowMs / 1000) };
+    }
+
+    if (now - entry.firstRequest > windowMs) {
+        return { success: true, remaining: maxRequests, resetIn: Math.ceil(windowMs / 1000) };
+    }
+
+    const resetIn = Math.ceil((windowMs - (now - entry.firstRequest)) / 1000);
+    const remaining = Math.max(0, maxRequests - entry.count);
+
+    if (entry.count >= maxRequests) {
+        return { success: false, remaining: 0, resetIn };
+    }
+
+    return { success: true, remaining, resetIn };
+}
+
+// Preset configurations for common use cases
 export const RATE_LIMITS = {
     auth: {
         windowMs: 15 * 60 * 1000,

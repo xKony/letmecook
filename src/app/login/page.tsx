@@ -7,8 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, User, ArrowRight, Loader2, CheckCircle } from "lucide-react";
 import { registerUser } from "@/app/actions/auth-actions";
-import { signIn } from "next-auth/react";
 import { useApp } from "@/lib/app-context";
+import { signIn } from "next-auth/react";
 
 function LoginForm() {
     const router = useRouter();
@@ -37,39 +37,44 @@ function LoginForm() {
         const formData = new FormData(e.currentTarget);
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
+        const redirectTo = searchParams.get("from") || "/";
 
+        const redirectAfterAuth = () => {
+            setSuccess(isLogin ? "Login successful! Redirecting..." : "Account created! Redirecting...");
+            router.refresh();
+            setTimeout(() => {
+                router.push(redirectTo);
+            }, 500);
+        };
+
+        const signInWithCredentials = async () => {
+            const result = await signIn("credentials", {
+                email,
+                password,
+                redirect: false,
+            });
+
+            if (result?.error) {
+                setError("Invalid email or password");
+                return false;
+            }
+
+            redirectAfterAuth();
+            return true;
+        };
 
         try {
             if (isLogin) {
-                const result = await signIn("credentials", {
-                    email,
-                    password,
-                    redirect: false,
-                });
-
-                if (result?.error) {
-                    setError("Invalid email or password");
-                } else {
-                    setSuccess("Login successful! Redirecting...");
-                    router.replace(searchParams.get("from") || "/");
-                }
+                await signInWithCredentials();
             } else {
                 const result = await registerUser(formData);
                 if (result?.error) {
                     setError(result.error);
                 } else if (result?.success) {
-                    const loginResult = await signIn("credentials", {
-                        email,
-                        password,
-                        redirect: false,
-                    });
-
-                    if (loginResult?.error) {
+                    const loggedIn = await signInWithCredentials();
+                    if (!loggedIn) {
                         setError("Account created but login failed. Please sign in.");
                         setIsLogin(true);
-                    } else {
-                        setSuccess("Account created! Redirecting...");
-                        router.replace(searchParams.get("from") || "/");
                     }
                 }
             }
@@ -147,9 +152,9 @@ function LoginForm() {
                             <input
                                 type="password"
                                 name="password"
-                                placeholder={isLogin ? "Password" : "Password (min 8 characters)"}
+                                placeholder="Password"
                                 required
-                                minLength={isLogin ? 1 : 8}
+                                minLength={6}
                                 className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />
                         </div>

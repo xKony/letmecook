@@ -8,24 +8,16 @@ interface StudySessionEmptyStateProps {
     activeFilter: CardLevel | null;
     totalCardsInDeck: number;
     onResetFilter: () => void;
-    onBackToDashboard: () => void;
     t: (key: string, options?: Record<string, string | number>) => string;
 }
 
 /**
- * View displayed when no cards match the current study session filter.
- * 
- * @param activeFilter The currently active card level filter.
- * @param totalCardsInDeck The total number of cards in the deck, regardless of filter.
- * @param onResetFilter Callback to clear the active filter.
- * @param onBackToDashboard Callback to close the deck and return to the dashboard.
- * @param t Translation function.
+ * View displayed when no cards match the active level filter.
  */
 export function StudySessionEmptyState({
     activeFilter,
     totalCardsInDeck,
     onResetFilter,
-    onBackToDashboard,
     t,
 }: StudySessionEmptyStateProps) {
     return (
@@ -35,9 +27,6 @@ export function StudySessionEmptyState({
             </p>
             <Button onClick={onResetFilter}>
                 {t("study.showAll", { count: totalCardsInDeck })}
-            </Button>
-            <Button variant="ghost" onClick={onBackToDashboard}>
-                {t("common.backToDashboard")}
             </Button>
         </div>
     );

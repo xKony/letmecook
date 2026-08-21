@@ -72,6 +72,7 @@ export const flashcards = pgTable("flashcards", {
     answer: text("answer").notNull(),
     image: text("image"),
     level: text("level").default("Nowe").notNull(), // CardLevel type
+    sortOrder: integer("sort_order").default(0).notNull(),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 }, (table) => [

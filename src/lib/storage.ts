@@ -1,5 +1,6 @@
-import { GuestState, Deck, Flashcard, CardLevel } from "./types";
+import { GuestState, Deck, Flashcard, CardLevel, ParsedFlashcard } from "./types";
 import { sanitizeImageUrl } from "./image-url";
+import { normalizeDeckCards } from "./flashcard-order";
 
 const STORAGE_KEY = "letmecook_guest_state";
 const LEGACY_KEY = "letmecook_app_state"; // Old profile-based storage
@@ -98,7 +99,12 @@ export function loadGuestState(): GuestState {
         if (stored) {
             const parsed = JSON.parse(stored);
             if (isValidGuestState(parsed)) {
-                return parsed;
+                return {
+                    decks: parsed.decks.map((deck) => ({
+                        ...deck,
+                        cards: normalizeDeckCards(deck.cards),
+                    })),
+                };
             }
 
             // Salvage: valid decks from a partially corrupt payload
@@ -115,7 +121,12 @@ export function loadGuestState(): GuestState {
                 const validDecks = parsed.filter(isValidDeck);
                 if (validDecks.length > 0) {
                     console.log("Salvaged decks from array-format storage");
-                    return { decks: validDecks };
+                    return {
+                        decks: validDecks.map((deck: Deck) => ({
+                            ...deck,
+                            cards: normalizeDeckCards(deck.cards),
+                        })),
+                    };
                 }
             }
 
@@ -147,18 +158,19 @@ export function saveGuestState(state: GuestState): void {
 }
 
 // Parse questions.txt format: "Question | Answer" or JSON array
-export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "level">[] {
+export function parseQuestionsFile(content: string): ParsedFlashcard[] {
     // Try parsing as JSON first
     try {
         const parsed = JSON.parse(content);
         
         // Helper to extract cards from a raw JSON array
-        const extractCards = (arr: unknown[]): Omit<Flashcard, "id" | "level">[] => {
-            return arr.map((item) => {
-                const row = (item && typeof item === "object" ? item : {}) as Record<string, unknown>;
-                const q = row.question ?? row.Question ?? row.q ?? row.Q ?? row.front ?? row.Front ?? row.text ?? row.Text ?? row.prompt ?? row.Prompt ?? "";
-                const a = row.answer ?? row.Answer ?? row.a ?? row.A ?? row.back ?? row.Back ?? row.definition ?? row.Definition ?? row.response ?? row.Response ?? "";
-                const img = row.image ?? row.Image ?? row.img ?? row.Img ?? undefined;
+        const extractCards = (arr: unknown[]): ParsedFlashcard[] => {
+            return arr.map((val) => {
+                const item = val as Record<string, unknown>;
+                // Support multiple key mappings case-insensitively
+                const q = item.question ?? item.Question ?? item.q ?? item.Q ?? item.front ?? item.Front ?? item.text ?? item.Text ?? item.prompt ?? item.Prompt ?? "";
+                const a = item.answer ?? item.Answer ?? item.a ?? item.A ?? item.back ?? item.Back ?? item.definition ?? item.Definition ?? item.response ?? item.Response ?? "";
+                const img = item.image ?? item.Image ?? item.img ?? item.Img ?? undefined;
                 
                 return {
                     question: String(q),
@@ -173,7 +185,7 @@ export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "lev
             if (parsed.length > 0) {
                 // If the first item has a cards array, it's an array of decks
                 if (Array.isArray(parsed[0].cards)) {
-                    const allCards: Omit<Flashcard, "id" | "level">[] = [];
+                    const allCards: ParsedFlashcard[] = [];
                     for (const deck of parsed) {
                         if (Array.isArray(deck.cards)) {
                             allCards.push(...extractCards(deck.cards));
@@ -190,7 +202,7 @@ export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "lev
         // 2. Object containing decks (e.g. backup format) or cards (e.g. single deck format)
         if (parsed && typeof parsed === "object") {
             if (Array.isArray(parsed.decks)) {
-                const allCards: Omit<Flashcard, "id" | "level">[] = [];
+                const allCards: ParsedFlashcard[] = [];
                 for (const deck of parsed.decks) {
                     if (Array.isArray(deck.cards)) {
                         allCards.push(...extractCards(deck.cards));
@@ -210,7 +222,7 @@ export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "lev
     }
 
     const lines = content.split("\n");
-    const cards: Omit<Flashcard, "id" | "level">[] = [];
+    const cards: ParsedFlashcard[] = [];
 
     for (const line of lines) {
         const trimmed = line.trim();
@@ -229,12 +241,13 @@ export function parseQuestionsFile(content: string): Omit<Flashcard, "id" | "lev
 }
 
 // Create a new deck from parsed cards
-export function createDeck(name: string, parsedCards: Omit<Flashcard, "id" | "level">[]): Deck {
+export function createDeck(name: string, parsedCards: ParsedFlashcard[]): Deck {
     const now = Date.now();
-    const cards: Flashcard[] = parsedCards.map((card) => ({
+    const cards: Flashcard[] = parsedCards.map((card, index) => ({
         ...card,
         id: generateId(),
         level: "Nowe" as CardLevel,
+        sortOrder: index,
     }));
 
     return {

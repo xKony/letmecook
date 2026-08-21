@@ -3,10 +3,23 @@
 import { db } from "@/db";
 import { decks, flashcards, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, asc, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { createDeckSchema } from "@/lib/validations";
+import { createDeckSchema, cardSchema, LIMITS } from "@/lib/validations";
 import { sanitizeImageUrl } from "@/lib/image-url";
+import { z } from "zod";
+
+const replacePublicDeckCardsSchema = z.object({
+    deckId: z.string().uuid("Invalid deck ID"),
+    cards: z
+        .array(cardSchema)
+        .min(1, "At least one card is required")
+        .max(LIMITS.CARDS_PER_DECK_MAX, `Maximum ${LIMITS.CARDS_PER_DECK_MAX} cards per deck`),
+});
+
+// ============================================
+// Helper: Require admin access
+// ============================================
 
 async function requireAdmin() {
     const session = await auth();
@@ -52,12 +65,13 @@ export async function createPublicDeck(
 
     if (validation.data.cards.length > 0) {
         await db.insert(flashcards).values(
-            validation.data.cards.map((card) => ({
+            validation.data.cards.map((card, index) => ({
                 deckId: newDeck.id,
                 question: card.question,
                 answer: card.answer,
                 image: card.image,
                 level: "Nowe",
+                sortOrder: index,
             }))
         );
     }
@@ -82,7 +96,9 @@ export async function getPublicDecks() {
                     answer: true,
                     image: true,
                     level: true,
-                }
+                    sortOrder: true,
+                },
+                orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
             },
             owner: {
                 columns: {
@@ -175,6 +191,100 @@ export async function updateUserMaxDecks(userId: string, maxDecks: number) {
 
     revalidatePath("/admin");
 }
+
+// ============================================
+// Admin: Replace public deck cards in-place
+// ============================================
+
+export async function replacePublicDeckFromPersonalDeck(
+    publicDeckId: string,
+    sourceDeckId: string
+) {
+    const admin = await requireAdmin();
+
+    const [publicDeck, sourceDeck] = await Promise.all([
+        db.query.decks.findFirst({
+            where: eq(decks.id, publicDeckId),
+            with: {
+                flashcards: {
+                    orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
+                },
+            },
+        }),
+        db.query.decks.findFirst({
+            where: eq(decks.id, sourceDeckId),
+            with: {
+                flashcards: {
+                    orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
+                },
+            },
+        }),
+    ]);
+
+    if (!publicDeck) {
+        throw new Error("Public deck not found");
+    }
+
+    if (!publicDeck.isPublic) {
+        throw new Error("Target deck is not in the public library");
+    }
+
+    if (!sourceDeck) {
+        throw new Error("Source deck not found");
+    }
+
+    if (sourceDeck.ownerId !== admin.id) {
+        throw new Error("You can only use your own decks as the source");
+    }
+
+    if (sourceDeck.isPublic) {
+        throw new Error("Use a personal deck from your dashboard as the source");
+    }
+
+    if (sourceDeck.flashcards.length === 0) {
+        throw new Error("Source deck has no cards");
+    }
+
+    const cards = sourceDeck.flashcards.map((card) => ({
+        question: card.question,
+        answer: card.answer,
+        image: card.image || undefined,
+    }));
+
+    const validation = replacePublicDeckCardsSchema.safeParse({
+        deckId: publicDeckId,
+        cards,
+    });
+    if (!validation.success) {
+        throw new Error(validation.error.issues[0]?.message || "Invalid input");
+    }
+
+    const normalizedCards = validation.data.cards.map((card, index) => ({
+        deckId: publicDeckId,
+        question: card.question,
+        answer: card.answer,
+        image: card.image?.trim() || null,
+        level: "Nowe",
+        sortOrder: index,
+    }));
+
+    await db.delete(flashcards).where(eq(flashcards.deckId, publicDeckId));
+    await db.insert(flashcards).values(normalizedCards);
+    await db.update(decks).set({ updatedAt: new Date() }).where(eq(decks.id, publicDeckId));
+
+    revalidatePath("/");
+    revalidatePath("/admin");
+
+    return {
+        publicDeckName: publicDeck.name,
+        sourceDeckName: sourceDeck.name,
+        cardCount: normalizedCards.length,
+    };
+}
+
+// ============================================
+// Admin: Delete public deck
+// ============================================
 
 export async function deletePublicDeck(deckId: string) {
     await requireAdmin();

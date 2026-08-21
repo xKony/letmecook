@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 
 /**
  * Props for the FlashcardEditor component.
@@ -41,7 +41,7 @@ export function FlashcardEditor({
     placeholder,
     isQuestion = false,
 }: FlashcardEditorProps) {
-    const { t } = useApp();
+    const { t } = useI18n();
 
     return (
         <motion.div
@@ -60,7 +60,7 @@ export function FlashcardEditor({
                 className={`w-full p-4 font-bold text-center bg-background border border-input rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${
                     isQuestion 
                         ? "text-xl md:text-2xl min-h-[100px]" 
-                        : "text-lg md:text-xl font-medium min-h-[80px]"
+                        : "text-base md:text-lg font-medium min-h-[80px] md:min-h-[200px]"
                 }`}
                 placeholder={placeholder}
             />

@@ -1,73 +1,108 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import { CardLevel, Flashcard, Deck } from "@/lib/types";
 
 /**
  * Custom hook to manage the core logic of a study session.
- * 
+ *
  * @param deck The current deck being studied.
  * @returns An object containing the play order, current index, current card, and session actions.
  */
+function cardMatchesSearch(card: Flashcard, query: string): boolean {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return true;
+    return (
+        card.question.toLowerCase().includes(normalized) ||
+        card.answer.toLowerCase().includes(normalized)
+    );
+}
+
+function getFilteredCardIds(deck: Deck, activeFilter: CardLevel | null): string[] {
+    const cards = activeFilter
+        ? deck.cards.filter((c) => c.level === activeFilter)
+        : deck.cards;
+    return cards.map((c) => c.id);
+}
+
+function fisherYatesShuffle<T>(array: T[], seed = 0): T[] {
+    const shuffled = [...array];
+    let state = seed || 1;
+    const next = () => {
+        state = (state * 1664525 + 1013904223) >>> 0;
+        return state / 0x100000000;
+    };
+
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(next() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
 export function useStudySession(deck: Deck | null) {
     const [playIndex, setPlayIndex] = useState(0);
     const [isShuffled, setIsShuffled] = useState(false);
     const [activeFilter, setActiveFilter] = useState<CardLevel | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
     const [isRevealed, setIsRevealed] = useState(false);
     const [shuffleSeed, setShuffleSeed] = useState(0);
 
-    /**
-     * Fisher-Yates shuffle algorithm to randomize the play order.
-     */
-    const fisherYatesShuffle = useCallback(<T,>(array: T[]): T[] => {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    }, []);
+    const playOrderContextKey = deck
+        ? `${deck.id}:${activeFilter ?? "all"}:${isShuffled}:${shuffleSeed}`
+        : "none";
 
-    /**
-     * The stable play order derived from the deck, filter, and shuffle state.
-     */
-    const playOrder = useMemo(() => {
+    const basePlayOrder = useMemo(() => {
         if (!deck) return [];
-
-        let filteredCards = deck.cards;
-        if (activeFilter) {
-            filteredCards = deck.cards.filter(c => c.level === activeFilter);
-        }
-
-        let cardIds = filteredCards.map(c => c.id);
-
+        let order = getFilteredCardIds(deck, activeFilter);
         if (isShuffled) {
-            // shuffleSeed is used to trigger a re-run of this memo even if other deps don't change
-            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-            shuffleSeed;
-            cardIds = fisherYatesShuffle(cardIds);
+            order = fisherYatesShuffle(order, shuffleSeed);
         }
+        return order;
+    }, [deck, activeFilter, isShuffled, shuffleSeed]);
 
-        return cardIds;
-    }, [deck, activeFilter, isShuffled, shuffleSeed, fisherYatesShuffle]);
+    const [playOrder, setPlayOrder] = useState<string[]>([]);
+    const [syncedPlayOrderContextKey, setSyncedPlayOrderContextKey] = useState<string | null>(null);
 
-    // Adjust state during render when play order changes
-    // This is the recommended way to sync state from other state/props during render
-    const playOrderKey = `${deck?.id ?? ""}|${activeFilter ?? ""}|${isShuffled}|${shuffleSeed}`;
-    const [prevPlayOrderKey, setPrevPlayOrderKey] = useState(playOrderKey);
-
-    if (playOrderKey !== prevPlayOrderKey) {
-        setPrevPlayOrderKey(playOrderKey);
+    // Sync play order state when the deck/filter/shuffle context changes
+    if (playOrderContextKey !== syncedPlayOrderContextKey) {
+        setSyncedPlayOrderContextKey(playOrderContextKey);
+        setPlayOrder(basePlayOrder);
         setPlayIndex(0);
         setIsRevealed(false);
     }
+
+    const filteredCardIds = useMemo(() => {
+        if (!deck) return [];
+        return getFilteredCardIds(deck, activeFilter);
+    }, [deck, activeFilter]);
+
+    const filteredCards = useMemo(() => {
+        if (!deck) return [];
+        const idSet = new Set(filteredCardIds);
+        return deck.cards.filter((c) => idSet.has(c.id));
+    }, [deck, filteredCardIds]);
+
+    const searchResults = useMemo(() => {
+        if (!deck || !searchQuery.trim()) return [];
+        return filteredCards.filter((c) => cardMatchesSearch(c, searchQuery));
+    }, [deck, filteredCards, searchQuery]);
+
+    // Keep refs in sync for advanceAfterRating without updating them during render.
+    const playOrderRef = useRef(playOrder);
+    const playIndexRef = useRef(playIndex);
+
+    useLayoutEffect(() => {
+        playOrderRef.current = playOrder;
+        playIndexRef.current = playIndex;
+    }, [playOrder, playIndex]);
 
     /**
      * Find a card by ID within the current deck.
      */
     const getCardById = useCallback((cardId: string): Flashcard | null => {
         if (!deck) return null;
-        return deck.cards.find(c => c.id === cardId) || null;
+        return deck.cards.find((c) => c.id === cardId) || null;
     }, [deck]);
 
     /**
@@ -136,6 +171,56 @@ export function useStudySession(deck: Deck | null) {
         return false;
     }, [playOrder.length]);
 
+    const handleGotoByCardId = useCallback((cardId: string) => {
+        const index = playOrder.indexOf(cardId);
+        if (index >= 0) {
+            setPlayIndex(index);
+            setIsRevealed(false);
+            return true;
+        }
+        return false;
+    }, [playOrder]);
+
+    /**
+     * Advance after rating: keeps shuffle stable and handles cards leaving an active filter.
+     */
+    const advanceAfterRating = useCallback(
+        (cardId: string, newLevel: CardLevel, onSessionEnd?: () => void) => {
+            const leavesFilter = activeFilter !== null && newLevel !== activeFilter;
+            const prevOrder = playOrderRef.current;
+            const prevIndex = playIndexRef.current;
+            const nextOrder = leavesFilter
+                ? prevOrder.filter((id) => id !== cardId)
+                : prevOrder;
+
+            let nextIndex: number;
+            if (nextOrder.length === 0) {
+                nextIndex = 0;
+                onSessionEnd?.();
+            } else if (leavesFilter) {
+                nextIndex = Math.min(prevIndex, nextOrder.length - 1);
+            } else if (prevIndex < nextOrder.length - 1) {
+                nextIndex = prevIndex + 1;
+            } else {
+                nextIndex = prevIndex;
+                onSessionEnd?.();
+            }
+
+            playOrderRef.current = nextOrder;
+            playIndexRef.current = nextIndex;
+
+            setPlayOrder(nextOrder);
+            setPlayIndex(nextIndex);
+            setIsRevealed(false);
+        },
+        [activeFilter]
+    );
+
+    const clearFilters = useCallback(() => {
+        setActiveFilter(null);
+        setSearchQuery("");
+    }, []);
+
     const restart = useCallback(() => {
         setShuffleSeed((prev) => prev + 1);
         setPlayIndex(0);
@@ -145,19 +230,26 @@ export function useStudySession(deck: Deck | null) {
     return {
         playIndex,
         playOrder,
+        filteredCards,
+        searchResults,
         currentCard,
         isShuffled,
         activeFilter,
+        searchQuery,
         isRevealed,
         stats,
         maxCount,
         setPlayIndex,
         setIsRevealed,
         setActiveFilter,
+        setSearchQuery,
+        clearFilters,
         handleNext,
         handlePrev,
         handleShuffle,
         handleGoto,
+        handleGotoByCardId,
+        advanceAfterRating,
         restart,
     };
 }
@@ -214,9 +306,9 @@ export function useSessionTimer(breakIntervalSeconds: number) {
         const secs = s % 60;
 
         if (hrs > 0) {
-            return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            return `${hrs}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
         }
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+        return `${mins}:${secs.toString().padStart(2, "0")}`;
     }, []);
 
     return {
@@ -256,7 +348,7 @@ interface ShortcutActions {
 
 /**
  * Custom hook to manage keyboard shortcuts during a study session.
- * 
+ *
  * @param isRevealed Whether the current card is revealed.
  * @param isDisabled Whether shortcuts should be disabled (e.g., when a modal is open).
  * @param actions Callback actions triggered by shortcuts.

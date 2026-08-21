@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { ChevronDown, Check } from "lucide-react";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { Language } from "@/lib/i18n";
 import { useState, useRef, useEffect } from "react";
 
@@ -10,7 +10,7 @@ const languages: { code: Language; label: string; flag: string }[] = [
 ];
 
 export const LanguageSelectorDropdown = () => {
-  const { language, setLanguage } = useApp();
+  const { language, setLanguage } = useI18n();
   const selected = languages.find((l) => l.code === language) || languages[0];
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);

@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 
 /**
  * Props for the FlashcardZoomModal component.
@@ -25,7 +25,7 @@ export function FlashcardZoomModal({
     zoomedImage,
     onClose,
 }: FlashcardZoomModalProps) {
-    const { t } = useApp();
+    const { t } = useI18n();
 
     return (
         <AnimatePresence>

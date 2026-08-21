@@ -59,6 +59,14 @@ export const updateDeckSchema = z.object({
     isPublic: z.boolean().optional(),
 });
 
+export const cardLevelSchema = z.enum([
+    "Nowe",
+    "Nie umiem",
+    "W miarę",
+    "Umiem",
+    "Opanowane 100%",
+]);
+
 // Card update schema
 export const updateCardSchema = z.object({
     question: z
@@ -67,8 +75,29 @@ export const updateCardSchema = z.object({
         .max(LIMITS.QUESTION_MAX, `Question must be ${LIMITS.QUESTION_MAX} characters or less`),
     answer: z
         .string()
-        .min(1, "Answer is required")
         .max(LIMITS.ANSWER_MAX, `Answer must be ${LIMITS.ANSWER_MAX} characters or less`),
+    image: z.string().optional(),
+});
+
+// Sync deck cards schema (bulk edit)
+export const syncCardSchema = z.object({
+    id: z.string().optional(),
+    question: z
+        .string()
+        .min(1, "Question is required")
+        .max(LIMITS.QUESTION_MAX, `Question must be ${LIMITS.QUESTION_MAX} characters or less`),
+    answer: z
+        .string()
+        .max(LIMITS.ANSWER_MAX, `Answer must be ${LIMITS.ANSWER_MAX} characters or less`),
+    image: z.string().optional(),
+    level: cardLevelSchema.optional(),
+});
+
+export const syncDeckCardsSchema = z.object({
+    deckId: z.string().uuid("Invalid deck ID"),
+    cards: z
+        .array(syncCardSchema)
+        .max(LIMITS.CARDS_PER_DECK_MAX, `Maximum ${LIMITS.CARDS_PER_DECK_MAX} cards per deck`),
 });
 
 // Add card schema
@@ -83,15 +112,6 @@ export const addCardSchema = z.object({
         .min(1, "Answer is required")
         .max(LIMITS.ANSWER_MAX, `Answer must be ${LIMITS.ANSWER_MAX} characters or less`),
 });
-
-// Card level schema
-export const cardLevelSchema = z.enum([
-    "Nowe",
-    "Nie umiem",
-    "W miarę",
-    "Umiem",
-    "Opanowane 100%",
-]);
 
 // ============================================
 // Auth Validation Schemas

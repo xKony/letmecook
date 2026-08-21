@@ -1,27 +1,32 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Pencil, Check, X, Download, Trash2 } from "lucide-react";
+import { Pencil, Check, X, Download, Trash2, ListTree, Globe } from "lucide-react";
 import { useApp } from "@/lib/app-context";
+import { ReplaceInLibraryDialog } from "@/components/dashboard/replace-in-library-dialog";
+import { useI18n } from "@/lib/i18n-context";
 import { Button } from "@/components/ui/button";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
+import { downloadDeckJson } from "@/lib/deck-export";
 
 interface DeckCardProps {
     deck: Deck;
     onSelect: (id: string) => void;
     onDelete: (deck: Deck) => void;
+    onEditSet?: (deck: Deck) => void;
 }
 
 /**
  * Individual deck card with inline editing and mobile context menu.
  */
-export function DeckCard({ deck, onSelect, onDelete }: DeckCardProps) {
-    const { renameDeck, t } = useApp();
+export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps) {
+    const { renameDeck, isAdmin } = useApp();
+    const { t } = useI18n();
     const [isEditing, setIsEditing] = useState(false);
     const [editingName, setEditingName] = useState(deck.name);
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+    const [showReplaceInLibrary, setShowReplaceInLibrary] = useState(false);
     const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     /**
@@ -64,24 +69,9 @@ export function DeckCard({ deck, onSelect, onDelete }: DeckCardProps) {
         }
     };
 
-    /**
-     * Exports deck to a .txt file
-     */
     const handleExport = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        const content = deck.cards
-            .map((card) => `${card.question} | ${card.answer}`)
-            .join("\n");
-
-        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${deck.name}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        downloadDeckJson(deck);
         setIsContextMenuOpen(false);
     }, [deck]);
 
@@ -133,14 +123,9 @@ export function DeckCard({ deck, onSelect, onDelete }: DeckCardProps) {
             >
                 <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
-                        <AnimatePresence mode="wait">
-                            {isEditing ? (
-                                <motion.div
-                                    key="editing"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="flex items-center gap-2"
+                        {isEditing ? (
+                                <div
+                                    className="animate-fade-in flex items-center gap-2"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <input
@@ -170,14 +155,9 @@ export function DeckCard({ deck, onSelect, onDelete }: DeckCardProps) {
                                     >
                                         <X className="w-4 h-4" />
                                     </Button>
-                                </motion.div>
+                                </div>
                             ) : (
-                                <motion.div
-                                    key="display"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                >
+                                <div className="animate-fade-in">
                                     <div className="flex items-center gap-2 min-w-0">
                                         <h3 className="text-lg font-semibold group-hover:text-primary transition-colors truncate max-w-[200px] sm:max-w-none">
                                             {deck.name}
@@ -195,12 +175,41 @@ export function DeckCard({ deck, onSelect, onDelete }: DeckCardProps) {
                                     <p className="text-sm text-muted-foreground">
                                         {t("dashboard.cardsCount", { count: deck.cards.length })}
                                     </p>
-                                </motion.div>
+                                </div>
                             )}
-                        </AnimatePresence>
                     </div>
                     {!isEditing && (
                         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                            {isAdmin && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowReplaceInLibrary(true);
+                                    }}
+                                    className="hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                                    title={t("dashboard.replaceInLibrary")}
+                                    aria-label={t("dashboard.replaceInLibrary")}
+                                >
+                                    <Globe className="w-4 h-4" />
+                                </Button>
+                            )}
+                            {onEditSet && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onEditSet(deck);
+                                    }}
+                                    className="hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                                    title={t("dashboard.editDeckSet")}
+                                    aria-label={t("dashboard.editDeckSet")}
+                                >
+                                    <ListTree className="w-4 h-4" />
+                                </Button>
+                            )}
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -239,23 +248,13 @@ export function DeckCard({ deck, onSelect, onDelete }: DeckCardProps) {
                 </div>
             </div>
 
-            {/* Mobile Context Menu */}
-            <AnimatePresence>
-                {isContextMenuOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm md:hidden"
+            {isContextMenuOpen && (
+                    <div
+                        className="animate-overlay-in fixed inset-0 z-50 bg-background/80 backdrop-blur-sm md:hidden"
                         onClick={() => setIsContextMenuOpen(false)}
                     >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                            className="absolute left-4 right-4 bottom-8 bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
+                        <div
+                            className="animate-modal-up absolute left-4 right-4 bottom-8 bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="p-4 border-b border-border">
@@ -273,6 +272,18 @@ export function DeckCard({ deck, onSelect, onDelete }: DeckCardProps) {
                                     <Pencil className="w-5 h-5 text-muted-foreground" />
                                     <span>{t("common.rename")}</span>
                                 </button>
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => {
+                                            setShowReplaceInLibrary(true);
+                                            setIsContextMenuOpen(false);
+                                        }}
+                                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left"
+                                    >
+                                        <Globe className="w-5 h-5 text-muted-foreground" />
+                                        <span>{t("dashboard.replaceInLibrary")}</span>
+                                    </button>
+                                )}
                                 <button
                                     onClick={handleExport}
                                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left"
@@ -297,10 +308,15 @@ export function DeckCard({ deck, onSelect, onDelete }: DeckCardProps) {
                             >
                                 {t("common.cancel")}
                             </button>
-                        </motion.div>
-                    </motion.div>
+                        </div>
+                    </div>
                 )}
-            </AnimatePresence>
+
+            <ReplaceInLibraryDialog
+                sourceDeck={deck}
+                isOpen={showReplaceInLibrary}
+                onClose={() => setShowReplaceInLibrary(false)}
+            />
         </>
     );
 }

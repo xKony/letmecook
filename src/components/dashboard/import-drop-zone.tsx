@@ -1,9 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 
 interface ImportDropZoneProps {
     isImporting: boolean;
@@ -29,7 +28,7 @@ export function ImportDropZone({
     handleDrop,
     handleDragOver,
 }: ImportDropZoneProps) {
-    const { t } = useApp();
+    const { t } = useI18n();
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -40,13 +39,10 @@ export function ImportDropZone({
 
     return (
         <>
-            {/* Drop Zone */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+            <div
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
-                className="border-2 border-dashed border-border rounded-2xl p-8 text-center mb-8 hover:border-primary/50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="animate-fade-in border-2 border-dashed border-border rounded-2xl p-8 text-center mb-8 hover:border-primary/50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 onClick={() => fileInputRef.current?.click()}
                 onKeyDown={handleKeyDown}
                 tabIndex={0}
@@ -65,15 +61,10 @@ export function ImportDropZone({
                     onChange={handleFileSelect}
                     className="hidden"
                 />
-            </motion.div>
+            </div>
 
-            {/* Import Form */}
             {isImporting && (
-                <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="bg-card rounded-xl p-4 mb-8 border border-border"
-                >
+                <div className="animate-fade-in bg-card rounded-xl p-4 mb-8 border border-border">
                     <input
                         type="text"
                         value={deckName}
@@ -89,7 +80,7 @@ export function ImportDropZone({
                             {t("common.cancel")}
                         </Button>
                     </div>
-                </motion.div>
+                </div>
             )}
         </>
     );

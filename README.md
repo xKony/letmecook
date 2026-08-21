@@ -4,10 +4,10 @@ Local-first active recall flashcards. Study as a guest in the browser, or sync d
 
 **[Live demo](https://letmecook-eight.vercel.app)** · **[MIT License](LICENSE)** · **[FAQ / study guide](https://letmecook-eight.vercel.app/faq)**
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.2.6-black?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19.2.6-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.3.2-black?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2.8-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-10.33-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![pnpm](https://img.shields.io/badge/pnpm-11.22-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
 
 ---
 
@@ -20,6 +20,7 @@ Local-first active recall flashcards. Study as a guest in the browser, or sync d
 - **LaTeX** — KaTeX inline (`$...$`) and display (`$$...$$`) math
 - **Images** — embed with `[img:https://...]` (HTTPS only; localhost HTTP allowed in dev)
 - **Public library** — browse and copy admin-published decks
+- **AI prompt builder** — generate a tailored LLM prompt that outputs import-ready decks from your study material
 - **i18n** — English and Polish
 - **Themes** — light / dark / system
 - **Admin tools** — publish public decks and raise per-user deck limits

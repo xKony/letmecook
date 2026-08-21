@@ -6,6 +6,8 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { loginSchema } from "@/lib/validations";
+import { getClientIP } from "@/lib/get-client-ip";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 const ADMIN_REFRESH_MS = 10 * 60_000;
 
@@ -31,6 +33,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 });
 
                 if (!parsed.success) {
+                    return null;
+                }
+
+                const ip = await getClientIP();
+                const rateLimit = await checkRateLimit(`login:${ip}`, RATE_LIMITS.login);
+                if (!rateLimit.success) {
                     return null;
                 }
 

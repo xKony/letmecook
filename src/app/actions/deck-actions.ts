@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { decks, flashcards, deckPermissions, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createDeckSchema, updateDeckSchema } from "@/lib/validations";
@@ -80,7 +80,9 @@ export const getMyDecks = cache(async function () {
             eq(decks.isPublic, false)
         ),
         with: {
-            flashcards: true,
+            flashcards: {
+                orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
+            },
         },
     });
 
@@ -117,7 +119,11 @@ export async function getDeck(deckId: string, shareToken?: string) {
     if (shareToken) {
         const deck = await db.query.decks.findFirst({
             where: eq(decks.shareToken, shareToken),
-            with: { flashcards: true },
+            with: {
+                flashcards: {
+                    orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
+                },
+            },
         });
         if (deck) {
             return { deck, access: "viewer" as AccessLevel };
@@ -132,7 +138,11 @@ export async function getDeck(deckId: string, shareToken?: string) {
 
     const deckWithCards = await db.query.decks.findFirst({
         where: eq(decks.id, deckId),
-        with: { flashcards: true },
+        with: {
+            flashcards: {
+                orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
+            },
+        },
     });
 
     return { deck: deckWithCards, access };
@@ -149,7 +159,11 @@ export async function getSharedDecks() {
         where: eq(deckPermissions.userId, user.id),
         with: {
             deck: {
-                with: { flashcards: true },
+                with: {
+                    flashcards: {
+                        orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
+                    },
+                },
             },
         },
     });
@@ -205,12 +219,13 @@ export async function createDeck(name: string, cards: { question: string; answer
             // 2. Insert Flashcards
             if (validation.data.cards.length > 0) {
                 await db.insert(flashcards).values(
-                    validation.data.cards.map((card) => ({
+                    validation.data.cards.map((card, index) => ({
                         deckId: deck.id,
                         question: card.question,
                         answer: card.answer,
                         image: card.image,
                         level: "Nowe",
+                        sortOrder: index,
                     }))
                 );
                 console.log(`[CREATE_DECK] Inserted ${validation.data.cards.length} flashcards`);

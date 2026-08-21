@@ -5,8 +5,10 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { signIn, auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { AuthError } from "next-auth";
+import { getClientIP } from "@/lib/get-client-ip";
+import { checkRateLimit, getRateLimitState, RATE_LIMITS } from "@/lib/rate-limit";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import {
     registerSchema,
     loginSchema,
@@ -14,20 +16,8 @@ import {
     changeNameSchema,
 } from "@/lib/validations";
 
-async function getClientIP(): Promise<string> {
-    const headersList = await headers();
-    const forwardedFor = headersList.get("x-forwarded-for");
-    if (forwardedFor) {
-        return forwardedFor.split(",")[0].trim();
-    }
-    const realIP = headersList.get("x-real-ip");
-    if (realIP) {
-        return realIP;
-    }
-    return "localhost";
-}
-
 export async function registerUser(formData: FormData) {
+    // Rate limiting
     const ip = await getClientIP();
     const rateLimit = await checkRateLimit(`register:${ip}`, RATE_LIMITS.register);
     if (!rateLimit.success) {
@@ -46,6 +36,7 @@ export async function registerUser(formData: FormData) {
 
     const { name, email, password } = validation.data;
 
+    // Check if user already exists
     const existingUser = await db.query.users.findFirst({
         where: eq(users.email, email),
     });
@@ -54,8 +45,10 @@ export async function registerUser(formData: FormData) {
         return { error: "Email already registered" };
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Create user
     try {
         await db.insert(users).values({
             name: name || null,
@@ -70,11 +63,15 @@ export async function registerUser(formData: FormData) {
     }
 }
 
-export async function loginUser(formData: FormData) {
+export async function loginUser(
+    formData: FormData
+): Promise<{ error?: string; success?: true }> {
     const ip = await getClientIP();
-    const rateLimit = await checkRateLimit(`login:${ip}`, RATE_LIMITS.login);
+    const rateLimit = getRateLimitState(`login:${ip}`, RATE_LIMITS.login);
     if (!rateLimit.success) {
-        return { error: `Too many login attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.` };
+        return {
+            error: `Too many login attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.`,
+        };
     }
 
     const validation = loginSchema.safeParse({
@@ -89,17 +86,26 @@ export async function loginUser(formData: FormData) {
     const { email, password } = validation.data;
 
     try {
-        await signIn("credentials", {
+        const result = await signIn("credentials", {
             email,
             password,
-            redirectTo: "/",
+            redirect: false,
         });
+
+        if (result?.error) {
+            return { error: "Invalid email or password" };
+        }
+
         return { success: true };
     } catch (error) {
-        if ((error as Error).message?.includes("NEXT_REDIRECT")) {
+        if (isRedirectError(error)) {
             throw error;
         }
-        return { error: "Invalid credentials" };
+        if (error instanceof AuthError) {
+            return { error: "Invalid email or password" };
+        }
+        console.error("Login error:", error);
+        return { error: "An unexpected error occurred. Please try again." };
     }
 }
 
@@ -110,6 +116,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
         return { error: "Not authenticated" };
     }
 
+    // Rate limiting (by user ID for authenticated users)
     const rateLimit = await checkRateLimit(`password:${session.user.id}`, RATE_LIMITS.passwordChange);
     if (!rateLimit.success) {
         return { error: `Too many password change attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.` };
@@ -121,6 +128,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
     }
 
     try {
+        // Get current user with password
         const user = await db.query.users.findFirst({
             where: eq(users.id, session.user.id),
         });
@@ -129,14 +137,17 @@ export async function changePassword(currentPassword: string, newPassword: strin
             return { error: "User not found or no password set" };
         }
 
+        // Verify current password
         const isValid = await bcrypt.compare(validation.data.currentPassword, user.password);
 
         if (!isValid) {
             return { error: "Current password is incorrect" };
         }
 
+        // Hash new password
         const hashedPassword = await bcrypt.hash(validation.data.newPassword, 12);
 
+        // Update password
         await db.update(users)
             .set({ password: hashedPassword })
             .where(eq(users.id, session.user.id));

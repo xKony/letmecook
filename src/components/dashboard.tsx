@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
+import { useDeckEditorSession } from "@/lib/deck-editor-session-context";
 import { useDeckImport } from "@/hooks/use-deck-import";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ImportDropZone } from "@/components/dashboard/import-drop-zone";
@@ -19,8 +21,9 @@ export function Dashboard() {
         deleteDeck,
         isGuest,
         maxDecks,
-        t,
     } = useApp();
+    const { t } = useI18n();
+    const { openEditDeck } = useDeckEditorSession();
 
     const {
         isImporting,
@@ -51,6 +54,7 @@ export function Dashboard() {
                 }}
                 onCancel={() => setDeckToDelete(null)}
             />
+
             <div className="max-w-4xl mx-auto">
                 <DashboardHeader />
 
@@ -65,7 +69,6 @@ export function Dashboard() {
                     handleDragOver={handleDragOver}
                 />
 
-                {/* Deck List */}
                 <div className="space-y-4">
                     <div className="flex justify-between items-center">
                         <h2 className="text-xl font-semibold">
@@ -93,6 +96,7 @@ export function Dashboard() {
                                     deck={deck}
                                     onSelect={selectDeck}
                                     onDelete={setDeckToDelete}
+                                    onEditSet={openEditDeck}
                                 />
                             ))}
                         </div>

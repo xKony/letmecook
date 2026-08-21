@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { useTTS } from "@/hooks/use-tts";
 import { FlashcardComponent } from "@/components/flashcard";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,8 @@ import { StudySessionStatsModal } from "./study/study-session-stats-modal";
 import { StudySessionGotoModal } from "./study/study-session-goto-modal";
 import { StudySessionBreakModal } from "./study/study-session-break-modal";
 import { StudySessionEmptyState } from "./study/study-session-empty-state";
+import { ensureKatexStyles } from "@/lib/latex";
+import { getQuestionNumber } from "@/lib/flashcard-order";
 
 interface SessionTimerTextProps {
     subscribeToSeconds: (listener: () => void) => () => void;
@@ -53,9 +56,8 @@ export function StudySession() {
         resetCurrentDeck,
         updateCardLevel,
         updateCard,
-        language,
-        t
     } = useApp();
+    const { t, language } = useI18n();
 
     const {
         enabled: ttsEnabled,
@@ -67,18 +69,25 @@ export function StudySession() {
     const {
         playIndex,
         playOrder,
+        filteredCards,
+        searchResults,
         currentCard,
         isShuffled,
         activeFilter,
+        searchQuery,
         isRevealed,
         stats,
         maxCount,
         setIsRevealed,
         setActiveFilter,
+        setSearchQuery,
+        clearFilters,
         handleNext,
         handlePrev,
         handleShuffle,
         handleGoto,
+        handleGotoByCardId,
+        advanceAfterRating,
         restart,
     } = useStudySession(currentDeck);
 
@@ -96,6 +105,10 @@ export function StudySession() {
     const [showGotoModal, setShowGotoModal] = useState(false);
     const [showRestartModal, setShowRestartModal] = useState(false);
     const [showResetModal, setShowResetModal] = useState(false);
+
+    useEffect(() => {
+        ensureKatexStyles();
+    }, []);
 
     // Tracks the card whose question was last spoken so toggling TTS mid-card
     // does not re-speak the same question
@@ -123,11 +136,10 @@ export function StudySession() {
      * Handle rating a card and moving to the next one.
      */
     const onRate = useCallback((level: CardLevel) => {
-        if (currentCard) {
-            updateCardLevel(currentCard.id, level);
-        }
-        handleNext(() => setShowRestartModal(true));
-    }, [currentCard, updateCardLevel, handleNext]);
+        if (!currentCard) return;
+        updateCardLevel(currentCard.id, level);
+        advanceAfterRating(currentCard.id, level, () => setShowRestartModal(true));
+    }, [currentCard, updateCardLevel, advanceAfterRating]);
 
     // Keyboard shortcuts hook
     useSessionShortcuts(
@@ -157,14 +169,13 @@ export function StudySession() {
                 activeFilter={activeFilter}
                 totalCardsInDeck={currentDeck.cards.length}
                 onResetFilter={() => setActiveFilter(null)}
-                onBackToDashboard={closeDeck}
                 t={t}
             />
         );
     }
 
     return (
-        <div className="min-h-screen flex flex-col p-4 md:p-8">
+        <div className="h-[100dvh] flex flex-col overflow-hidden p-4 md:p-8">
             {/* Confirmation Modals */}
             <ConfirmationModal
                 isOpen={showRestartModal}
@@ -198,9 +209,22 @@ export function StudySession() {
                 stats={stats}
                 maxCount={maxCount}
                 activeFilter={activeFilter}
+                searchQuery={searchQuery}
                 totalCards={currentDeck.cards.length}
+                searchResults={searchResults}
+                filteredCardCount={filteredCards.length}
+                playOrder={playOrder}
+                onSearchChange={setSearchQuery}
                 onFilterSelect={(level) => {
                     setActiveFilter(level);
+                    setShowStatsModal(false);
+                }}
+                onCardSelect={(cardId) => {
+                    handleGotoByCardId(cardId);
+                    setShowStatsModal(false);
+                }}
+                onClearFilters={() => {
+                    clearFilters();
                     setShowStatsModal(false);
                 }}
                 t={t}
@@ -251,27 +275,33 @@ export function StudySession() {
                 totalCards={playOrder.length} 
             />
 
-            <main className="flex-1 flex items-center justify-center" aria-label={t("study.cardArea")}>
-                <AnimatePresence mode="wait">
-                    {currentCard && (
-                        <FlashcardComponent
-                            key={currentCard.id}
-                            card={currentCard}
-                            deckName={currentDeck.name}
-                            isRevealed={isRevealed}
-                            onReveal={onReveal}
-                            onRate={onRate}
-                            onUpdateCard={updateCard}
-                            ttsEnabled={ttsEnabled}
-                            onTTSToggle={toggleTTS}
-                        />
-                    )}
-                </AnimatePresence>
+            <main
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+                aria-label={t("study.cardArea")}
+            >
+                <div className="min-h-full flex flex-col items-center justify-center py-4 pb-32 md:pb-4 w-full">
+                    <AnimatePresence mode="wait">
+                        {currentCard && (
+                            <FlashcardComponent
+                                key={currentCard.id}
+                                card={currentCard}
+                                deckName={currentDeck.name}
+                                questionNumber={getQuestionNumber(currentCard)}
+                                isRevealed={isRevealed}
+                                onReveal={onReveal}
+                                onRate={onRate}
+                                onUpdateCard={updateCard}
+                                ttsEnabled={ttsEnabled}
+                                onTTSToggle={toggleTTS}
+                            />
+                        )}
+                    </AnimatePresence>
+                </div>
             </main>
 
             {/* Bottom Navigation */}
-            <footer className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background to-transparent md:relative md:bg-transparent md:mt-6">
-                <div className="max-w-2xl mx-auto flex justify-between gap-4">
+            <footer className="fixed bottom-0 left-0 right-0 z-20 p-4 pointer-events-none md:relative md:pointer-events-auto md:bg-transparent md:mt-6">
+                <div className="max-w-2xl mx-auto flex justify-between gap-4 pointer-events-auto bg-gradient-to-t from-background via-background/95 to-transparent md:bg-transparent pt-2 -mt-2 md:pt-0 md:mt-0">
                     <Button
                         variant="outline"
                         onClick={handlePrev}
@@ -294,8 +324,6 @@ export function StudySession() {
                 </div>
             </footer>
 
-            {/* Spacer for fixed bottom nav on mobile */}
-            <div className="h-20 md:hidden" aria-hidden="true" />
         </div>
     );
 }

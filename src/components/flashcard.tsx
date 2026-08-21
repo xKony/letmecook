@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard as FlashcardType, CardLevel } from "@/lib/types";
-import { useApp } from "@/lib/app-context";
+import { useI18n } from "@/lib/i18n-context";
 import { Pencil } from "lucide-react";
 
 import { FlashcardHeader } from "./flashcard/flashcard-header";
@@ -13,6 +13,7 @@ import { FlashcardZoomModal } from "./flashcard/flashcard-zoom-modal";
 import { FlashcardContent } from "./flashcard/flashcard-content";
 import { useFlashcardEdit } from "./flashcard/use-flashcard-edit";
 import { FlashcardEditor } from "./flashcard/flashcard-editor";
+import { FlashcardMobileEditBar } from "./flashcard/flashcard-mobile-edit-bar";
 
 /**
  * Props for the FlashcardComponent.
@@ -34,6 +35,8 @@ interface FlashcardProps {
     ttsEnabled: boolean;
     /** Callback to toggle TTS state. */
     onTTSToggle: () => void;
+    /** Original question number in the deck (1-based import order). */
+    questionNumber?: number;
 }
 
 /**
@@ -52,8 +55,9 @@ export function FlashcardComponent({
     onUpdateCard,
     ttsEnabled,
     onTTSToggle,
+    questionNumber,
 }: FlashcardProps) {
-    const { t } = useApp();
+    const { t } = useI18n();
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
     const { openZoom, closeZoom } = useFlashcardImageZoom(zoomedImage, setZoomedImage);
@@ -65,9 +69,13 @@ export function FlashcardComponent({
         setEditQuestion,
         setEditAnswer,
         showEditHint,
-        setShowEditHint,
-        handleTouchStart,
-        handleTouchEnd,
+        showEditHintFor,
+        scheduleHideEditHint,
+        showMobileEditMenu,
+        dismissMobileEditMenu,
+        handleCardTouchStart,
+        handleCardTouchMove,
+        handleCardTouchEnd,
         handleSaveQuestion,
         handleSaveAnswer,
         handleCancelEdit,
@@ -85,7 +93,13 @@ export function FlashcardComponent({
             className="w-full max-w-2xl mx-auto"
         >
             {/* Card Container */}
-            <div className="relative bg-card rounded-3xl border border-border shadow-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] dark:border-white/5 min-h-[400px] flex flex-col p-8 md:p-12">
+            <div
+                className="relative bg-card rounded-3xl border border-border shadow-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] dark:border-white/5 min-h-[400px] flex flex-col p-8 md:p-12"
+                onTouchStart={onUpdateCard ? handleCardTouchStart : undefined}
+                onTouchMove={onUpdateCard ? handleCardTouchMove : undefined}
+                onTouchEnd={onUpdateCard ? handleCardTouchEnd : undefined}
+                onTouchCancel={onUpdateCard ? handleCardTouchEnd : undefined}
+            >
                 <FlashcardHeader
                     card={card}
                     deckName={deckName}
@@ -97,13 +111,18 @@ export function FlashcardComponent({
                 <motion.div
                     animate={{ y: isRevealed ? -10 : 0 }}
                     transition={{ duration: 0.3 }}
-                    className="flex-1 flex items-center justify-center relative group"
-                    onMouseEnter={() => !isEditingQuestion && setShowEditHint("question")}
-                    onMouseLeave={() => setShowEditHint(null)}
-                    onTouchStart={() => handleTouchStart("question")}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchCancel={handleTouchEnd}
+                    className="flex-1 flex flex-col items-center justify-center relative group"
+                    onMouseEnter={() => showEditHintFor("question")}
+                    onMouseLeave={scheduleHideEditHint}
                 >
+                    {questionNumber != null && (
+                        <span
+                            className="mb-3 text-xs font-medium text-muted-foreground/60 tabular-nums"
+                            aria-label={t("study.questionNumber", { number: questionNumber })}
+                        >
+                            {questionNumber}
+                        </span>
+                    )}
                     <AnimatePresence mode="wait">
                         {isEditingQuestion ? (
                             <FlashcardEditor
@@ -130,17 +149,19 @@ export function FlashcardComponent({
                                         onImageZoom={openZoom}
                                     />
                                 </h2>
-                                {/* Edit button - Desktop hover */}
+                                {/* Edit button - Desktop hover (outside text, symmetric layout) */}
                                 <AnimatePresence>
                                     {showEditHint === "question" && onUpdateCard && (
                                         <motion.button
                                             initial={{ opacity: 0, scale: 0.8 }}
                                             animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.8 }}
-                                            transition={{ duration: 0.15 }}
+                                            exit={{ opacity: 0, scale: 0.9 }}
+                                            transition={{ duration: 0.2 }}
                                             onClick={() => startEditing("question")}
-                                            className="absolute -right-10 top-1/2 -translate-y-1/2 p-2 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors hidden md:flex"
-                                            title="Edit question"
+                                            onMouseEnter={() => showEditHintFor("question")}
+                                            onMouseLeave={scheduleHideEditHint}
+                                            className="absolute -right-10 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-muted/90 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors hidden md:flex shadow-sm"
+                                            title={t("study.editQuestion")}
                                         >
                                             <Pencil className="w-4 h-4" />
                                         </motion.button>
@@ -174,11 +195,8 @@ export function FlashcardComponent({
                             exit={{ opacity: 0, y: 20 }}
                             transition={{ duration: 0.3, delay: 0.1 }}
                             className="flex-1 flex items-center justify-center border-t border-border pt-6 relative group"
-                            onMouseEnter={() => !isEditingAnswer && setShowEditHint("answer")}
-                            onMouseLeave={() => setShowEditHint(null)}
-                            onTouchStart={() => handleTouchStart("answer")}
-                            onTouchEnd={handleTouchEnd}
-                            onTouchCancel={handleTouchEnd}
+                            onMouseEnter={() => showEditHintFor("answer")}
+                            onMouseLeave={scheduleHideEditHint}
                         >
                             <AnimatePresence mode="wait">
                                 {isEditingAnswer ? (
@@ -198,9 +216,7 @@ export function FlashcardComponent({
                                         exit={{ opacity: 0 }}
                                         className="relative w-full"
                                     >
-                                        <div
-                                            aria-live="polite"
-                                        >
+                                        <div aria-live="polite">
                                             <FlashcardContent
                                                 text={card.answer}
                                                 onImageZoom={openZoom}
@@ -208,16 +224,18 @@ export function FlashcardComponent({
                                             {!card.answer && t("study.mentalAnswer")}
                                         </div>
 
-                                        {/* Edit button - Desktop hover */}
+                                        {/* Edit button - Desktop hover (outside text, symmetric layout) */}
                                         <AnimatePresence>
                                             {showEditHint === "answer" && onUpdateCard && (
                                                 <motion.button
                                                     initial={{ opacity: 0, scale: 0.8 }}
                                                     animate={{ opacity: 1, scale: 1 }}
-                                                    exit={{ opacity: 0, scale: 0.8 }}
-                                                    transition={{ duration: 0.15 }}
+                                                    exit={{ opacity: 0, scale: 0.9 }}
+                                                    transition={{ duration: 0.2 }}
                                                     onClick={() => startEditing("answer")}
-                                                    className="absolute -right-10 top-1/2 -translate-y-1/2 p-2 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors hidden md:flex"
+                                                    onMouseEnter={() => showEditHintFor("answer")}
+                                                    onMouseLeave={scheduleHideEditHint}
+                                                    className="absolute -right-10 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-muted/90 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors hidden md:flex shadow-sm"
                                                     title={t("study.editAnswer")}
                                                 >
                                                     <Pencil className="w-4 h-4" />
@@ -230,6 +248,16 @@ export function FlashcardComponent({
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {onUpdateCard && (
+                    <FlashcardMobileEditBar
+                        isOpen={showMobileEditMenu}
+                        isRevealed={isRevealed}
+                        onEditQuestion={() => startEditing("question")}
+                        onEditAnswer={() => startEditing("answer")}
+                        onDismiss={dismissMobileEditMenu}
+                    />
+                )}
             </div>
 
             <FlashcardRating

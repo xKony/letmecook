@@ -3,9 +3,13 @@
 import { db } from "@/db";
 import { flashcards, decks, deckPermissions } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { addCardSchema, updateCardSchema, cardLevelSchema } from "@/lib/validations";
+import { addCardSchema, updateCardSchema, cardLevelSchema, syncDeckCardsSchema } from "@/lib/validations";
+
+// ============================================
+// Helper: Check if user can edit deck's cards
+// ============================================
 
 async function canEditDeck(deckId: string, userId: string): Promise<boolean> {
     const deck = await db.query.decks.findFirst({
@@ -94,7 +98,11 @@ export async function updateCardLevel(cardId: string, level: string) {
     revalidatePath("/");
 }
 
-export async function updateCard(cardId: string, question: string, answer: string) {
+// ============================================
+// UPDATE: Card content
+// ============================================
+
+export async function updateCard(cardId: string, question: string, answer: string, image?: string) {
     const user = await requireAuth();
 
     const validation = updateCardSchema.safeParse({ question, answer });
@@ -117,6 +125,7 @@ export async function updateCard(cardId: string, question: string, answer: strin
             .set({
                 question: validation.data.question,
                 answer: validation.data.answer,
+                image: image?.trim() || null,
                 updatedAt: new Date(),
             })
             .where(eq(flashcards.id, cardId)),
@@ -125,6 +134,102 @@ export async function updateCard(cardId: string, question: string, answer: strin
             .where(eq(decks.id, context.deckId)),
     ]);
 }
+
+function isTempCardId(id: string): boolean {
+    return id.startsWith("temp-");
+}
+
+// ============================================
+// SYNC: Bulk update deck cards (editor)
+// ============================================
+
+export async function syncDeckCards(
+    deckId: string,
+    cards: { id: string; question: string; answer: string; image?: string; level?: string }[]
+) {
+    const user = await requireAuth();
+
+    const validation = syncDeckCardsSchema.safeParse({ deckId, cards });
+    if (!validation.success) {
+        throw new Error(validation.error.issues[0]?.message || "Invalid input");
+    }
+
+    if (!(await canEditDeck(deckId, user.id))) {
+        throw new Error("Permission denied");
+    }
+
+    const existingCards = await db.query.flashcards.findMany({
+        where: eq(flashcards.deckId, deckId),
+    });
+    const existingIds = new Set(existingCards.map((c) => c.id));
+    const payloadIds = new Set(
+        validation.data.cards
+            .map((c) => c.id)
+            .filter((id): id is string => !!id && !isTempCardId(id))
+    );
+
+    const idsToDelete = [...existingIds].filter((id) => !payloadIds.has(id));
+    const now = new Date();
+
+    const cardsToUpdate: { id: string; question: string; answer: string; image: string | null; sortOrder: number }[] = [];
+    const cardsToInsert: { deckId: string; question: string; answer: string; image: string | null; level: string; sortOrder: number }[] = [];
+
+    for (const [index, card] of validation.data.cards.entries()) {
+        const image = card.image?.trim() || null;
+        const cardId = card.id;
+
+        if (cardId && !isTempCardId(cardId) && existingIds.has(cardId)) {
+            cardsToUpdate.push({ id: cardId, question: card.question, answer: card.answer, image, sortOrder: index });
+        } else {
+            cardsToInsert.push({ deckId, question: card.question, answer: card.answer, image, level: "Nowe", sortOrder: index });
+        }
+    }
+
+    type BatchQuery = Parameters<typeof db.batch>[0][number];
+    const operations: BatchQuery[] = [];
+
+    if (idsToDelete.length > 0) {
+        operations.push(
+            db.delete(flashcards).where(
+                and(eq(flashcards.deckId, deckId), inArray(flashcards.id, idsToDelete))
+            )
+        );
+    }
+
+    if (cardsToInsert.length > 0) {
+        operations.push(db.insert(flashcards).values(cardsToInsert));
+    }
+
+    for (const card of cardsToUpdate) {
+        operations.push(
+            db.update(flashcards)
+                .set({
+                    question: card.question,
+                    answer: card.answer,
+                    image: card.image,
+                    sortOrder: card.sortOrder,
+                    updatedAt: now,
+                })
+                .where(eq(flashcards.id, card.id))
+        );
+    }
+
+    operations.push(
+        db.update(decks).set({ updatedAt: now }).where(eq(decks.id, deckId))
+    );
+
+    if (operations.length === 1) {
+        await operations[0];
+    } else {
+        await db.batch(operations as [BatchQuery, ...BatchQuery[]]);
+    }
+
+    revalidatePath("/");
+}
+
+// ============================================
+// CREATE: Add card to deck
+// ============================================
 
 export async function addCard(deckId: string, question: string, answer: string) {
     const user = await requireAuth();
@@ -138,11 +243,21 @@ export async function addCard(deckId: string, question: string, answer: string) 
         throw new Error("Permission denied");
     }
 
+    const existingCards = await db.query.flashcards.findMany({
+        where: eq(flashcards.deckId, deckId),
+        columns: { sortOrder: true },
+    });
+    const nextSortOrder = existingCards.reduce(
+        (max, card) => Math.max(max, card.sortOrder ?? 0),
+        -1
+    ) + 1;
+
     const [newCard] = await db.insert(flashcards).values({
         deckId: validation.data.deckId,
         question: validation.data.question,
         answer: validation.data.answer,
         level: "Nowe",
+        sortOrder: nextSortOrder,
     }).returning();
 
     await db.update(decks)

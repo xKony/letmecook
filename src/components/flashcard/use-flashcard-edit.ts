@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Flashcard as FlashcardType } from "@/lib/types";
-import { FLASHCARD_LONG_PRESS_MS } from "@/lib/constants";
+import {
+    FLASHCARD_LONG_PRESS_MS,
+    FLASHCARD_TOUCH_MOVE_CANCEL_PX,
+    FLASHCARD_EDIT_HINT_HIDE_MS,
+} from "@/lib/constants";
 
 /**
  * Options for the useFlashcardEdit hook.
@@ -16,10 +20,7 @@ interface UseFlashcardEditOptions {
 
 /**
  * Hook to manage the editing state and logic for a flashcard.
- * Handles both desktop (hover/click) and mobile (long press) edit triggers.
- * 
- * @param options - Hook options.
- * @returns Editing state and event handlers.
+ * Desktop: hover + pencil click. Mobile: long-press opens edit menu at card bottom.
  */
 export function useFlashcardEdit({
     card,
@@ -30,45 +31,127 @@ export function useFlashcardEdit({
     const [editQuestion, setEditQuestion] = useState(card.question);
     const [editAnswer, setEditAnswer] = useState(card.answer);
     const [showEditHint, setShowEditHint] = useState<"question" | "answer" | null>(null);
+    const [showMobileEditMenu, setShowMobileEditMenu] = useState(false);
+    const [syncedCardKey, setSyncedCardKey] = useState(
+        () => `${card.id}:${card.question}:${card.answer}`
+    );
 
     const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hideEditHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-    // Handle long press for mobile
-    const handleTouchStart = useCallback((type: "question" | "answer") => {
-        longPressTimerRef.current = setTimeout(() => {
-            if (type === "question") {
-                setEditQuestion(card.question);
-                setIsEditingQuestion(true);
-            } else {
-                setEditAnswer(card.answer);
-                setIsEditingAnswer(true);
+    const clearHideEditHintTimer = useCallback(() => {
+        if (hideEditHintTimerRef.current) {
+            clearTimeout(hideEditHintTimerRef.current);
+            hideEditHintTimerRef.current = null;
+        }
+    }, []);
+
+    const showEditHintFor = useCallback(
+        (type: "question" | "answer") => {
+            clearHideEditHintTimer();
+            if (type === "question" && !isEditingQuestion) {
+                setShowEditHint("question");
+            } else if (type === "answer" && !isEditingAnswer) {
+                setShowEditHint("answer");
             }
-        }, FLASHCARD_LONG_PRESS_MS);
-    }, [card.question, card.answer]);
+        },
+        [isEditingQuestion, isEditingAnswer, clearHideEditHintTimer]
+    );
 
-    const handleTouchEnd = useCallback(() => {
+    const scheduleHideEditHint = useCallback(() => {
+        clearHideEditHintTimer();
+        hideEditHintTimerRef.current = setTimeout(() => {
+            setShowEditHint(null);
+            hideEditHintTimerRef.current = null;
+        }, FLASHCARD_EDIT_HINT_HIDE_MS);
+    }, [clearHideEditHintTimer]);
+
+    const cardKey = `${card.id}:${card.question}:${card.answer}`;
+    if (cardKey !== syncedCardKey) {
+        setSyncedCardKey(cardKey);
+        setShowMobileEditMenu(false);
+        setIsEditingQuestion(false);
+        setIsEditingAnswer(false);
+        setEditQuestion(card.question);
+        setEditAnswer(card.answer);
+        setShowEditHint(null);
+    }
+
+    useEffect(() => {
+        clearHideEditHintTimer();
+    }, [cardKey, clearHideEditHintTimer]);
+
+    useEffect(() => {
+        return () => clearHideEditHintTimer();
+    }, [clearHideEditHintTimer]);
+
+    const clearLongPressTimer = useCallback(() => {
         if (longPressTimerRef.current) {
             clearTimeout(longPressTimerRef.current);
             longPressTimerRef.current = null;
         }
     }, []);
 
+    const dismissMobileEditMenu = useCallback(() => {
+        setShowMobileEditMenu(false);
+    }, []);
+
+    const handleCardTouchStart = useCallback(
+        (e: React.TouchEvent) => {
+            if (!onUpdateCard || isEditingQuestion || isEditingAnswer) return;
+
+            const touch = e.touches[0];
+            touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+
+            clearLongPressTimer();
+            longPressTimerRef.current = setTimeout(() => {
+                setShowMobileEditMenu(true);
+                if (typeof navigator !== "undefined" && navigator.vibrate) {
+                    navigator.vibrate(30);
+                }
+            }, FLASHCARD_LONG_PRESS_MS);
+        },
+        [onUpdateCard, isEditingQuestion, isEditingAnswer, clearLongPressTimer]
+    );
+
+    const handleCardTouchMove = useCallback(
+        (e: React.TouchEvent) => {
+            if (!touchStartRef.current || !longPressTimerRef.current) return;
+
+            const touch = e.touches[0];
+            const dx = Math.abs(touch.clientX - touchStartRef.current.x);
+            const dy = Math.abs(touch.clientY - touchStartRef.current.y);
+
+            if (
+                dx > FLASHCARD_TOUCH_MOVE_CANCEL_PX ||
+                dy > FLASHCARD_TOUCH_MOVE_CANCEL_PX
+            ) {
+                clearLongPressTimer();
+            }
+        },
+        [clearLongPressTimer]
+    );
+
+    const handleCardTouchEnd = useCallback(() => {
+        touchStartRef.current = null;
+        clearLongPressTimer();
+    }, [clearLongPressTimer]);
+
     const handleSaveQuestion = useCallback(() => {
         if (onUpdateCard && editQuestion.trim()) {
-            // Replace newlines with spaces to maintain file structure
-            const sanitizedQuestion = editQuestion.replace(/[\r\n]+/g, " ").trim();
-            onUpdateCard(card.id, sanitizedQuestion, card.answer);
+            onUpdateCard(card.id, editQuestion.trim(), card.answer);
         }
         setIsEditingQuestion(false);
+        setShowMobileEditMenu(false);
     }, [card.id, card.answer, editQuestion, onUpdateCard]);
 
     const handleSaveAnswer = useCallback(() => {
         if (onUpdateCard) {
-            // Replace newlines with spaces to maintain file structure
-            const sanitizedAnswer = editAnswer.replace(/[\r\n]+/g, " ").trim();
-            onUpdateCard(card.id, card.question, sanitizedAnswer);
+            onUpdateCard(card.id, card.question, editAnswer.trim());
         }
         setIsEditingAnswer(false);
+        setShowMobileEditMenu(false);
     }, [card.id, card.question, editAnswer, onUpdateCard]);
 
     const handleCancelEdit = useCallback((type: "question" | "answer") => {
@@ -95,6 +178,7 @@ export function useFlashcardEdit({
     }, [handleSaveQuestion, handleSaveAnswer, handleCancelEdit]);
 
     const startEditing = useCallback((type: "question" | "answer") => {
+        setShowMobileEditMenu(false);
         if (type === "question") {
             setEditQuestion(card.question);
             setIsEditingQuestion(true);
@@ -112,9 +196,13 @@ export function useFlashcardEdit({
         setEditQuestion,
         setEditAnswer,
         showEditHint,
-        setShowEditHint,
-        handleTouchStart,
-        handleTouchEnd,
+        showEditHintFor,
+        scheduleHideEditHint,
+        showMobileEditMenu,
+        dismissMobileEditMenu,
+        handleCardTouchStart,
+        handleCardTouchMove,
+        handleCardTouchEnd,
         handleSaveQuestion,
         handleSaveAnswer,
         handleCancelEdit,
