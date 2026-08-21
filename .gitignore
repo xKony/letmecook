@@ -36,3 +36,6 @@ next-env.d.ts
 .gemini/
 # next-agents-md
 .next-docs/
+
+# local review notes
+improvements.md
