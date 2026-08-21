@@ -9,7 +9,7 @@ import { LEVEL_COLORS } from "@/lib/level-styles";
 interface StudySessionHeaderProps {
     currentIndex: number;
     totalCards: number;
-    formattedTime: string;
+    timeSlot: React.ReactNode;
     isShuffled: boolean;
     activeFilter: CardLevel | null;
     onClose: () => void;
@@ -25,7 +25,7 @@ interface StudySessionHeaderProps {
  * 
  * @param currentIndex The current card index.
  * @param totalCards The total number of cards in play order.
- * @param formattedTime The formatted session duration.
+ * @param timeSlot Live session duration node (self-subscribing timer leaf).
  * @param isShuffled Whether the play order is currently shuffled.
  * @param activeFilter The active card level filter.
  * @param onClose Callback to close the session.
@@ -38,7 +38,7 @@ interface StudySessionHeaderProps {
 export function StudySessionHeader({
     currentIndex,
     totalCards,
-    formattedTime,
+    timeSlot,
     isShuffled,
     activeFilter,
     onClose,
@@ -66,7 +66,7 @@ export function StudySessionHeader({
                     title={t("common.loading")}
                 >
                     <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span className="tabular-nums">{formattedTime}</span>
+                    {timeSlot}
                 </div>
             </div>
 

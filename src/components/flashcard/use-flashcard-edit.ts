@@ -31,7 +31,7 @@ export function useFlashcardEdit({
     const [editAnswer, setEditAnswer] = useState(card.answer);
     const [showEditHint, setShowEditHint] = useState<"question" | "answer" | null>(null);
 
-    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Handle long press for mobile
     const handleTouchStart = useCallback((type: "question" | "answer") => {

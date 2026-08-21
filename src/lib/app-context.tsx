@@ -58,16 +58,18 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-export function AppProvider({ 
+export function AppProvider({
     children,
     initialDecks = [],
     initialMaxDecks = MAX_DECKS_PER_USER,
-    initialSession = null
-}: { 
+    initialSession = null,
+    initialLanguage = "en"
+}: {
     children: React.ReactNode,
     initialDecks?: Deck[],
     initialMaxDecks?: number,
-    initialSession?: Session | null
+    initialSession?: Session | null,
+    initialLanguage?: Language
 }) {
     // Use useSession as the source of truth for client-side auth state
     const { data: session, status } = useSession();
@@ -79,28 +81,21 @@ export function AppProvider({
     const [guestState, setGuestState] = useState<GuestState>({ decks: [] });
     const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false); // Start as NOT loading if we have server data
-    const [language, setLanguageState] = useState<Language>("en");
+    const [language, setLanguageState] = useState<Language>(initialLanguage);
     const hasInitializedAuthData = useRef(false);
 
-    // Initialize language from localStorage
-    useEffect(() => {
-        const savedLang = localStorage.getItem("language") as Language;
-        if (savedLang === "en" || savedLang === "pl") {
-            setLanguageState(savedLang);
-        }
-    }, []);
+    // Auth state derived from session or initialSession
+    const currentSession = session || initialSession;
 
     const setLanguage = useCallback((lang: Language) => {
         setLanguageState(lang);
         localStorage.setItem("language", lang);
+        document.cookie = `lang=${lang}; path=/; max-age=31536000; samesite=lax`;
     }, []);
 
     const t = useCallback((key: string, params?: Record<string, string | number>) => {
         return getTranslation(language, key, params);
     }, [language]);
-
-    // Auth state derived from session or initialSession
-    const currentSession = session || initialSession;
     
     // Derived values should be calculated during render, not in effects
     const isAuthenticated = useMemo(() => !!currentSession?.user, [currentSession]);
@@ -141,7 +136,7 @@ export function AppProvider({
     }, [isAuthenticated, isGuest, authLoading, initialDecks.length, dbDecks.length]);
 
     // Debounced save to localStorage for guests
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (isGuest && !authLoading) {
@@ -332,25 +327,23 @@ export function AppProvider({
             .flatMap((d) => d.cards)
             .find((c) => c.id === cardId)?.level;
 
-        const applyLevel = (nextLevel: CardLevel) => {
-            setDbDecks((prev) => prev.map((deck) => ({
-                ...deck,
-                cards: deck.cards.map((card) =>
-                    card.id === cardId ? { ...card, level: nextLevel } : card
-                ),
-                updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-            })));
+        const applyToDeck = (deck: Deck, nextLevel: CardLevel): Deck => ({
+            ...deck,
+            cards: deck.cards.map((card) =>
+                card.id === cardId ? { ...card, level: nextLevel } : card
+            ),
+            updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
+        });
 
-            setGuestState((prev) => ({
-                ...prev,
-                decks: prev.decks.map((deck) => ({
-                    ...deck,
-                    cards: deck.cards.map((card) =>
-                        card.id === cardId ? { ...card, level: nextLevel } : card
-                    ),
-                    updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-                })),
-            }));
+        const applyLevel = (nextLevel: CardLevel) => {
+            if (isAuthenticated) {
+                setDbDecks((prev) => prev.map((deck) => applyToDeck(deck, nextLevel)));
+            } else {
+                setGuestState((prev) => ({
+                    ...prev,
+                    decks: prev.decks.map((deck) => applyToDeck(deck, nextLevel)),
+                }));
+            }
         };
 
         applyLevel(level);
@@ -373,25 +366,23 @@ export function AppProvider({
             .flatMap((d) => d.cards)
             .find((c) => c.id === cardId);
 
-        const applyContent = (nextQuestion: string, nextAnswer: string) => {
-            setDbDecks((prev) => prev.map((deck) => ({
-                ...deck,
-                cards: deck.cards.map((card) =>
-                    card.id === cardId ? { ...card, question: nextQuestion, answer: nextAnswer } : card
-                ),
-                updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-            })));
+        const applyToDeck = (deck: Deck, nextQuestion: string, nextAnswer: string): Deck => ({
+            ...deck,
+            cards: deck.cards.map((card) =>
+                card.id === cardId ? { ...card, question: nextQuestion, answer: nextAnswer } : card
+            ),
+            updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
+        });
 
-            setGuestState((prev) => ({
-                ...prev,
-                decks: prev.decks.map((deck) => ({
-                    ...deck,
-                    cards: deck.cards.map((card) =>
-                        card.id === cardId ? { ...card, question: nextQuestion, answer: nextAnswer } : card
-                    ),
-                    updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-                })),
-            }));
+        const applyContent = (nextQuestion: string, nextAnswer: string) => {
+            if (isAuthenticated) {
+                setDbDecks((prev) => prev.map((deck) => applyToDeck(deck, nextQuestion, nextAnswer)));
+            } else {
+                setGuestState((prev) => ({
+                    ...prev,
+                    decks: prev.decks.map((deck) => applyToDeck(deck, nextQuestion, nextAnswer)),
+                }));
+            }
         };
 
         applyContent(question, answer);
@@ -409,7 +400,7 @@ export function AppProvider({
         }
     }, [isAuthenticated, dbDecks, guestState.decks]);
 
-    const value: AppContextType = {
+    const value = useMemo<AppContextType>(() => ({
         isAuthenticated,
         isGuest,
         isAdmin,
@@ -433,7 +424,31 @@ export function AppProvider({
         language,
         setLanguage,
         t,
-    };
+    }), [
+        isAuthenticated,
+        isGuest,
+        isAdmin,
+        authUser,
+        authLoading,
+        decks,
+        currentDeck,
+        isLoading,
+        maxDecks,
+        setInitialData,
+        handleSignOut,
+        addDeck,
+        selectDeck,
+        closeDeck,
+        deleteDeck,
+        renameDeck,
+        resetCurrentDeck,
+        refreshDecks,
+        updateCardLevel,
+        updateCard,
+        language,
+        setLanguage,
+        t,
+    ]);
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

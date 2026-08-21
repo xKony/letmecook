@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { AppProvider } from "@/lib/app-context";
 import { auth } from "@/lib/auth";
-import "katex/dist/katex.min.css";
+import { Language } from "@/lib/i18n";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,6 +31,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await auth();
+  const langCookie = (await cookies()).get("lang")?.value;
+  const initialLanguage: Language = langCookie === "en" || langCookie === "pl" ? langCookie : "en";
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -38,7 +41,7 @@ export default async function RootLayout({
       >
         <AuthProvider session={session}>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-            <AppProvider initialSession={session}>{children}</AppProvider>
+            <AppProvider initialSession={session} initialLanguage={initialLanguage}>{children}</AppProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>

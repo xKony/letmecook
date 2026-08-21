@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import { useApp } from "@/lib/app-context";
 import { Dashboard } from "@/components/dashboard";
 import { GuestModeBanner } from "@/components/guest-mode-banner";
-import type { Session } from "next-auth";
 import { Deck } from "@/lib/types";
 
 // Dynamically import StudySession as it contains heavy libraries (Katex, etc.)
@@ -22,7 +21,6 @@ const StudySession = dynamic(() => import("@/components/study-session").then(mod
 interface AppMainProps {
     initialDecks?: Deck[];
     initialMaxDecks?: number;
-    session?: Session | null;
 }
 
 /**

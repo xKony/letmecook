@@ -54,7 +54,7 @@ export async function registerUser(formData: FormData) {
         return { error: "Email already registered" };
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     try {
         await db.insert(users).values({
@@ -135,7 +135,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
             return { error: "Current password is incorrect" };
         }
 
-        const hashedPassword = await bcrypt.hash(validation.data.newPassword, 10);
+        const hashedPassword = await bcrypt.hash(validation.data.newPassword, 12);
 
         await db.update(users)
             .set({ password: hashedPassword })

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import { CardLevel, Flashcard, Deck } from "@/lib/types";
 
 /**
@@ -53,11 +53,11 @@ export function useStudySession(deck: Deck | null) {
 
     // Adjust state during render when play order changes
     // This is the recommended way to sync state from other state/props during render
-    const playOrderJson = JSON.stringify(playOrder);
-    const [prevPlayOrderJson, setPrevPlayOrderJson] = useState(playOrderJson);
-    
-    if (playOrderJson !== prevPlayOrderJson) {
-        setPrevPlayOrderJson(playOrderJson);
+    const playOrderKey = `${deck?.id ?? ""}|${activeFilter ?? ""}|${isShuffled}|${shuffleSeed}`;
+    const [prevPlayOrderKey, setPrevPlayOrderKey] = useState(playOrderKey);
+
+    if (playOrderKey !== prevPlayOrderKey) {
+        setPrevPlayOrderKey(playOrderKey);
         setPlayIndex(0);
         setIsRevealed(false);
     }
@@ -164,29 +164,46 @@ export function useStudySession(deck: Deck | null) {
 
 /**
  * Custom hook to manage the study session timer and break reminders.
- * 
+ * The ticking lives in a ref so per-second updates do not re-render the caller;
+ * leaf components subscribe via `useSessionSeconds`.
+ *
  * @param breakIntervalSeconds Interval in seconds after which a break reminder should be shown.
- * @returns An object containing the session duration and actions for break reminders.
+ * @returns Break reminder state plus stable accessors for reading/subscribing to the timer.
  */
 export function useSessionTimer(breakIntervalSeconds: number) {
-    const [seconds, setSeconds] = useState(0);
+    const secondsRef = useRef(0);
+    const lastBreakTimeRef = useRef(0);
     const [showBreakModal, setShowBreakModal] = useState(false);
-    const [lastBreakTime, setLastBreakTime] = useState(0);
+    const listenersRef = useRef(new Set<() => void>());
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setSeconds((prev) => {
-                const newSeconds = prev + 1;
-                if (newSeconds > 0 && newSeconds % breakIntervalSeconds === 0 && newSeconds !== lastBreakTime) {
-                    setShowBreakModal(true);
-                    setLastBreakTime(newSeconds);
-                }
-                return newSeconds;
-            });
+            secondsRef.current += 1;
+            const newSeconds = secondsRef.current;
+            if (newSeconds > 0 && newSeconds % breakIntervalSeconds === 0 && newSeconds !== lastBreakTimeRef.current) {
+                lastBreakTimeRef.current = newSeconds;
+                setShowBreakModal(true);
+            }
+            listenersRef.current.forEach((listener) => listener());
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [breakIntervalSeconds, lastBreakTime]);
+    }, [breakIntervalSeconds]);
+
+    /**
+     * Subscribe a listener to per-second timer ticks without re-rendering the subscriber.
+     */
+    const subscribeToSeconds = useCallback((listener: () => void) => {
+        listenersRef.current.add(listener);
+        return () => {
+            listenersRef.current.delete(listener);
+        };
+    }, []);
+
+    /**
+     * Read the current session duration in seconds (non-reactive).
+     */
+    const getSeconds = useCallback(() => secondsRef.current, []);
 
     /**
      * Format seconds into a human-readable duration (MM:SS or HH:MM:SS).
@@ -203,11 +220,30 @@ export function useSessionTimer(breakIntervalSeconds: number) {
     }, []);
 
     return {
-        seconds,
+        subscribeToSeconds,
+        getSeconds,
         showBreakModal,
         setShowBreakModal,
         formatTime,
     };
+}
+
+/**
+ * Subscribe to the session timer and return the formatted duration.
+ * Intended for small leaf components so only the time text re-renders each second.
+ *
+ * @param subscribeToSeconds Subscribe function from `useSessionTimer`.
+ * @param getSeconds Non-reactive reader from `useSessionTimer`.
+ * @param formatTime Formatter from `useSessionTimer`.
+ * @returns The formatted session duration, updated every second.
+ */
+export function useSessionSeconds(
+    subscribeToSeconds: (listener: () => void) => () => void,
+    getSeconds: () => number,
+    formatTime: (s: number) => string
+): string {
+    const getSnapshot = useCallback(() => formatTime(getSeconds()), [formatTime, getSeconds]);
+    return useSyncExternalStore(subscribeToSeconds, getSnapshot);
 }
 
 interface ShortcutActions {
@@ -230,6 +266,12 @@ export function useSessionShortcuts(
     isDisabled: boolean,
     actions: ShortcutActions
 ) {
+    const actionsRef = useRef(actions);
+
+    useEffect(() => {
+        actionsRef.current = actions;
+    });
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (isDisabled) return;
@@ -242,23 +284,23 @@ export function useSessionShortcuts(
             if (e.key === " " || e.code === "Space") {
                 e.preventDefault();
                 if (!isRevealed) {
-                    actions.onReveal();
+                    actionsRef.current.onReveal();
                 }
             } else if (e.key === "ArrowLeft") {
-                actions.onPrev();
+                actionsRef.current.onPrev();
             } else if (e.key === "ArrowRight") {
-                actions.onNext();
+                actionsRef.current.onNext();
             } else if (e.key === "g" || e.key === "G") {
-                actions.onShowGoto();
+                actionsRef.current.onShowGoto();
             } else if (isRevealed) {
-                if (e.key === "1") actions.onRate("Nie umiem");
-                else if (e.key === "2") actions.onRate("W miarę");
-                else if (e.key === "3") actions.onRate("Umiem");
-                else if (e.key === "4") actions.onRate("Opanowane 100%");
+                if (e.key === "1") actionsRef.current.onRate("Nie umiem");
+                else if (e.key === "2") actionsRef.current.onRate("W miarę");
+                else if (e.key === "3") actionsRef.current.onRate("Umiem");
+                else if (e.key === "4") actionsRef.current.onRate("Opanowane 100%");
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isRevealed, isDisabled, actions]);
+    }, [isRevealed, isDisabled]);
 }

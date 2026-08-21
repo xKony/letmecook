@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { loginSchema } from "@/lib/validations";
 
-const ADMIN_REFRESH_MS = 60_000;
+const ADMIN_REFRESH_MS = 10 * 60_000;
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     adapter: DrizzleAdapter(db),

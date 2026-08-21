@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { decks, flashcards, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { createDeckSchema } from "@/lib/validations";
 import { sanitizeImageUrl } from "@/lib/image-url";
@@ -144,15 +144,12 @@ export async function checkIsAdmin(): Promise<boolean> {
 export async function getAllUsers() {
     await requireAdmin();
 
-    const allUsers = await db.query.users.findMany({
-        with: {
-            decks: {
-                columns: {
-                    id: true,
-                }
-            },
-        },
-    });
+    const [allUsers, deckCounts] = await Promise.all([
+        db.query.users.findMany(),
+        db.select({ ownerId: decks.ownerId, total: count() }).from(decks).groupBy(decks.ownerId),
+    ]);
+
+    const deckCountByOwner = new Map(deckCounts.map((row) => [row.ownerId, row.total]));
 
     return allUsers.map((user) => ({
         id: user.id,
@@ -160,7 +157,7 @@ export async function getAllUsers() {
         name: user.name,
         isAdmin: user.isAdmin,
         maxDecks: user.maxDecks,
-        deckCount: user.decks.length,
+        deckCount: deckCountByOwner.get(user.id) ?? 0,
         createdAt: user.createdAt.toISOString(),
     }));
 }

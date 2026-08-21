@@ -22,7 +22,7 @@ export function DeckCard({ deck, onSelect, onDelete }: DeckCardProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editingName, setEditingName] = useState(deck.name);
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
-    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     /**
      * Handles starting the rename process

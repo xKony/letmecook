@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { getMyDecks, getUserMaxDecks } from "@/app/actions/deck-actions";
 import { AppMain } from "@/components/app-main";
 import { transformDbDeck } from "@/lib/utils";
-import { Suspense } from "react";
 import { Deck } from "@/lib/types";
 
 export default async function Home() {
@@ -27,16 +26,9 @@ export default async function Home() {
     }
 
     return (
-        <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-pulse text-muted-foreground">Loading...</div>
-            </div>
-        }>
-            <AppMain
-                initialDecks={initialDecks}
-                initialMaxDecks={initialMaxDecks}
-                session={session}
-            />
-        </Suspense>
+        <AppMain
+            initialDecks={initialDecks}
+            initialMaxDecks={initialMaxDecks}
+        />
     );
 }

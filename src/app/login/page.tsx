@@ -51,10 +51,7 @@ function LoginForm() {
                     setError("Invalid email or password");
                 } else {
                     setSuccess("Login successful! Redirecting...");
-                    router.refresh();
-                    setTimeout(() => {
-                        router.push("/");
-                    }, 500);
+                    router.replace(searchParams.get("from") || "/");
                 }
             } else {
                 const result = await registerUser(formData);
@@ -72,10 +69,7 @@ function LoginForm() {
                         setIsLogin(true);
                     } else {
                         setSuccess("Account created! Redirecting...");
-                        router.refresh();
-                        setTimeout(() => {
-                            router.push("/");
-                        }, 500);
+                        router.replace(searchParams.get("from") || "/");
                     }
                 }
             }
