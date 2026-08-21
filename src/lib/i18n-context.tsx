@@ -11,18 +11,19 @@ interface I18nContextType {
 
 const I18nContext = createContext<I18nContextType | null>(null);
 
-function getInitialLanguage(): Language {
-    if (typeof window === "undefined") return "en";
-    const savedLang = localStorage.getItem("language") as Language;
-    return savedLang === "en" || savedLang === "pl" ? savedLang : "en";
-}
-
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-    const [language, setLanguageState] = useState<Language>(getInitialLanguage);
+export function I18nProvider({
+    children,
+    initialLanguage = "en",
+}: {
+    children: React.ReactNode;
+    initialLanguage?: Language;
+}) {
+    const [language, setLanguageState] = useState<Language>(initialLanguage);
 
     const setLanguage = useCallback((lang: Language) => {
         setLanguageState(lang);
         localStorage.setItem("language", lang);
+        document.cookie = `lang=${lang}; max-age=31536000; path=/; samesite=lax`;
     }, []);
 
     const t = useCallback((key: string, params?: Record<string, string | number>) => {

@@ -1,17 +1,15 @@
 
-
-// Simple in-memory rate limiter for server actions
-// For production at scale, consider using @upstash/ratelimit with Redis
+// Simple in-memory rate limiter for server actions.
+// On multi-instance Vercel this is best-effort only — each isolate has its own Map.
+// For production at scale, replace with @upstash/ratelimit + Redis.
 
 interface RateLimitEntry {
     count: number;
     firstRequest: number;
 }
 
-// In-memory store (resets on server restart - acceptable for single instance)
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
-// Clean up old entries every 5 minutes
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
 let lastCleanup = Date.now();
 
@@ -28,21 +26,18 @@ function cleanup(windowMs: number) {
 }
 
 export interface RateLimitConfig {
-    windowMs: number;  // Time window in milliseconds
-    maxRequests: number;  // Max requests per window
+    windowMs: number;
+    maxRequests: number;
 }
 
 export interface RateLimitResult {
     success: boolean;
     remaining: number;
-    resetIn: number;  // Seconds until reset
+    resetIn: number;
 }
 
 /**
  * Check rate limit for a given identifier (usually IP or user ID)
- * @param identifier - Unique identifier for the client (IP address, user ID, etc.)
- * @param config - Rate limit configuration
- * @returns RateLimitResult with success status and remaining requests
  */
 export async function checkRateLimit(
     identifier: string,
@@ -52,25 +47,20 @@ export async function checkRateLimit(
     const now = Date.now();
     const key = identifier;
 
-    // Periodic cleanup
     cleanup(windowMs);
 
     const entry = rateLimitStore.get(key);
 
     if (!entry) {
-        // First request in this window
         rateLimitStore.set(key, { count: 1, firstRequest: now });
         return { success: true, remaining: maxRequests - 1, resetIn: Math.ceil(windowMs / 1000) };
     }
 
-    // Check if window has expired
     if (now - entry.firstRequest > windowMs) {
-        // Reset the window
         rateLimitStore.set(key, { count: 1, firstRequest: now });
         return { success: true, remaining: maxRequests - 1, resetIn: Math.ceil(windowMs / 1000) };
     }
 
-    // Increment count
     entry.count++;
     rateLimitStore.set(key, entry);
 
@@ -114,29 +104,24 @@ export function getRateLimitState(
 
 // Preset configurations for common use cases
 export const RATE_LIMITS = {
-    // Auth endpoints - strict to prevent brute force
     auth: {
-        windowMs: 15 * 60 * 1000,  // 15 minutes
-        maxRequests: 50,  // Increased from 5
+        windowMs: 15 * 60 * 1000,
+        maxRequests: 10,
     },
-    // Login specifically - slightly more lenient
     login: {
-        windowMs: 15 * 60 * 1000,  // 15 minutes
-        maxRequests: 100,  // Increased from 10
+        windowMs: 15 * 60 * 1000,
+        maxRequests: 10,
     },
-    // Registration - very strict to prevent spam
     register: {
-        windowMs: 60 * 60 * 1000,  // 1 hour
-        maxRequests: 50,  // Increased from 3
+        windowMs: 60 * 60 * 1000,
+        maxRequests: 5,
     },
-    // Password change - strict
     passwordChange: {
-        windowMs: 60 * 60 * 1000,  // 1 hour
-        maxRequests: 20,  // Increased from 5
+        windowMs: 60 * 60 * 1000,
+        maxRequests: 5,
     },
-    // General API - more lenient
     api: {
-        windowMs: 60 * 1000,  // 1 minute
-        maxRequests: 200,  // Increased from 60
+        windowMs: 60 * 1000,
+        maxRequests: 60,
     },
 };

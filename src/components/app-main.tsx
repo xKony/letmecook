@@ -7,7 +7,6 @@ import { useI18n } from "@/lib/i18n-context";
 import { Dashboard } from "@/components/dashboard";
 import { StudySession } from "@/components/study-session";
 import { GuestModeBanner } from "@/components/guest-mode-banner";
-import type { Session } from "next-auth";
 import { Deck } from "@/lib/types";
 
 const DeckSetEditorModal = dynamic(
@@ -18,7 +17,6 @@ const DeckSetEditorModal = dynamic(
 interface AppMainProps {
     initialDecks?: Deck[];
     initialMaxDecks?: number;
-    session?: Session | null;
 }
 
 /**

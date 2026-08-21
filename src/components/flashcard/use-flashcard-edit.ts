@@ -36,8 +36,8 @@ export function useFlashcardEdit({
         () => `${card.id}:${card.question}:${card.answer}`
     );
 
-    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const hideEditHintTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hideEditHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
     const clearHideEditHintTimer = useCallback(() => {

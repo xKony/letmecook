@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, startTransition } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
@@ -13,10 +13,11 @@ import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { BREAK_REMINDER_INTERVAL_SECONDS } from "@/lib/constants";
 
 // New custom hooks
-import { 
-    useStudySession, 
-    useSessionTimer, 
-    useSessionShortcuts 
+import {
+    useStudySession,
+    useSessionTimer,
+    useSessionSeconds,
+    useSessionShortcuts
 } from "@/hooks/use-study-session";
 
 // New sub-components
@@ -29,25 +30,40 @@ import { StudySessionEmptyState } from "./study/study-session-empty-state";
 import { ensureKatexStyles } from "@/lib/latex";
 import { getQuestionNumber } from "@/lib/flashcard-order";
 
+interface SessionTimerTextProps {
+    subscribeToSeconds: (listener: () => void) => () => void;
+    getSeconds: () => number;
+    formatTime: (s: number) => string;
+}
+
+/**
+ * Leaf component that renders the live session duration so the whole session
+ * tree does not re-render every second.
+ */
+function SessionTimerText({ subscribeToSeconds, getSeconds, formatTime }: SessionTimerTextProps) {
+    const formattedTime = useSessionSeconds(subscribeToSeconds, getSeconds, formatTime);
+    return <span className="tabular-nums">{formattedTime}</span>;
+}
+
 /**
  * The main study session component that orchestrates the flashcard learning experience.
  * It manages the session state, timer, shortcuts, and various UI sub-components.
  */
 export function StudySession() {
-    const { 
-        currentDeck, 
-        closeDeck, 
-        resetCurrentDeck, 
-        updateCardLevel, 
-        updateCard, 
+    const {
+        currentDeck,
+        closeDeck,
+        resetCurrentDeck,
+        updateCardLevel,
+        updateCard,
     } = useApp();
-    const { t } = useI18n();
-    
-    const { 
-        enabled: ttsEnabled, 
-        speak, 
-        toggle: toggleTTS 
-    } = useTTS();
+    const { t, language } = useI18n();
+
+    const {
+        enabled: ttsEnabled,
+        speak,
+        toggle: toggleTTS
+    } = useTTS(language);
 
     // Core session logic hook
     const {
@@ -75,9 +91,10 @@ export function StudySession() {
         restart,
     } = useStudySession(currentDeck);
 
-    // Timer logic hook
+    // Timer logic hook (ticks live in a ref; leaf components subscribe)
     const {
-        seconds,
+        subscribeToSeconds,
+        getSeconds,
         showBreakModal,
         setShowBreakModal,
         formatTime,
@@ -93,18 +110,23 @@ export function StudySession() {
         ensureKatexStyles();
     }, []);
 
+    // Tracks the card whose question was last spoken so toggling TTS mid-card
+    // does not re-speak the same question
+    const lastSpokenCardIdRef = useRef<string | null>(null);
+
     // TTS effect for current card
     useEffect(() => {
-        if (currentCard && ttsEnabled) {
-            speak(currentCard.question);
-        }
+        if (!currentCard || !ttsEnabled) return;
+        if (lastSpokenCardIdRef.current === currentCard.id) return;
+        lastSpokenCardIdRef.current = currentCard.id;
+        speak(currentCard.question);
     }, [currentCard, ttsEnabled, speak]);
 
     /**
      * Handle revealing the card answer and triggering TTS if enabled.
      */
     const onReveal = useCallback(() => {
-        startTransition(() => setIsRevealed(true));
+        setIsRevealed(true);
         if (currentCard && ttsEnabled) {
             speak(currentCard.answer);
         }
@@ -219,7 +241,7 @@ export function StudySession() {
             <StudySessionBreakModal
                 isOpen={showBreakModal}
                 onClose={() => setShowBreakModal(false)}
-                formattedTime={formatTime(seconds)}
+                formattedTime={formatTime(getSeconds())}
                 onTakeBreak={() => {
                     setShowBreakModal(false);
                     closeDeck();
@@ -231,7 +253,13 @@ export function StudySession() {
             <StudySessionHeader
                 currentIndex={playIndex}
                 totalCards={playOrder.length}
-                formattedTime={formatTime(seconds)}
+                timeSlot={
+                    <SessionTimerText
+                        subscribeToSeconds={subscribeToSeconds}
+                        getSeconds={getSeconds}
+                        formatTime={formatTime}
+                    />
+                }
                 isShuffled={isShuffled}
                 activeFilter={activeFilter}
                 onClose={closeDeck}

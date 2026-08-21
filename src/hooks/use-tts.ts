@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { Language } from "@/lib/i18n";
 
-export function useTTS() {
+export function useTTS(lang: Language = "en") {
     const [enabled, setEnabled] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
 
@@ -17,7 +18,7 @@ export function useTTS() {
         if (!text.trim()) return;
 
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "pl-PL"; // Polish as default, can be made configurable
+        utterance.lang = lang === "pl" ? "pl-PL" : "en-US";
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
 
@@ -26,7 +27,7 @@ export function useTTS() {
         utterance.onerror = () => setIsSpeaking(false);
 
         window.speechSynthesis.speak(utterance);
-    }, [enabled]);
+    }, [enabled, lang]);
 
     const toggle = useCallback(() => {
         if (typeof window !== "undefined" && window.speechSynthesis) {

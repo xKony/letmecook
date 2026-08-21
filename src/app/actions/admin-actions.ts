@@ -3,10 +3,11 @@
 import { db } from "@/db";
 import { decks, flashcards, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { eq, asc } from "drizzle-orm";
+import { eq, and, asc, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { createDeckSchema, cardSchema, LIMITS } from "@/lib/validations";
+import { sanitizeImageUrl } from "@/lib/image-url";
 import { z } from "zod";
-import { cardSchema, LIMITS } from "@/lib/validations";
 
 const replacePublicDeckCardsSchema = z.object({
     deckId: z.string().uuid("Invalid deck ID"),
@@ -37,25 +38,34 @@ async function requireAdmin() {
     return user;
 }
 
-// ============================================
-// Admin: Create public deck
-// ============================================
-
 export async function createPublicDeck(
     name: string,
     cards: { question: string; answer: string; image?: string }[]
 ) {
     const admin = await requireAdmin();
 
-    const [newDeck] = await db.insert(decks).values({
+    const validation = createDeckSchema.safeParse({
         name,
+        cards: cards.map((card) => ({
+            question: card.question,
+            answer: card.answer,
+            image: sanitizeImageUrl(card.image),
+        })),
+    });
+
+    if (!validation.success) {
+        throw new Error(validation.error.issues[0]?.message || "Invalid input");
+    }
+
+    const [newDeck] = await db.insert(decks).values({
+        name: validation.data.name,
         ownerId: admin.id,
-        isPublic: true, // Public decks are visible to everyone
+        isPublic: true,
     }).returning();
 
-    if (cards.length > 0) {
+    if (validation.data.cards.length > 0) {
         await db.insert(flashcards).values(
-            cards.map((card, index) => ({
+            validation.data.cards.map((card, index) => ({
                 deckId: newDeck.id,
                 question: card.question,
                 answer: card.answer,
@@ -73,10 +83,6 @@ export async function createPublicDeck(
         isPublic: newDeck.isPublic,
     };
 }
-
-// ============================================
-// Admin: Get all public decks
-// ============================================
 
 export async function getPublicDecks() {
     const publicDecks = await db.query.decks.findMany({
@@ -97,7 +103,6 @@ export async function getPublicDecks() {
             owner: {
                 columns: {
                     name: true,
-                    email: true,
                 }
             },
         },
@@ -109,22 +114,17 @@ export async function getPublicDecks() {
         isPublic: deck.isPublic,
         owner: deck.owner ? {
             name: deck.owner.name,
-            email: deck.owner.email,
         } : null,
         flashcards: deck.flashcards.map(card => ({
             id: card.id,
             deckId: card.deckId,
             question: card.question,
             answer: card.answer,
-            image: card.image || undefined,
+            image: sanitizeImageUrl(card.image) || undefined,
             level: card.level,
         })),
     }));
 }
-
-// ============================================
-// Admin: Toggle deck public status
-// ============================================
 
 export async function toggleDeckPublic(deckId: string) {
     await requireAdmin();
@@ -137,17 +137,12 @@ export async function toggleDeckPublic(deckId: string) {
         throw new Error("Deck not found");
     }
 
-    // Only admin can toggle public status, even for decks they don't own
     await db.update(decks)
         .set({ isPublic: !deck.isPublic })
         .where(eq(decks.id, deckId));
 
     revalidatePath("/");
 }
-
-// ============================================
-// Check if current user is admin
-// ============================================
 
 export async function checkIsAdmin(): Promise<boolean> {
     const session = await auth();
@@ -162,22 +157,15 @@ export async function checkIsAdmin(): Promise<boolean> {
     return user?.isAdmin ?? false;
 }
 
-// ============================================
-// Admin: Get all users
-// ============================================
-
 export async function getAllUsers() {
     await requireAdmin();
 
-    const allUsers = await db.query.users.findMany({
-        with: {
-            decks: {
-                columns: {
-                    id: true,
-                }
-            },
-        },
-    });
+    const [allUsers, deckCounts] = await Promise.all([
+        db.query.users.findMany(),
+        db.select({ ownerId: decks.ownerId, total: count() }).from(decks).groupBy(decks.ownerId),
+    ]);
+
+    const deckCountByOwner = new Map(deckCounts.map((row) => [row.ownerId, row.total]));
 
     return allUsers.map((user) => ({
         id: user.id,
@@ -185,14 +173,10 @@ export async function getAllUsers() {
         name: user.name,
         isAdmin: user.isAdmin,
         maxDecks: user.maxDecks,
-        deckCount: user.decks.length,
+        deckCount: deckCountByOwner.get(user.id) ?? 0,
         createdAt: user.createdAt.toISOString(),
     }));
 }
-
-// ============================================
-// Admin: Update user's max decks
-// ============================================
 
 export async function updateUserMaxDecks(userId: string, maxDecks: number) {
     await requireAdmin();
@@ -305,9 +289,19 @@ export async function replacePublicDeckFromPersonalDeck(
 export async function deletePublicDeck(deckId: string) {
     await requireAdmin();
 
+    const deck = await db.query.decks.findFirst({
+        where: and(
+            eq(decks.id, deckId),
+            eq(decks.isPublic, true),
+        ),
+    });
+
+    if (!deck) {
+        throw new Error("Public deck not found");
+    }
+
     await db.delete(decks).where(eq(decks.id, deckId));
 
     revalidatePath("/");
     revalidatePath("/admin");
 }
-

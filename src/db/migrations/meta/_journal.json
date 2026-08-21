@@ -8,6 +8,13 @@
       "when": 1779031876415,
       "tag": "0000_easy_nightshade",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784470000000,
+      "tag": "0001_deck_permissions_unique",
+      "breakpoints": true
     }
   ]
 }
