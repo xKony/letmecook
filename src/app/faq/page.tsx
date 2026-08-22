@@ -71,21 +71,30 @@ export default function FAQPage() {
 
   const getFormattedPrompt = () => {
     const template = t.promptTextTemplate;
-    let formatted = template;
 
     if (faqLang === "pl") {
-      formatted = formatted
-        .replace("{PRZEDMIOT}", subject.trim() || "{PRZEDMIOT}")
-        .replace("{DODATKOWE_NOTATKI}", notes.trim() || "{DODATKOWE_NOTATKI}")
+      const contextLines: string[] = [];
+      if (subject.trim()) contextLines.push(`Nazwa przedmiotu: ${subject.trim()}`);
+      if (notes.trim()) contextLines.push(`Dodatkowe uwagi do zestawu: ${notes.trim()}`);
+      const context = contextLines.length
+        ? `\nKontekst:\n${contextLines.join("\n")}\n`
+        : "";
+
+      return template
+        .replace("{KONTEKST}", context)
         .replace("[TUTAJ WKLEJ SWOJE PYTANIA]", questions.trim() || "[TUTAJ WKLEJ SWOJE PYTANIA]");
-    } else {
-      formatted = formatted
-        .replace("{PRZEDMIOT}", subject.trim() || "{PRZEDMIOT}")
-        .replace("{DODATKOWE_NOTATKI}", notes.trim() || "{DODATKOWE_NOTATKI}")
-        .replace("[PASTE YOUR QUESTIONS HERE]", questions.trim() || "[PASTE YOUR QUESTIONS HERE]");
     }
 
-    return formatted;
+    const contextLines: string[] = [];
+    if (subject.trim()) contextLines.push(`Subject name: ${subject.trim()}`);
+    if (notes.trim()) contextLines.push(`Additional comments for the deck: ${notes.trim()}`);
+    const context = contextLines.length
+      ? `\nContext:\n${contextLines.join("\n")}\n`
+      : "";
+
+    return template
+      .replace("{CONTEXT_BLOCK}", context)
+      .replace("[PASTE YOUR QUESTIONS HERE]", questions.trim() || "[PASTE YOUR QUESTIONS HERE]");
   };
 
   const toggleFaq = (id: string) => {
@@ -122,39 +131,35 @@ export default function FAQPage() {
       questionsLabel: "Your Questions / Raw Notes",
       questionsPlaceholder: "Paste your questions here (one per line) or raw text...",
       promptTextTemplate: `Role: You are an Instructional Design Expert and a specialist in Active Recall methodology. Your task is to transform raw questions and source materials into a high-quality set of educational flashcards.
-
-Context (optional):
-Subject name: {PRZEDMIOT}
-Additional comments for the deck: {DODATKOWE_NOTATKI}
-
-(If the context fields are empty, ignore them and rely solely on universal rules of logic for the provided questions).
-
-Objective: Create a database of questions and answers based on the provided list of questions and the content of the attached materials. If a context is defined, take into account the specifics of the subject or additional guidelines.
+{CONTEXT_BLOCK}
+Objective: Create a set of question-and-answer flashcards based on the provided list of questions and the content of the attached materials. If a context is defined, take into account the specifics of the subject or additional guidelines.
 
 Execution Instructions (Step-by-Step):
-1. Analysis and Correction: Read each question from the list. Correct any linguistic, spelling, or punctuation errors. If a question is vague, rephrase it to be specific while maintaining the original intent.
+1. Analysis and Correction: Read each item from the input. Correct any linguistic, spelling, or punctuation errors. If a question is vague, rephrase it to be specific while maintaining the original intent. If parts of the input are raw notes rather than explicit questions, transform the key facts into clear, self-contained questions.
 2. Content Development: Answer each question, treating the content of the attached materials as the primary source of truth.
-3. Filling Gaps: If the presentation/document does not contain the answer, use your broad expert knowledge to provide a full, factually correct, and comprehensive response.
-4. Stylistics: Answers must be specific yet exhaustive (leaving no room for doubt). Use professional terminology.
+3. Filling Gaps: If the presentation/document does not contain the answer, use your broad expert knowledge to provide a factually correct and comprehensive response.
+4. Stylistics: Keep answers flashcard-sized - specific yet concise: typically 1-3 sentences (max ~60 words) unless the question genuinely demands more (derivations, enumerations). Use professional terminology.
+5. Language: Write each answer in the same language as its source question.
 
 CRITICAL FORMATTING RULES (Constraint Checklist):
+- Generate exactly one card per input item, preserving the original order of the list.
 - Generate ONLY one code block labeled as "json".
 - The result must be a valid array of objects with keys: "question", "answer", and optionally "image".
+- Include an "image" key ONLY if the source material contains a genuine image URL; NEVER invent or guess image URLs.
 - Absolute ban on adding any introduction, acknowledgments, comments, or summaries before or after the JSON block.
 - Write mathematical/technical formulas in LaTeX format inside JSON strings (e.g., $E=mc^2$ or for blocks $$...$$).
 - Remember to properly format the JSON — in particular, double-escape characters in LaTeX commands (e.g., \\\\frac, \\\\pi).
-- The only allowed formatting inside string values (besides LaTeX equations) is indeed bold (**text**), italics (*text*), and newline characters (\\\\n) if needed. Do not use other formatting types like bullet points, numbered lists, or headers.
+- The only allowed formatting inside string values (besides LaTeX equations) is bold (**text**), italics (*text*), and newline characters (\\\\n) if needed. Do not use other formatting types like bullet points, numbered lists, or headers.
 
 Examples of expected output structure:
 [
   {
     "question": "What is the mitochondria?",
-    "answer": "The powerhouse of the cell, responsible for generating ATP.",
-    "image": "https://images.unsplash.com/photo.png"
+    "answer": "The powerhouse of the cell, responsible for generating ATP."
   },
   {
-    "question": "How to write a fraction $\\\\frac{a}{b}$ in LaTeX?",
-    "answer": "We use the \`\\\\frac{a}{b}\` command, which we write in JSON with a double backslash as \`$\\\\frac{a}{b}$\`."
+    "question": "How do you write a fraction $\\\\frac{a}{b}$ in LaTeX?",
+    "answer": "Use the $\\\\frac{a}{b}$ command; inside JSON strings every backslash must be doubled."
   }
 ]
 
@@ -377,39 +382,35 @@ QUESTIONS:
       questionsLabel: "Twoje pytania / Surowe notatki",
       questionsPlaceholder: "Wklej tutaj swoje pytania (jedno w linii) lub surowy tekst...",
       promptTextTemplate: `Rola: Jesteś ekspertem ds. projektowania instruktażowego (Instructional Design) oraz specjalistą od metodologii Active Recall. Twoim zadaniem jest przekształcenie surowych pytań i materiałów źródłowych w wysokiej jakości zestaw fiszek do nauki.
-
-Kontekst (opcjonalny):
-Nazwa przedmiotu: {PRZEDMIOT}
-Dodatkowe uwagi do zestawu: {DODATKOWE_NOTATKI}
-
-(Jeśli pola kontekstu są puste, zignoruj je i opieraj się wyłącznie na uniwersalnych zasadach logiki dla podanych pytań).
-
-Cel zadania: Stworzenie bazy pytań i odpowiedzi na podstawie dostarczonej listy pytań oraz treści załączonych materiałów. Jeśli zdefiniowano kontekst, uwzględnij specyfikę przedmiotu lub dodatkowe wytyczne.
+{KONTEKST}
+Cel zadania: Stworzenie zestawu fiszek pytanie–odpowiedź na podstawie dostarczonej listy pytań oraz treści załączonych materiałów. Jeśli zdefiniowano kontekst, uwzględnij specyfikę przedmiotu lub dodatkowe wytyczne.
 
 Instrukcje wykonawcze (Krok po kroku):
-1. Analiza i korekta: Przeczytaj każde pytanie z listy. Popraw błędy językowe, ortograficzne i interpunkcyjne. Jeśli pytanie jest niejasne, sformułuj je tak, aby było konkretne, zachowując pierwotny sens.
-2. Opracowanie merytoryczne: Odpowiedz na każde pytanie, traktując treść załączonych materiałów jako priorytetowe źródło prawdy. 
-3. Uzupełnienie luk: Jeśli prezentacja/dokument nie zawiera odpowiedzi, wykorzystaj swoją szeroką wiedzę ekspercką, aby udzielić pełnej, poprawnej merytorycznie i wyczerpującej odpowiedzi.
-4. Stylistyka: Odpowiedzi muszą być konkretne, ale wyczerpujące (bez niedomówień). Używaj profesjonalnej terminologii.
+1. Analiza i korekta: Przeczytaj każdy element wejścia. Popraw błędy językowe, ortograficzne i interpunkcyjne. Jeśli pytanie jest niejasne, sformułuj je tak, aby było konkretne, zachowując pierwotny sens. Jeśli część wejścia to surowe notatki, a nie jawne pytania, przekształć kluczowe fakty w jasne, samodzielne pytania.
+2. Opracowanie merytoryczne: Odpowiedz na każde pytanie, traktując treść załączonych materiałów jako priorytetowe źródło prawdy.
+3. Uzupełnienie luk: Jeśli prezentacja/dokument nie zawiera odpowiedzi, wykorzystaj swoją szeroką wiedzę ekspercką, aby udzielić poprawnej merytorycznie i wyczerpującej odpowiedzi.
+4. Stylistyka: Zachowaj rozmiar fiszki — odpowiedzi konkretne, lecz zwięzłe: zwykle 1–3 zdania (maks. ok. 60 słów), chyba że pytanie rzeczywiście tego wymaga (wyprowadzenia, wyliczenia). Używaj profesjonalnej terminologii.
+5. Język: Każdą odpowiedź zapisz w tym samym języku, w którym napisane jest pytanie źródłowe.
 
 KRYTYCZNE ZASADY FORMATOWANIA (Constraint Checklist):
+- Wygeneruj dokładnie jedną fiszkę na każdy element wejścia, zachowując pierwotną kolejność listy.
 - Wygeneruj wyłącznie jeden blok kodu oznaczony jako "json".
 - Wynik musi być poprawną tablicą obiektów z kluczami: "question", "answer" oraz opcjonalnie "image".
+- Klucz "image" dodawaj WYŁĄCZNIE wtedy, gdy materiały źródłowe zawierają prawdziwy adres URL obrazu; NIGDY nie wymyślaj ani nie zgaduj adresów URL.
 - Całkowity zakaz dodawania jakiegokolwiek wstępu, podziękowań, komentarzy czy podsumowań przed i po bloku JSON.
 - Wzory matematyczne/techniczne zapisuj w formacie LaTeX wewnątrz stringów JSON (np. $E=mc^2$ lub dla bloków $$...$$).
 - Pamiętaj o poprawnym formatowaniu JSON — w szczególności o podwójnym uciekaniu znaków w komendach LaTeX (np. \\\\frac, \\\\pi).
-- Jedyne dozwolone formatowanie tekstu wewnątrz wartości (poza równaniami LaTeX) to właśnie takie z pogrubieniami (**tekst**), kursywą (*tekst*) oraz znakami nowej linii (\\\\n) w razie potrzeby. Całkowity zakaz stosowania innych formatowań, w tym list punktowanych, numerowanych czy nagłówków.
+- Jedyne dozwolone formatowanie tekstu wewnątrz wartości (poza równaniami LaTeX) to pogrubienia (**tekst**), kursywa (*tekst*) oraz znaki nowej linii (\\\\n) w razie potrzeby. Całkowity zakaz stosowania innych formatowań, w tym list punktowanych, numerowanych czy nagłówków.
 
 Przykłady oczekiwanej struktury wyjściowej:
 [
   {
-    "question": "Wzór na pole koła o promieniu $r$?",
-    "answer": "Wzór to $P = \\\\pi r^2$.",
-    "image": "https://example.com/circle.png"
+    "question": "Co to jest mitochondrium?",
+    "answer": "Elektrownia komórki, odpowiedzialna za wytwarzanie ATP."
   },
   {
     "question": "Jak zapisać ułamek $\\\\frac{a}{b}$ w LaTeX?",
-    "answer": "Używamy polecenia \`\\\\frac{a}{b}\`, co w JSON zapisujemy z podwójnym backslashem jako \`$\\\\frac{a}{b}$\`."
+    "answer": "Użyj polecenia $\\\\frac{a}{b}$; wewnątrz stringów JSON każdy ukośnik trzeba podwoić."
   }
 ]
 
