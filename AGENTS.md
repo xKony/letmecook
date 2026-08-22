@@ -72,7 +72,7 @@ For the full dependency list, see `package.json`. Note: `@types/katex` and `@typ
 - **Auth**: NextAuth.js (v5 Beta) with Credentials provider (BCrypt hashing, cost 12).
 - **State Management**: React Context API — `AppProvider` for global app state/decks, `I18nProvider` for translations, `DeckEditorSessionProvider` for bulk-edit sessions.
 - **Data Fetching**: Server Actions (`src/app/actions/`) for mutations and initial server-side fetching in `src/app/page.tsx`.
-- **UI Architecture**: Tailwind CSS 4 utility-first approach with `tw-animate-css`; CSS animations preferred over JS animation libraries.
+- **UI Architecture**: Tailwind CSS 4 utility-first approach with `tw-animate-css`; CSS animations/transitions are preferred for predetermined effects, while framer-motion (wrapped in `MotionConfig` with `reducedMotion="user"`) is used for dynamic/interruptible UI.
 - **Import & Parsing Pipeline (`src/lib/storage.ts`)**: Normalizes import data. Tries JSON parsing first, searching case-insensitively for question keys (`question`/`front`/`q`/`text`/`prompt`), answer keys (`answer`/`back`/`a`/`definition`/`response`), and image keys (`image`/`img`), with support for flattening nested deck collections. Falls back to plain-text line-by-line parsing using the pipe (`|`) separator. Imported order is preserved via `sortOrder`.
 - **Interactive AI Prompt Generator (`src/app/faq/page.tsx`)**: Dynamic prompt builder supporting real-time parameter injection (subject name, additional instructions/comments, raw questions) in English and Polish to output pre-formatted JSON structures.
 - **LaTeX & KaTeX Integration**: Inline (`$...$`) and block (`$$...$$`) math via `src/lib/latex.ts` + `src/lib/latex-render.tsx`; styles injected on demand (`ensureKatexStyles`), not globally imported.
@@ -106,7 +106,7 @@ Defined in `.env.local` (referenced in `drizzle.config.ts` and `src/db/index.ts`
 
 ## 9. Known Constraints and Gotchas
 - **Max Decks**: Default limit is 5 decks per user (configurable in `src/lib/constants.ts` and DB `users` table).
-- **Guest Sync**: Guest data does NOT auto-sync to Auth account on login; users must manually export/import via `src/app/actions/migration-actions.ts`.
+- **Guest Sync**: Guest data does NOT auto-sync to Auth account on login; moving decks between guest and account is manual, via per-deck JSON export and the drop-zone import on the dashboard. There is no whole-account DB migration UI.
 - **LocalStorage Debounce**: Guest state saves are debounced by 500ms (`LOCALSTORAGE_SAVE_DEBOUNCE_MS` in `src/lib/constants.ts`) to prevent performance hits during study sessions.
 - **CI Builds**: `src/db/index.ts` throws without `DATABASE_URL`; CI sets dummy env vars so `next build` can run.
 
@@ -116,6 +116,7 @@ Defined in `.env.local` (referenced in `drizzle.config.ts` and `src/db/index.ts`
 - **React Best Practices**: Keep client-side state responsive. Use React Context (`AppProvider`) for global application state. Optimize render cycles by utilizing hooks like `useMemo` and `useCallback` where appropriate. Ensure components remain decoupled, clean, and focus on their respective responsibilities.
 - **Package Manager**: Always use `pnpm` instead of `npm` for scripts execution (e.g., `pnpm build`, `pnpm dev`, `pnpm lint`, `pnpm typecheck`). `npm install` is blocked by the `preinstall` guard.
 - **Next.js Best Practices**: Always review and strictly apply the principles in the `/next-best-practices` skill documentation (including RSC boundaries, async pattern migrations, dynamic functions, data patterns, and optimal image/font loading) whenever writing, reviewing, or modifying Next.js codebase files.
+- **Commit frequently**: land every completed, verified unit of work (feature, fix, docs) as its own concise conventional commit; never batch unrelated changes; never leave the tree dirty with mixed concerns.
 
 ## Design Reference
 - Read `DESIGN-GUIDELINES.md` before any UI work (new components, restyling, color/motion changes).

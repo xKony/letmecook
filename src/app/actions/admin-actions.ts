@@ -144,19 +144,6 @@ export async function toggleDeckPublic(deckId: string) {
     revalidatePath("/");
 }
 
-export async function checkIsAdmin(): Promise<boolean> {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return false;
-    }
-
-    const user = await db.query.users.findFirst({
-        where: eq(users.id, session.user.id),
-    });
-
-    return user?.isAdmin ?? false;
-}
-
 export async function getAllUsers() {
     await requireAdmin();
 
