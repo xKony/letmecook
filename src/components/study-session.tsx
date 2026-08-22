@@ -175,7 +175,7 @@ export function StudySession() {
     }
 
     return (
-        <div className="study-stage h-[100dvh] flex flex-col overflow-hidden p-4 md:p-8">
+        <div className="study-stage flex-1 min-h-0 flex flex-col overflow-hidden p-4 md:p-6 [@media(min-height:820px)]:md:p-8">
             <div className="stage-orb-a" aria-hidden="true" />
             <div className="stage-orb-b" aria-hidden="true" />
             {/* Confirmation Modals */}
@@ -278,37 +278,35 @@ export function StudySession() {
             />
 
             <main
-                className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col"
                 aria-label={t("study.cardArea")}
             >
-                <div className="min-h-full flex flex-col items-center justify-center py-4 pb-32 md:pb-4 w-full">
-                    <AnimatePresence mode="wait">
-                        {currentCard && (
-                            <FlashcardComponent
-                                key={currentCard.id}
-                                card={currentCard}
-                                deckName={currentDeck.name}
-                                questionNumber={getQuestionNumber(currentCard)}
-                                isRevealed={isRevealed}
-                                onReveal={onReveal}
-                                onRate={onRate}
-                                onUpdateCard={updateCard}
-                                ttsEnabled={ttsEnabled}
-                                onTTSToggle={toggleTTS}
-                            />
-                        )}
-                    </AnimatePresence>
-                </div>
+                <AnimatePresence mode="wait">
+                    {currentCard && (
+                        <FlashcardComponent
+                            key={currentCard.id}
+                            card={currentCard}
+                            deckName={currentDeck.name}
+                            questionNumber={getQuestionNumber(currentCard)}
+                            isRevealed={isRevealed}
+                            onReveal={onReveal}
+                            onRate={onRate}
+                            onUpdateCard={updateCard}
+                            ttsEnabled={ttsEnabled}
+                            onTTSToggle={toggleTTS}
+                        />
+                    )}
+                </AnimatePresence>
             </main>
 
             {/* Bottom Navigation */}
-            <footer className="fixed bottom-0 left-0 right-0 z-20 p-4 pointer-events-none md:relative md:pointer-events-auto md:bg-transparent md:mt-6">
-                <div className="max-w-2xl mx-auto flex justify-between gap-4 pointer-events-auto bg-gradient-to-t from-background via-background/95 to-transparent md:bg-transparent pt-2 -mt-2 md:pt-0 md:mt-0">
+            <footer className="relative z-20 mt-3 md:mt-4 shrink-0">
+                <div className="max-w-2xl mx-auto flex justify-between gap-4">
                     <Button
                         variant="outline"
                         onClick={handlePrev}
                         disabled={playIndex === 0}
-                        className="flex-1 md:flex-none md:w-32 h-12"
+                        className="flex-1 md:flex-none md:w-32 h-11 md:h-12"
                         aria-label={t("study.previous")}
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -317,7 +315,7 @@ export function StudySession() {
                     <Button
                         variant="outline"
                         onClick={() => handleNext(() => setShowRestartModal(true))}
-                        className="flex-1 md:flex-none md:w-32 h-12"
+                        className="flex-1 md:flex-none md:w-32 h-11 md:h-12"
                         aria-label={t("study.next")}
                     >
                         {t("study.next")}

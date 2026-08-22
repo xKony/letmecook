@@ -90,11 +90,11 @@ export function FlashcardComponent({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -50, opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="w-full max-w-2xl mx-auto"
+            className="w-full max-w-2xl mx-auto my-auto"
         >
             {/* Card Container */}
             <div
-                className="relative bg-card/80 backdrop-blur-xl rounded-3xl border border-border shadow-2xl shadow-primary/10 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] dark:border-white/10 min-h-[400px] flex flex-col p-8 md:p-12"
+                className="relative bg-card/80 backdrop-blur-xl rounded-3xl border border-border shadow-2xl shadow-primary/10 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] dark:border-white/10 min-h-[min(25rem,52dvh)] flex flex-col p-5 sm:p-7 md:p-9 [@media(min-height:820px)]:md:p-12"
                 onTouchStart={onUpdateCard ? handleCardTouchStart : undefined}
                 onTouchMove={onUpdateCard ? handleCardTouchMove : undefined}
                 onTouchEnd={onUpdateCard ? handleCardTouchEnd : undefined}

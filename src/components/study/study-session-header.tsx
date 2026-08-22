@@ -49,7 +49,7 @@ export function StudySessionHeader({
     t,
 }: StudySessionHeaderProps) {
     return (
-        <header className="relative flex justify-between items-center mb-4 max-w-2xl mx-auto w-full h-10">
+        <header className="relative flex justify-between items-center mb-3 md:mb-4 max-w-2xl mx-auto w-full h-10 shrink-0">
             {/* Left: Close + Timer */}
             <div className="flex items-center gap-2 z-10">
                 <Button 

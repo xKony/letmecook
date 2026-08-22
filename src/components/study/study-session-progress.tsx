@@ -20,7 +20,7 @@ export function StudySessionProgress({ currentIndex, totalCards }: StudySessionP
     const progress = ((currentIndex + 1) / totalCards) * 100;
 
     return (
-        <div className="max-w-2xl mx-auto w-full mb-6">
+        <div className="max-w-2xl mx-auto w-full mb-3 md:mb-4">
             <ProgressBar value={progress} />
         </div>
     );
