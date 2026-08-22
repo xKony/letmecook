@@ -116,3 +116,8 @@ Defined in `.env.local` (referenced in `drizzle.config.ts` and `src/db/index.ts`
 - **React Best Practices**: Keep client-side state responsive. Use React Context (`AppProvider`) for global application state. Optimize render cycles by utilizing hooks like `useMemo` and `useCallback` where appropriate. Ensure components remain decoupled, clean, and focus on their respective responsibilities.
 - **Package Manager**: Always use `pnpm` instead of `npm` for scripts execution (e.g., `pnpm build`, `pnpm dev`, `pnpm lint`, `pnpm typecheck`). `npm install` is blocked by the `preinstall` guard.
 - **Next.js Best Practices**: Always review and strictly apply the principles in the `/next-best-practices` skill documentation (including RSC boundaries, async pattern migrations, dynamic functions, data patterns, and optimal image/font loading) whenever writing, reviewing, or modifying Next.js codebase files.
+
+## Design Reference
+- Read `DESIGN-GUIDELINES.md` before any UI work (new components, restyling, color/motion changes).
+- Brand tokens live in `src/app/globals.css`; level colors in `src/lib/level-styles.ts` are RESERVED.
+- Values marked "proposed" in the guidelines are NOT implemented tokens — don't use them as if they exist.
