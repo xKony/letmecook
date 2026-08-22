@@ -89,7 +89,7 @@ Defined in `.env.local` (referenced in `drizzle.config.ts` and `src/db/index.ts`
 - `AUTH_SECRET`: NextAuth.js encryption secret (Required for Auth Mode).
 
 ## 7. Key Configuration
-- **pnpm**: Pinned via `packageManager` in `package.json` (`pnpm@11.22.0`). Dependency overrides, build-script approvals (`allowBuilds`), and the `minimumReleaseAge` supply-chain policy live in `pnpm-workspace.yaml`. pnpm-only is enforced via the `preinstall` script.
+- **pnpm**: Pinned via `packageManager` in `package.json` (`pnpm@11.22.0`). Dependency overrides and build-script approvals (`allowBuilds`) live in `pnpm-workspace.yaml`. pnpm-only is enforced via the `preinstall` script.
 - **Tailwind v4**: Configured via `@import "tailwindcss"` in `globals.css` with inline theme extensions.
 - **TypeScript**: Strict mode enabled, `paths` alias `@/*` -> `./src/*`.
 - **Drizzle**: PostgreSQL dialect with schema located at `src/db/schema.ts`.
