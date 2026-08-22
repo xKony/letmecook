@@ -3,6 +3,11 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
 
+# TEMPORARY (2026-08-22): Next.js 16.3.2 in the lockfile was published
+# 2026-08-21T09:38Z and fails the default 24h minimumReleaseAge window until
+# ~09:38Z on 2026-08-22. Delete this line once the release has aged out.
+minimumReleaseAge: 8h
+
 overrides:
   "@types/react": 19.2.18
   "@types/react-dom": 19.2.4
