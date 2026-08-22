@@ -209,10 +209,10 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                                             variant="ghost"
                                             size="icon"
                                             onClick={startEditing}
-                                            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-6 w-6"
+                                            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-8 w-8 md:h-9 md:w-9"
                                             aria-label={t("common.rename")}
                                         >
-                                            <Pencil className="w-3 h-3" />
+                                            <Pencil className="w-3.5 h-3.5" />
                                         </Button>
                                     </div>
                                     <p className="text-sm text-muted-foreground">
@@ -222,7 +222,7 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                             )}
                     </div>
                     {!isEditing && (
-                        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                        <div className="flex items-center gap-2 sm:gap-1 flex-shrink-0 ml-1 sm:ml-2">
                             {isAdmin && (
                                 <Button
                                     variant="ghost"

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -25,6 +25,15 @@ export const metadata: Metadata = {
   description:
     "Learn smarter with active recall flashcards. Local-first, privacy-focused study app.",
   keywords: ["flashcards", "active recall", "study", "learning", "education"],
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f9f9fc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d0c13" },
+  ],
 };
 
 export default async function RootLayout({

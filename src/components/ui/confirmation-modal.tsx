@@ -37,31 +37,32 @@ export function ConfirmationModal({
                     onClick={onCancel}
                 >
                     <motion.div
-                        className="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm overflow-hidden"
+                        className="bg-card border border-border rounded-2xl shadow-xl shadow-primary/10 w-full max-w-sm overflow-hidden"
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12, ease: "easeOut" } }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="p-6">
+                        <div className="p-5 sm:p-6">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className={`p-2 rounded-full ${variant === "destructive" ? "bg-red-500/10 text-destructive" : "bg-primary/10 text-primary"}`}>
                                     <AlertTriangle className="w-5 h-5" />
                                 </div>
-                                <h3 className="text-lg font-semibold">{title}</h3>
+                                <h3 className="text-lg font-semibold tracking-tight">{title}</h3>
                             </div>
 
-                            <p className="text-muted-foreground mb-6">
+                            <p className="text-sm text-muted-foreground mb-6">
                                 {description}
                             </p>
 
-                            <div className="flex gap-3 justify-end">
-                                <Button variant="ghost" onClick={onCancel}>
+                            <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+                                <Button variant="ghost" className="h-11 sm:h-9" onClick={onCancel}>
                                     {cancelLabel}
                                 </Button>
                                 <Button
                                     variant={variant === "destructive" ? "destructive" : "default"}
+                                    className="h-11 sm:h-9"
                                     onClick={onConfirm}
                                 >
                                     {confirmLabel}

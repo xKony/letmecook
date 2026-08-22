@@ -142,7 +142,7 @@ export function FlashcardComponent({
                                 exit={{ opacity: 0 }}
                                 className="relative"
                             >
-                                <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight text-foreground">
+                                <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight text-balance text-foreground">
                                     <FlashcardContent
                                         text={card.question}
                                         isLarge={true}
@@ -216,7 +216,7 @@ export function FlashcardComponent({
                                         exit={{ opacity: 0 }}
                                         className="relative w-full"
                                     >
-                                        <div aria-live="polite">
+                                        <div aria-live="polite" className="text-lg md:text-xl leading-relaxed text-foreground/95">
                                             <FlashcardContent
                                                 text={card.answer}
                                                 onImageZoom={openZoom}

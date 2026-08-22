@@ -43,8 +43,10 @@ export function DashboardHeader() {
     return (
         <div className="flex justify-between items-center mb-8">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">{t("dashboard.title")}</h1>
-                <p className="text-muted-foreground flex items-center gap-2">
+                <h1 className="text-[1.7rem] leading-tight sm:text-3xl font-bold tracking-tight text-balance">
+                    {t("dashboard.title")}
+                </h1>
+                <p className="text-sm sm:text-base text-muted-foreground flex items-center gap-2 mt-0.5">
                     <User className="w-4 h-4" />
                     {isGuest ? t("common.guestMode") : displayName}
                 </p>
@@ -58,11 +60,11 @@ export function DashboardHeader() {
                     variant="ghost"
                     size="icon-sm"
                     onClick={() => setIsMobileMenuOpen((open) => !open)}
-                    className="sm:hidden"
+                    className="sm:hidden h-11 w-11"
                     aria-expanded={isMobileMenuOpen}
                     aria-label={t("common.menu")}
                 >
-                    {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                    {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                 </Button>
                 <AnimatePresence>
                     {isMobileMenuOpen && (
@@ -71,7 +73,7 @@ export function DashboardHeader() {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.97 }}
                             transition={{ duration: 0.15, ease: "easeOut" }}
-                            className="origin-top-right absolute right-0 top-11 z-50 w-64 rounded-2xl border border-border bg-background p-3 shadow-xl sm:hidden"
+                            className="origin-top-right absolute right-0 top-12 z-50 w-72 rounded-2xl border border-border bg-background p-4 shadow-xl shadow-primary/10 sm:hidden"
                         >
                         <div className="space-y-3 border-b border-border pb-3">
                             <div className="flex items-center justify-between gap-3">
@@ -90,9 +92,8 @@ export function DashboardHeader() {
                         <div className="mt-3 flex flex-col gap-1">
                             <Button
                                 variant="ghost"
-                                size="sm"
                                 onClick={() => navigateFromMobileMenu("/faq")}
-                                className="justify-start gap-2"
+                                className="h-11 justify-start gap-2"
                             >
                                 <HelpCircle className="w-4 h-4" />
                                 {t("common.faq")}
@@ -102,7 +103,7 @@ export function DashboardHeader() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => navigateFromMobileMenu("/admin")}
-                                    className="justify-start gap-2"
+                                    className="h-11 justify-start gap-2"
                                 >
                                     <Shield className="w-4 h-4" />
                                     {t("common.admin")}
@@ -113,7 +114,7 @@ export function DashboardHeader() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => navigateFromMobileMenu("/login")}
-                                    className="justify-start gap-2"
+                                    className="h-11 justify-start gap-2"
                                 >
                                     <LogIn className="w-4 h-4" />
                                     {t("common.signIn")}
@@ -124,7 +125,7 @@ export function DashboardHeader() {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => navigateFromMobileMenu("/settings")}
-                                        className="justify-start gap-2"
+                                        className="h-11 justify-start gap-2"
                                     >
                                         <Settings className="w-4 h-4" />
                                         {t("common.settings")}
@@ -133,7 +134,7 @@ export function DashboardHeader() {
                                         variant="ghost"
                                         size="sm"
                                         onClick={signOutFromMobileMenu}
-                                        className="justify-start gap-2"
+                                        className="h-11 justify-start gap-2"
                                     >
                                         <LogOut className="w-4 h-4" />
                                         {t("common.signOut")}
