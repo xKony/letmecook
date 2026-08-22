@@ -37,5 +37,10 @@ next-env.d.ts
 # next-agents-md
 .next-docs/
 
+# local agent tooling
+.opencode/
+.playwright-mcp/
+opencode.json
+
 # local review notes
 improvements.md
