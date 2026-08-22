@@ -48,6 +48,7 @@ type ContentDict = {
   notesLabel: string;
   notesPlaceholder: string;
   questionsLabel: string;
+  breakdownLabel: string;
   questionsPlaceholder: string;
   copyPromptBtn: string;
   copiedBtn: string;
@@ -68,6 +69,7 @@ export default function FAQPage() {
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
   const [questions, setQuestions] = useState("");
+  const [decompose, setDecompose] = useState(false);
 
   const getFormattedPrompt = () => {
     const template = t.promptTextTemplate;
@@ -79,9 +81,13 @@ export default function FAQPage() {
       const context = contextLines.length
         ? `\nKontekst:\n${contextLines.join("\n")}\n`
         : "";
+      const decomposeBlock = decompose
+        ? "\nObsługa złożoności: Gdy pytanie jest szerokie lub wieloczęściowe, podziel je na kilka węższych, samodzielnych pytań — po jednym na każdy kluczowy aspekt — i wygeneruj dla każdego osobną fiszkę, zachowując pierwotną kolejność listy źródłowej.\n"
+        : "";
 
       return template
         .replace("{KONTEKST}", context)
+        .replace("{ROZBIJ}", decomposeBlock)
         .replace("[TUTAJ WKLEJ SWOJE PYTANIA]", questions.trim() || "[TUTAJ WKLEJ SWOJE PYTANIA]");
     }
 
@@ -91,9 +97,13 @@ export default function FAQPage() {
     const context = contextLines.length
       ? `\nContext:\n${contextLines.join("\n")}\n`
       : "";
+    const decomposeBlock = decompose
+      ? "\nComplexity handling: When a question is broad or multi-part, split it into several narrower, self-contained questions - one per key aspect - and generate a separate flashcard for each of them, keeping the original order of the source list.\n"
+      : "";
 
     return template
       .replace("{CONTEXT_BLOCK}", context)
+      .replace("{BREAKDOWN_BLOCK}", decomposeBlock)
       .replace("[PASTE YOUR QUESTIONS HERE]", questions.trim() || "[PASTE YOUR QUESTIONS HERE]");
   };
 
@@ -129,6 +139,7 @@ export default function FAQPage() {
       notesLabel: "Additional Comments (Optional)",
       notesPlaceholder: "e.g., Focus on Krebs cycle, skip section 4",
       questionsLabel: "Your Questions / Raw Notes",
+      breakdownLabel: "Break down complex questions into smaller ones",
       questionsPlaceholder: "Paste your questions here (one per line) or raw text...",
       promptTextTemplate: `Role: You are an Instructional Design Expert and a specialist in Active Recall methodology. Your task is to transform raw questions and source materials into a high-quality set of educational flashcards.
 {CONTEXT_BLOCK}
@@ -138,11 +149,11 @@ Execution Instructions (Step-by-Step):
 1. Analysis and Correction: Read each item from the input. Correct any linguistic, spelling, or punctuation errors. If a question is vague, rephrase it to be specific while maintaining the original intent. If parts of the input are raw notes rather than explicit questions, transform the key facts into clear, self-contained questions.
 2. Content Development: Answer each question, treating the content of the attached materials as the primary source of truth.
 3. Filling Gaps: If the presentation/document does not contain the answer, use your broad expert knowledge to provide a factually correct and comprehensive response.
-4. Stylistics: Keep answers flashcard-sized - specific yet concise: typically 1-3 sentences (max ~60 words) unless the question genuinely demands more (derivations, enumerations). Use professional terminology.
+4. Stylistics: Answers must be specific yet exhaustive - always provide the most complete, detailed response possible, leaving no room for doubt. Use professional terminology.
 5. Language: Write each answer in the same language as its source question.
-
+{BREAKDOWN_BLOCK}
 CRITICAL FORMATTING RULES (Constraint Checklist):
-- Generate exactly one card per input item, preserving the original order of the list.
+- Preserve the original order of the list; every input item must produce at least one card.
 - Generate ONLY one code block labeled as "json".
 - The result must be a valid array of objects with keys: "question", "answer", and optionally "image".
 - Include an "image" key ONLY if the source material contains a genuine image URL; NEVER invent or guess image URLs.
@@ -380,6 +391,7 @@ QUESTIONS:
       notesLabel: "Dodatkowe uwagi (opcjonalnie)",
       notesPlaceholder: "np. Skup się na cyklu Krebsa, pomiń rozdział 4",
       questionsLabel: "Twoje pytania / Surowe notatki",
+      breakdownLabel: "Rozbij złożone pytania na mniejsze",
       questionsPlaceholder: "Wklej tutaj swoje pytania (jedno w linii) lub surowy tekst...",
       promptTextTemplate: `Rola: Jesteś ekspertem ds. projektowania instruktażowego (Instructional Design) oraz specjalistą od metodologii Active Recall. Twoim zadaniem jest przekształcenie surowych pytań i materiałów źródłowych w wysokiej jakości zestaw fiszek do nauki.
 {KONTEKST}
@@ -389,11 +401,11 @@ Instrukcje wykonawcze (Krok po kroku):
 1. Analiza i korekta: Przeczytaj każdy element wejścia. Popraw błędy językowe, ortograficzne i interpunkcyjne. Jeśli pytanie jest niejasne, sformułuj je tak, aby było konkretne, zachowując pierwotny sens. Jeśli część wejścia to surowe notatki, a nie jawne pytania, przekształć kluczowe fakty w jasne, samodzielne pytania.
 2. Opracowanie merytoryczne: Odpowiedz na każde pytanie, traktując treść załączonych materiałów jako priorytetowe źródło prawdy.
 3. Uzupełnienie luk: Jeśli prezentacja/dokument nie zawiera odpowiedzi, wykorzystaj swoją szeroką wiedzę ekspercką, aby udzielić poprawnej merytorycznie i wyczerpującej odpowiedzi.
-4. Stylistyka: Zachowaj rozmiar fiszki — odpowiedzi konkretne, lecz zwięzłe: zwykle 1–3 zdania (maks. ok. 60 słów), chyba że pytanie rzeczywiście tego wymaga (wyprowadzenia, wyliczenia). Używaj profesjonalnej terminologii.
+4. Stylistyka: Odpowiedzi muszą być konkretne, lecz wyczerpujące - zawsze podawaj najbardziej kompletną i szczegółową odpowiedź, bez niedomówień. Używaj profesjonalnej terminologii.
 5. Język: Każdą odpowiedź zapisz w tym samym języku, w którym napisane jest pytanie źródłowe.
-
+{ROZBIJ}
 KRYTYCZNE ZASADY FORMATOWANIA (Constraint Checklist):
-- Wygeneruj dokładnie jedną fiszkę na każdy element wejścia, zachowując pierwotną kolejność listy.
+- Zachowaj pierwotną kolejność listy; każdy element wejścia musi dać co najmniej jedną fiszkę.
 - Wygeneruj wyłącznie jeden blok kodu oznaczony jako "json".
 - Wynik musi być poprawną tablicą obiektów z kluczami: "question", "answer" oraz opcjonalnie "image".
 - Klucz "image" dodawaj WYŁĄCZNIE wtedy, gdy materiały źródłowe zawierają prawdziwy adres URL obrazu; NIGDY nie wymyślaj ani nie zgaduj adresów URL.
@@ -694,6 +706,19 @@ PYTANIA:
               rows={4}
               className="w-full text-sm p-3 bg-muted/30 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono resize-y placeholder:text-muted-foreground/60"
             />
+          </div>
+
+          <div className="flex items-center gap-2.5 mb-6">
+            <input
+              id="decompose-toggle"
+              type="checkbox"
+              checked={decompose}
+              onChange={(e) => setDecompose(e.target.checked)}
+              className="size-4 rounded border-border accent-primary cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            />
+            <label htmlFor="decompose-toggle" className="text-sm text-foreground/80 cursor-pointer select-none">
+              {t.breakdownLabel}
+            </label>
           </div>
 
           <div className="relative">
