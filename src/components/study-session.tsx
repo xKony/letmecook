@@ -175,7 +175,9 @@ export function StudySession() {
     }
 
     return (
-        <div className="h-[100dvh] flex flex-col overflow-hidden p-4 md:p-8">
+        <div className="study-stage h-[100dvh] flex flex-col overflow-hidden p-4 md:p-8">
+            <div className="stage-orb-a" aria-hidden="true" />
+            <div className="stage-orb-b" aria-hidden="true" />
             {/* Confirmation Modals */}
             <ConfirmationModal
                 isOpen={showRestartModal}

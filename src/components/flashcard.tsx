@@ -94,7 +94,7 @@ export function FlashcardComponent({
         >
             {/* Card Container */}
             <div
-                className="relative bg-card rounded-3xl border border-border shadow-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] dark:border-white/5 min-h-[400px] flex flex-col p-8 md:p-12"
+                className="relative bg-card/80 backdrop-blur-xl rounded-3xl border border-border shadow-2xl shadow-primary/10 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] dark:border-white/10 min-h-[400px] flex flex-col p-8 md:p-12"
                 onTouchStart={onUpdateCard ? handleCardTouchStart : undefined}
                 onTouchMove={onUpdateCard ? handleCardTouchMove : undefined}
                 onTouchEnd={onUpdateCard ? handleCardTouchEnd : undefined}
@@ -194,7 +194,7 @@ export function FlashcardComponent({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 20 }}
                             transition={{ duration: 0.3, delay: 0.1 }}
-                            className="flex-1 flex items-center justify-center border-t border-border pt-6 relative group"
+                            className="answer-reveal-pulse flex-1 flex items-center justify-center border-t border-border pt-6 relative group"
                             onMouseEnter={() => showEditHintFor("answer")}
                             onMouseLeave={scheduleHideEditHint}
                         >

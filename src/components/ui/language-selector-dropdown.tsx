@@ -31,7 +31,7 @@ export const LanguageSelectorDropdown = () => {
       <button
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex items-center gap-2 rounded-full border h-8 px-3 text-sm transition-all",
+          "flex items-center gap-2 rounded-full border h-8 px-3 text-sm transition-colors",
           "bg-white border-zinc-200 text-zinc-800",
           "dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-200",
           "hover:bg-zinc-50 dark:hover:bg-zinc-900"

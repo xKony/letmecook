@@ -113,7 +113,7 @@ function LoginForm() {
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full max-w-md"
             >
-                <div className="bg-card border border-border rounded-2xl p-8 shadow-xl">
+                <div className="bg-card border border-border rounded-2xl p-8 shadow-xl shadow-primary/5">
                     <div className="text-center mb-8">
                         <h1 className="text-3xl font-bold text-foreground mb-2">
                             🍳 LetMeCook
@@ -131,7 +131,7 @@ function LoginForm() {
                                     type="text"
                                     name="name"
                                     placeholder="Name (optional)"
-                                    className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
                                 />
                             </div>
                         )}
@@ -143,7 +143,7 @@ function LoginForm() {
                                 name="email"
                                 placeholder="Email"
                                 required
-                                className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
                             />
                         </div>
 
@@ -155,7 +155,7 @@ function LoginForm() {
                                 placeholder="Password"
                                 required
                                 minLength={6}
-                                className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
                             />
                         </div>
 
@@ -165,7 +165,7 @@ function LoginForm() {
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
-                                    className="text-rose-400 text-sm text-center p-3 bg-rose-500/10 rounded-lg border border-rose-500/20"
+                                    className="text-destructive text-sm text-center p-3 bg-destructive/10 rounded-lg border border-destructive/20"
                                 >
                                     {error}
                                 </motion.div>

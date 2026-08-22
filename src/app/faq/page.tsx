@@ -662,7 +662,7 @@ PYTANIA:
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder={t.subjectPlaceholder}
-                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/60"
+                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-[color,background-color,border-color,box-shadow] placeholder:text-muted-foreground/60"
               />
             </div>
             
@@ -676,7 +676,7 @@ PYTANIA:
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder={t.notesPlaceholder}
-                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/60"
+                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-[color,background-color,border-color,box-shadow] placeholder:text-muted-foreground/60"
               />
             </div>
           </div>
@@ -728,7 +728,7 @@ PYTANIA:
             <Button
               onClick={() => handleCopyPrompt(getFormattedPrompt())}
               variant={isCopied ? "default" : "secondary"}
-              className={`w-full sm:w-auto gap-2 transition-all order-1 sm:order-2 ${isCopied ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
+              className={`w-full sm:w-auto gap-2 transition-colors order-1 sm:order-2 ${isCopied ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
             >
               <AnimatePresence mode="wait" initial={false}>
                 {isCopied ? (
@@ -779,7 +779,7 @@ PYTANIA:
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: secIndex * 0.1 + itemIndex * 0.05 }}
-                    className={`border border-border rounded-xl overflow-hidden transition-all duration-300 ${isOpen ? "bg-card/80 border-primary/50 shadow-[0_0_15px_rgba(var(--primary),0.1)]" : "bg-card hover:border-primary/30"}`}
+                    className={`border border-border rounded-xl overflow-hidden transition-[background-color,border-color,box-shadow] duration-300 ${isOpen ? "bg-card/80 border-primary/50 shadow-lg shadow-primary/10" : "bg-card hover:border-primary/30"}`}
                   >
                     <button
                       onClick={() => toggleFaq(id)}

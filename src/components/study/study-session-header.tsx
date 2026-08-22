@@ -82,7 +82,7 @@ export function StudySessionHeader({
                         {t(`levels.${activeFilter}`)}
                     </span>
                 )}
-                <span>{t("study.cardCounter", { current: currentIndex + 1, total: totalCards })}</span>
+                <span className="tabular-nums">{t("study.cardCounter", { current: currentIndex + 1, total: totalCards })}</span>
             </button>
 
             {/* Right: Action buttons */}
