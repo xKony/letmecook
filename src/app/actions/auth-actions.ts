@@ -4,14 +4,11 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { signIn, auth } from "@/lib/auth";
-import { AuthError } from "next-auth";
+import { auth } from "@/lib/auth";
 import { getClientIP } from "@/lib/get-client-ip";
-import { checkRateLimit, getRateLimitState, RATE_LIMITS } from "@/lib/rate-limit";
-import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import {
     registerSchema,
-    loginSchema,
     changePasswordSchema,
     changeNameSchema,
 } from "@/lib/validations";
@@ -60,52 +57,6 @@ export async function registerUser(formData: FormData) {
     } catch (error) {
         console.error("Registration error:", error);
         return { error: "Failed to create account" };
-    }
-}
-
-export async function loginUser(
-    formData: FormData
-): Promise<{ error?: string; success?: true }> {
-    const ip = await getClientIP();
-    const rateLimit = getRateLimitState(`login:${ip}`, RATE_LIMITS.login);
-    if (!rateLimit.success) {
-        return {
-            error: `Too many login attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.`,
-        };
-    }
-
-    const validation = loginSchema.safeParse({
-        email: formData.get("email"),
-        password: formData.get("password"),
-    });
-
-    if (!validation.success) {
-        return { error: validation.error.issues[0]?.message || "Invalid input" };
-    }
-
-    const { email, password } = validation.data;
-
-    try {
-        const result = await signIn("credentials", {
-            email,
-            password,
-            redirect: false,
-        });
-
-        if (result?.error) {
-            return { error: "Invalid email or password" };
-        }
-
-        return { success: true };
-    } catch (error) {
-        if (isRedirectError(error)) {
-            throw error;
-        }
-        if (error instanceof AuthError) {
-            return { error: "Invalid email or password" };
-        }
-        console.error("Login error:", error);
-        return { error: "An unexpected error occurred. Please try again." };
     }
 }
 

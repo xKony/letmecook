@@ -43,8 +43,10 @@ export function AppMain({ initialDecks, initialMaxDecks }: AppMainProps) {
 
     return (
         <>
-            {isGuest && <GuestModeBanner />}
-            {currentDeck ? <StudySession /> : <Dashboard />}
+            <div className={currentDeck ? "flex h-[100dvh] flex-col overflow-hidden" : undefined}>
+                {isGuest && <GuestModeBanner />}
+                {currentDeck ? <StudySession /> : <Dashboard />}
+            </div>
             <DeckSetEditorModal />
         </>
     );

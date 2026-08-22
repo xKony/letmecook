@@ -4,7 +4,6 @@ import { db } from "@/db";
 import { decks, flashcards, deckPermissions, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { eq, and, asc } from "drizzle-orm";
-import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createDeckSchema, updateDeckSchema } from "@/lib/validations";
 import { cache } from "react";
@@ -104,75 +103,6 @@ export const getUserMaxDecks = cache(async function (): Promise<number> {
 
     return dbUser?.maxDecks ?? 5;
 });
-
-/**
- * READ: Get single deck with cards
- * @param deckId UUID of the deck
- * @param shareToken Optional share token for public access
- * @returns Deck with flashcards and access level
- */
-export async function getDeck(deckId: string, shareToken?: string) {
-    const session = await auth();
-    const userId = session?.user?.id;
-
-    // Check for share token access
-    if (shareToken) {
-        const deck = await db.query.decks.findFirst({
-            where: eq(decks.shareToken, shareToken),
-            with: {
-                flashcards: {
-                    orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
-                },
-            },
-        });
-        if (deck) {
-            return { deck, access: "viewer" as AccessLevel };
-        }
-    }
-
-    const { deck, access } = await getDeckAccess(deckId, userId);
-
-    if (!deck || !access) {
-        return null;
-    }
-
-    const deckWithCards = await db.query.decks.findFirst({
-        where: eq(decks.id, deckId),
-        with: {
-            flashcards: {
-                orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
-            },
-        },
-    });
-
-    return { deck: deckWithCards, access };
-}
-
-/**
- * READ: Get shared decks (where user has permission)
- * @returns Array of decks shared with the user
- */
-export async function getSharedDecks() {
-    const user = await requireAuth();
-
-    const permissions = await db.query.deckPermissions.findMany({
-        where: eq(deckPermissions.userId, user.id),
-        with: {
-            deck: {
-                with: {
-                    flashcards: {
-                        orderBy: [asc(flashcards.sortOrder), asc(flashcards.createdAt)],
-                    },
-                },
-            },
-        },
-    });
-
-    return permissions.map((p: typeof permissions[number]) => ({
-        ...p.deck,
-        role: p.role,
-    }));
-}
 
 /**
  * CREATE: New deck
@@ -294,103 +224,5 @@ export async function deleteDeck(deckId: string) {
     }
 
     await db.delete(decks).where(eq(decks.id, deckId));
-    revalidatePath("/");
-}
-
-/**
- * SHARING: Generate share link
- * @param deckId UUID of the deck
- * @returns The share token
- */
-export async function generateShareLink(deckId: string) {
-    const user = await requireAuth();
-    const { deck, access } = await getDeckAccess(deckId, user.id);
-
-    if (access !== "owner") {
-        throw new Error("Only owner can generate share link");
-    }
-
-    // Generate new token or return existing
-    if (deck?.shareToken) {
-        return deck.shareToken;
-    }
-
-    const token = randomBytes(16).toString("hex");
-
-    await db.update(decks)
-        .set({ shareToken: token })
-        .where(eq(decks.id, deckId));
-
-    revalidatePath("/");
-    return token;
-}
-
-/**
- * SHARING: Add user permission
- * @param deckId UUID of the deck
- * @param email Email of the user to grant access
- * @param role Access level (viewer or editor)
- */
-export async function addDeckPermission(deckId: string, email: string, role: "viewer" | "editor") {
-    const user = await requireAuth();
-    const { access } = await getDeckAccess(deckId, user.id);
-
-    if (access !== "owner") {
-        throw new Error("Only owner can manage permissions");
-    }
-
-    // Find user by email
-    const targetUser = await db.query.users.findFirst({
-        where: eq(users.email, email),
-    });
-
-    if (!targetUser) {
-        throw new Error("User not found");
-    }
-
-    // Check if permission already exists
-    const existing = await db.query.deckPermissions.findFirst({
-        where: and(
-            eq(deckPermissions.deckId, deckId),
-            eq(deckPermissions.userId, targetUser.id)
-        ),
-    });
-
-    if (existing) {
-        // Update existing permission
-        await db.update(deckPermissions)
-            .set({ role })
-            .where(eq(deckPermissions.id, existing.id));
-    } else {
-        // Create new permission
-        await db.insert(deckPermissions).values({
-            deckId,
-            userId: targetUser.id,
-            role,
-        });
-    }
-
-    revalidatePath("/");
-}
-
-/**
- * SHARING: Remove user permission
- * @param deckId UUID of the deck
- * @param targetUserId UUID of the user to remove
- */
-export async function removeDeckPermission(deckId: string, targetUserId: string) {
-    const user = await requireAuth();
-    const { access } = await getDeckAccess(deckId, user.id);
-
-    if (access !== "owner") {
-        throw new Error("Only owner can manage permissions");
-    }
-
-    await db.delete(deckPermissions)
-        .where(and(
-            eq(deckPermissions.deckId, deckId),
-            eq(deckPermissions.userId, targetUserId)
-        ));
-
     revalidatePath("/");
 }

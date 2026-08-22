@@ -34,7 +34,7 @@ export function FlashcardRating({
     const { t } = useI18n();
 
     return (
-        <div className="relative z-10 mt-6 space-y-4 w-full">
+        <div className="relative z-10 mt-3 space-y-3 md:mt-5 w-full">
             <AnimatePresence mode="wait" initial={false}>
                 {!isRevealed ? (
                     <motion.div
@@ -45,7 +45,7 @@ export function FlashcardRating({
                     >
                         <Button
                             onClick={onReveal}
-                            className="w-full h-14 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-lg shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            className="w-full h-12 md:h-14 rounded-full bg-gradient-to-b from-primary to-primary/85 text-primary-foreground font-semibold text-lg shadow-lg shadow-primary/30 transition-[transform,filter,box-shadow] duration-200 ease-out [@media(hover:hover)]:hover:brightness-110 [@media(hover:hover)]:hover:scale-[1.02] active:scale-[0.98]"
                         >
                             {t("study.reveal")}
                         </Button>
@@ -63,7 +63,7 @@ export function FlashcardRating({
                                 key={rating.value}
                                 onClick={() => onRate(rating.value)}
                                 variant="outline"
-                                className={`h-16 rounded-xl border-2 transition-all font-medium ${RATING_STYLES[rating.value]}`}
+                                className={`h-12 md:h-14 [@media(min-height:820px)]:md:h-16 rounded-xl border-2 transition-colors duration-150 active:scale-[0.98] font-medium ${RATING_STYLES[rating.value]}`}
                             >
                                 {t(`ratings.${rating.value}`)}
                             </Button>

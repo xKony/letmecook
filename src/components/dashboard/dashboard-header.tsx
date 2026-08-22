@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { User, HelpCircle, Shield, Settings, LogIn, LogOut, Menu, X } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
@@ -63,8 +64,15 @@ export function DashboardHeader() {
                 >
                     {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
                 </Button>
-                {isMobileMenuOpen && (
-                    <div className="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-border bg-background p-3 shadow-xl sm:hidden">
+                <AnimatePresence>
+                    {isMobileMenuOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.97 }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
+                            className="origin-top-right absolute right-0 top-11 z-50 w-64 rounded-2xl border border-border bg-background p-3 shadow-xl sm:hidden"
+                        >
                         <div className="space-y-3 border-b border-border pb-3">
                             <div className="flex items-center justify-between gap-3">
                                 <span className="text-sm font-medium text-muted-foreground">
@@ -133,8 +141,9 @@ export function DashboardHeader() {
                                 </>
                             )}
                         </div>
-                    </div>
-                )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
                 <Button
                     variant="ghost"
                     size="sm"

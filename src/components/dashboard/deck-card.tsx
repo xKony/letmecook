@@ -1,11 +1,19 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Pencil, Check, X, Download, Trash2, ListTree, Globe } from "lucide-react";
+import {
+    motion,
+    useMotionTemplate,
+    useMotionValue,
+    useReducedMotion,
+    useSpring,
+} from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { ReplaceInLibraryDialog } from "@/components/dashboard/replace-in-library-dialog";
 import { useI18n } from "@/lib/i18n-context";
 import { Button } from "@/components/ui/button";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
 import { downloadDeckJson } from "@/lib/deck-export";
@@ -28,6 +36,33 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
     const [showReplaceInLibrary, setShowReplaceInLibrary] = useState(false);
     const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const prefersReducedMotion = useReducedMotion();
+    const [hasFinePointer, setHasFinePointer] = useState(false);
+    const spotlightX = useMotionValue(0);
+    const spotlightY = useMotionValue(0);
+    const spotlightSpringConfig = { stiffness: 150, damping: 20 };
+    const spotlightSX = useSpring(spotlightX, spotlightSpringConfig);
+    const spotlightSY = useSpring(spotlightY, spotlightSpringConfig);
+    const spotlightBackground = useMotionTemplate`radial-gradient(350px circle at ${spotlightSX}px ${spotlightSY}px, color-mix(in oklab, var(--primary) 12%, transparent), transparent 70%)`;
+    const isSpotlightEnabled = hasFinePointer && !prefersReducedMotion;
+
+    useEffect(() => {
+        const query = window.matchMedia("(hover: hover) and (pointer: fine)");
+        const update = () => setHasFinePointer(query.matches);
+        update();
+        query.addEventListener("change", update);
+        return () => query.removeEventListener("change", update);
+    }, []);
+
+    const handleCardPointerMove = useCallback(
+        (e: React.PointerEvent<HTMLDivElement>) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            spotlightX.set(e.clientX - rect.left);
+            spotlightY.set(e.clientY - rect.top);
+        },
+        [spotlightX, spotlightY]
+    );
 
     /**
      * Handles starting the rename process
@@ -111,9 +146,10 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
     return (
         <>
             <div
-                className="deck-card-animate group bg-card rounded-xl p-4 border border-border hover:border-primary/30 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="deck-card-animate group relative bg-card rounded-xl p-4 border border-border hover:border-primary/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10 transition-[border-color,box-shadow,transform] duration-200 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 onClick={() => !isEditing && !isContextMenuOpen && onSelect(deck.id)}
                 onKeyDown={handleCardKeyDown}
+                onPointerMove={isSpotlightEnabled ? handleCardPointerMove : undefined}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchEnd}
@@ -121,6 +157,13 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                 role="button"
                 aria-label={t("dashboard.cardsCount", { count: deck.cards.length })}
             >
+                {isSpotlightEnabled && (
+                    <motion.div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{ background: spotlightBackground }}
+                    />
+                )}
                 <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
                         {isEditing ? (
@@ -236,16 +279,12 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                     )}
                 </div>
                 {/* Progress bar */}
-                <div className="mt-3 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                        className="h-full bg-gradient-to-r from-blue-400 to-purple-500 rounded-full transition-all"
-                        style={{
-                            width: `${deck.cards.length > 0
-                                ? (deck.cards.filter((c) => c.level !== "Nowe").length / deck.cards.length) * 100
-                                : 0}%`,
-                        }}
-                    />
-                </div>
+                <ProgressBar
+                    className="mt-3"
+                    value={deck.cards.length > 0
+                        ? (deck.cards.filter((c) => c.level !== "Nowe").length / deck.cards.length) * 100
+                        : 0}
+                />
             </div>
 
             {isContextMenuOpen && (

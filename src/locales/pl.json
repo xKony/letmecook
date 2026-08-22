@@ -12,15 +12,14 @@
     "signIn": "Zaloguj się",
     "signOut": "Wyloguj się",
     "guestMode": "Tryb Gościa",
-    "backToDashboard": "Wróć do Panelu",
     "added": "Dodano",
     "retry": "Ponów",
-    "ok": "OK",
     "go": "Idź",
     "restart": "Restart",
     "menu": "Menu",
     "language": "Język",
-    "theme": "Motyw"
+    "theme": "Motyw",
+    "close": "Zamknij"
   },
   "dashboard": {
     "title": "LetMeCook 🍳",
@@ -75,7 +74,6 @@
     "resetProgressDescription": "Czy na pewno chcesz zresetować wszystkie karty do statusu 'Nowe'? Tego nie można cofnąć.",
     "deckStats": "Statystyki talii",
     "searchPlaceholder": "Szukaj w pytaniach i odpowiedziach...",
-    "noSearchResults": "Brak kart pasujących do wyszukiwania",
     "noSearchResultsFor": "Brak pytań ani odpowiedzi z „{{query}}”",
     "resultsCount": "{{total}} kart / {{filtered}} wyników",
     "clickToFilter": "Kliknij poziom, aby filtrować karty",
@@ -99,7 +97,10 @@
     "enterAnswer": "Wpisz odpowiedź...",
     "mentalAnswer": "(Odpowiedź w pamięci)",
     "imageFailed": "Nie udało się załadować obrazu",
-    "zoomHint": "Kliknij gdziekolwiek lub naciśnij Escape, aby zamknąć"
+    "zoomHint": "Kliknij gdziekolwiek lub naciśnij Escape, aby zamknąć",
+    "shuffleOn": "Tasowanie włączone",
+    "shuffleOff": "Tasowanie wyłączone",
+    "cardArea": "Obszar fiszek"
   },
   "levels": {
     "Nowe": "Nowe",
@@ -128,9 +129,6 @@
     "goDashboardBtn": "Przejdź do panelu głównego",
     "promptTitle": "Generator zapytań AI",
     "promptDescription": "Skopiuj poniższe zapytanie do swojego ulubionego modelu językowego (LLM), aby automatycznie wygenerować fiszki ze swoich notatek.",
-    "promptText": "Rola: Jesteś ekspertem ds. projektowania instruktażowego (Instructional Design) oraz specjalistą od metodologii Active Recall. Twoim zadaniem jest przekształcenie surowych pytań i materiałów źródłowych w wysokiej jakości zestaw fiszek do nauki.\n\nCel zadania: Stworzenie bazy pytań i odpowiedzi (Pytanie | Odpowiedź) na podstawie dostarczonej listy pytań oraz treści załączonej prezentacji/dokumentu.\n\nInstrukcje wykonawcze (Krok po kroku):\n1. Analiza i korekta: Przeczytaj każde pytanie z listy. Popraw błędy językowe, ortograficzne i interpunkcyjne. Jeśli pytanie jest niejasne, sformułuj je tak, aby było konkretne, zachowując pierwotny sens.\n2. Opracowanie merytoryczne: Odpowiedz na każde pytanie, traktując treść załączonej prezentacji jako priorytetowe źródło prawdy. \n3. Uzupełnienie luk: Jeśli prezentacja nie zawiera odpowiedzi, wykorzystaj swoją szeroką wiedzę ekspercką, aby udzielić pełnej, poprawnej merytorycznie i wyczerpującej odpowiedzi.\n4. Stylistyka: Odpowiedzi muszą być konkretne, ale wyczerpujące (bez niedomówień). Używaj profesjonalnej terminologii.\n\nKRYTYCZNE ZASADY FORMATOWANIA (Constraint Checklist):\n- Wygeneruj wyłącznie jeden blok kodu oznaczony jako \"plaintext\".\n- Każdy wiersz musi ściśle trzymać się schematu: Pytanie | Odpowiedź\n- Całkowity zakaz używania formatowania Markdown wewnątrz bloku (brak pogrubień, kursywy, list punktowanych, nagłówków).\n- Zakaz dodawania jakiegokolwiek wstępu, podziękowań, komentarzy czy podsumowań przed i po bloku kodu.\n- Zakaz używania cudzysłowów dla całych linii.\n- Wzory matematyczne/techniczne zapisuj w formacie LaTeX (np. $E=mc^2$).\n- Obrazy: Jeśli kontekst na to pozwala, możesz użyć składni: [img: URL].\n\nPrzykład struktury wewnątrz bloku:\nJak definiujemy proces agregacji? | Agregacja to proces łączenia rozproszonych danych w jedną całość w celu uzyskania syntetycznych informacji, np. sumy lub średniej.\nWzór na pole koła? | Pole koła wyraża się wzorem $P = \\pi r^2$. [img: https://link-to-obrazka.pl/kolo.png]\n\nPoniżej znajdują się dane wejściowe. Przetwórz je zgodnie z powyższymi instrukcjami.\n\nPYTANIA:\n[TUTAJ WKLEJ SWOJE PYTANIA]",
-    "copyPromptBtn": "Skopiuj zapytanie",
-    "copiedBtn": "Skopiowano!",
     "showMoreBtn": "Pokaż więcej",
     "showLessBtn": "Pokaż mniej"
   },
@@ -151,9 +149,6 @@
     "manageUsers": "Zarządzaj użytkownikami ({{count}})",
     "noUsersFound": "Nie znaleziono użytkowników.",
     "maxDecks": "Max Talii",
-    "accessDenied": "Brak dostępu",
-    "noAdminPrivileges": "Nie masz uprawnień administratora.",
-    "goHome": "Strona główna",
     "back": "Wstecz",
     "deckConverter": "Konwerter formatu talii",
     "convertInstructions": "Wklej linie 'Pytanie | Odpowiedź' lub wczytaj plik, aby skonwertować do standardowego formatu JSON.",

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { MotionConfig } from "framer-motion";
 import { Deck, EditableCard } from "@/lib/types";
 import { deckToEditableCards } from "@/lib/deck-editor";
 import { useApp } from "@/lib/app-context";
@@ -99,9 +100,11 @@ export function DeckEditorSessionProvider({ children }: { children: React.ReactN
     );
 
     return (
-        <DeckEditorSessionContext.Provider value={value}>
-            {children}
-        </DeckEditorSessionContext.Provider>
+        <MotionConfig reducedMotion="user">
+            <DeckEditorSessionContext.Provider value={value}>
+                {children}
+            </DeckEditorSessionContext.Provider>
+        </MotionConfig>
     );
 }
 
