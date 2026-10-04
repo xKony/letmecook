@@ -17,6 +17,25 @@ export interface Flashcard {
     level: CardLevel;
     /** Stable import order (0-based). */
     sortOrder: number;
+    // --- FSRS memory state (ts-fsrs). Undefined/null = new card. ---
+    /** Due timestamp (ms epoch). */
+    fsrsDue?: number | null;
+    /** FSRS stability (S). */
+    fsrsStability?: number | null;
+    /** FSRS difficulty (D, 1-10). */
+    fsrsDifficulty?: number | null;
+    /** Successful recalls. */
+    fsrsReps?: number | null;
+    /** "Again" count. */
+    fsrsLapses?: number | null;
+    /** 0 New, 1 Learning, 2 Review, 3 Relearning. */
+    fsrsState?: number | null;
+    /** Intraday learning-step progress (must round-trip for graduation). */
+    fsrsLearningSteps?: number | null;
+    /** Last review timestamp (ms epoch). */
+    fsrsLastReview?: number | null;
+    /** Last scheduled interval in days. */
+    fsrsScheduledDays?: number | null;
 }
 
 // A deck of flashcards

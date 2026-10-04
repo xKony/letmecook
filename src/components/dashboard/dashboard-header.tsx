@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, HelpCircle, Shield, Settings, LogIn, LogOut, Menu, X } from "lucide-react";
+import { User, HelpCircle, Shield, Settings, LogIn, LogOut, Menu, X, Bell } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,15 @@ export function DashboardHeader() {
                 <Button
                     variant="ghost"
                     size="icon-sm"
+                    onClick={() => router.push("/reminders")}
+                    aria-label={t("reminders.title")}
+                    title={t("reminders.title")}
+                >
+                    <Bell className="w-4 h-4" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => setIsMobileMenuOpen((open) => !open)}
                     className="sm:hidden"
                     aria-expanded={isMobileMenuOpen}
@@ -80,6 +89,15 @@ export function DashboardHeader() {
                             </div>
                         </div>
                         <div className="mt-3 flex flex-col gap-1">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigateFromMobileMenu("/reminders")}
+                                className="justify-start gap-2"
+                            >
+                                <Bell className="w-4 h-4" />
+                                {t("reminders.title")}
+                            </Button>
                             <Button
                                 variant="ghost"
                                 size="sm"

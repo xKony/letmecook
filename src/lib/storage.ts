@@ -221,11 +221,23 @@ export function createDeck(name: string, parsedCards: ParsedFlashcard[]): Deck {
     };
 }
 
-// Reset all card levels in a deck to "Nowe"
+// Reset all card levels in a deck to "Nowe" (clears FSRS memory too)
 export function resetDeckProgress(deck: Deck): Deck {
     return {
         ...deck,
-        cards: deck.cards.map((card) => ({ ...card, level: "Nowe" as CardLevel })),
+        cards: deck.cards.map((card) => ({
+            ...card,
+            level: "Nowe" as CardLevel,
+            fsrsDue: undefined,
+            fsrsStability: undefined,
+            fsrsDifficulty: undefined,
+            fsrsReps: 0,
+            fsrsLapses: 0,
+            fsrsState: 0,
+            fsrsLearningSteps: 0,
+            fsrsLastReview: undefined,
+            fsrsScheduledDays: 0,
+        })),
         updatedAt: Date.now(),
     };
 }

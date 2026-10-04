@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { syncDeckCardsSchema } from "@/lib/validations";
+import { reviewCard } from "@/lib/spaced-repetition";
 
 // ============================================
 // Helper: Check if user can edit deck's cards
@@ -61,9 +62,29 @@ export async function updateCardLevel(cardId: string, level: string) {
         throw new Error("Permission denied");
     }
 
+    // FSRS scheduling: compute next memory state from the rating.
+    // The coarse `level` label is kept in sync for filters/stats.
+    const now = Date.now();
+    const memory = reviewCard(
+        {
+            fsrsDue: card.fsrsDue,
+            fsrsStability: card.fsrsStability,
+            fsrsDifficulty: card.fsrsDifficulty,
+            fsrsReps: card.fsrsReps,
+            fsrsLapses: card.fsrsLapses,
+            fsrsState: card.fsrsState,
+            fsrsLearningSteps: card.fsrsLearningSteps,
+            fsrsLastReview: card.fsrsLastReview,
+            fsrsScheduledDays: card.fsrsScheduledDays,
+        },
+        level as "Nowe" | "Nie umiem" | "W miarę" | "Umiem" | "Opanowane 100%",
+        now,
+    );
+
     await db.update(flashcards)
         .set({
             level,
+            ...memory,
             updatedAt: new Date(),
         })
         .where(eq(flashcards.id, cardId));
@@ -277,6 +298,15 @@ export async function resetDeckProgress(deckId: string) {
     await db.update(flashcards)
         .set({
             level: "Nowe",
+            fsrsDue: null,
+            fsrsStability: null,
+            fsrsDifficulty: null,
+            fsrsReps: 0,
+            fsrsLapses: 0,
+            fsrsState: 0,
+            fsrsLearningSteps: 0,
+            fsrsLastReview: null,
+            fsrsScheduledDays: 0,
             updatedAt: new Date(),
         })
         .where(eq(flashcards.deckId, deckId));

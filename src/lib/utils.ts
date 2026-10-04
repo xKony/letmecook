@@ -25,6 +25,15 @@ export function transformDbDeck(dbDeck: {
         image?: string | null;
         level: string;
         sortOrder?: number;
+        fsrsDue?: number | null;
+        fsrsStability?: number | null;
+        fsrsDifficulty?: number | null;
+        fsrsReps?: number | null;
+        fsrsLapses?: number | null;
+        fsrsState?: number | null;
+        fsrsLearningSteps?: number | null;
+        fsrsLastReview?: number | null;
+        fsrsScheduledDays?: number | null;
         createdAt: Date;
     }[];
 }): Deck {
@@ -44,6 +53,15 @@ export function transformDbDeck(dbDeck: {
             image: card.image || undefined,
             level: card.level as CardLevel,
             sortOrder: card.sortOrder,
+            fsrsDue: card.fsrsDue ?? undefined,
+            fsrsStability: card.fsrsStability ?? undefined,
+            fsrsDifficulty: card.fsrsDifficulty ?? undefined,
+            fsrsReps: card.fsrsReps ?? undefined,
+            fsrsLapses: card.fsrsLapses ?? undefined,
+            fsrsState: card.fsrsState ?? undefined,
+            fsrsLearningSteps: card.fsrsLearningSteps ?? undefined,
+            fsrsLastReview: card.fsrsLastReview ?? undefined,
+            fsrsScheduledDays: card.fsrsScheduledDays ?? undefined,
         })),
     };
 }

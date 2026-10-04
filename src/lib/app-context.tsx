@@ -13,6 +13,7 @@ import {
     generateId,
 } from "@/lib/storage";
 import { LOCALSTORAGE_SAVE_DEBOUNCE_MS, MAX_DECKS_PER_USER } from "@/lib/constants";
+import { reviewCard } from "@/lib/spaced-repetition";
 
 // Server actions for authenticated users
 import { getMyDecks, getUserMaxDecks, createDeck as createDbDeck, deleteDeck as deleteDbDeck, updateDeck as updateDbDeck } from "@/app/actions/deck-actions";
@@ -75,7 +76,7 @@ export function AppProvider({
     const [dbDecks, setDbDecks] = useState<Deck[]>(initialDecks);
     const [maxDecks, setMaxDecks] = useState(initialMaxDecks);
     
-    const [guestState, setGuestState] = useState<GuestState>({ decks: [] });
+    const [guestState, setGuestState] = useState<GuestState>(() => loadGuestState());
     const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false); // Start as NOT loading if we have server data
     const hasInitializedAuthData = useRef(false);
@@ -96,6 +97,20 @@ export function AppProvider({
     // Use a ref for authLoading to avoid unnecessary re-renders if we already have initial data
     const authLoading = status === "loading" && !initialSession;
 
+    // Reload guest state when transitioning into guest mode at runtime (e.g.
+    // session expired without a full page reload). This render-phase
+    // adjustment replaces a synchronous setState-in-effect (see
+    // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
+    // The initial mount is already covered by the lazy useState initializer above.
+    const guestMode = isGuest && !authLoading;
+    const [wasGuestMode, setWasGuestMode] = useState(guestMode);
+    if (wasGuestMode !== guestMode) {
+        setWasGuestMode(guestMode);
+        if (guestMode) {
+            setGuestState(loadGuestState());
+        }
+    }
+
     // Sync with database if session changes and we don't have data yet
     useEffect(() => {
         if (isAuthenticated && !hasInitializedAuthData.current && dbDecks.length === 0 && !initialDecks.length) {
@@ -114,12 +129,8 @@ export function AppProvider({
                 }
             };
             loadData();
-        } else if (isGuest && !authLoading) {
-            // Always load guest state from local storage on mount
-            const loaded = loadGuestState();
-            setGuestState(loaded);
         }
-    }, [isAuthenticated, isGuest, authLoading, initialDecks.length, dbDecks.length]);
+    }, [isAuthenticated, initialDecks.length, dbDecks.length]);
 
     // Debounced save to localStorage for guests
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -305,7 +316,23 @@ export function AppProvider({
                 // Immediately update local state
                 setDbDecks((prev) => prev.map((d) =>
                     d.id === currentDeckId
-                        ? { ...d, cards: d.cards.map((c) => ({ ...c, level: "Nowe" as CardLevel })), updatedAt: Date.now() }
+                        ? {
+                            ...d,
+                            cards: d.cards.map((c) => ({
+                                ...c,
+                                level: "Nowe" as CardLevel,
+                                fsrsDue: undefined,
+                                fsrsStability: undefined,
+                                fsrsDifficulty: undefined,
+                                fsrsReps: 0,
+                                fsrsLapses: 0,
+                                fsrsState: 0,
+                                fsrsLearningSteps: 0,
+                                fsrsLastReview: undefined,
+                                fsrsScheduledDays: 0,
+                            })),
+                            updatedAt: Date.now(),
+                        }
                         : d
                 ));
             } catch (error) {
@@ -321,12 +348,14 @@ export function AppProvider({
         }
     }, [currentDeckId, isAuthenticated]);
 
-    // Update a single card's level
+    // Update a single card's level (FSRS review). Optimistic: compute the
+    // next memory state locally so guest mode and UI update instantly;
+    // the server action persists the same computation for auth users.
     const updateCardLevel = useCallback(async (cardId: string, level: CardLevel) => {
         updateActiveDecks((decks) => decks.map((deck) => ({
             ...deck,
             cards: deck.cards.map((card) =>
-                card.id === cardId ? { ...card, level } : card
+                card.id === cardId ? { ...card, level, ...reviewCard(card, level) } : card
             ),
             updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
         })));

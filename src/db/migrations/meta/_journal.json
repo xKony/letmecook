@@ -8,6 +8,20 @@
       "when": 1779031876415,
       "tag": "0000_easy_nightshade",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791128754072,
+      "tag": "0001_wandering_harpoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791129466274,
+      "tag": "0002_tense_wallflower",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Lock, ArrowLeft, Loader2, CheckCircle, AlertCircle, User } from "lucide-react";
 import { changePassword, changeName } from "@/app/actions/auth-actions";
 import { useApp } from "@/lib/app-context";
+import { NtfySetup } from "@/components/reminders/ntfy-setup";
 import { signOut } from "next-auth/react";
 
 export function SettingsClient() {
@@ -254,6 +255,9 @@ export function SettingsClient() {
                         </Button>
                     </form>
                 </motion.div>
+
+                {/* Review Reminders */}
+                <NtfySetup />
 
                 {/* Sign Out Button */}
                 <Button

@@ -34,23 +34,39 @@ export function ReplaceInLibraryDialog({
     onSuccess,
 }: ReplaceInLibraryDialogProps) {
     const { t } = useI18n();
-    const [publicDecks, setPublicDecks] = useState<PublicDeckOption[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [publicDecks, setPublicDecks] = useState<PublicDeckOption[] | null>(null);
     const [replacingId, setReplacingId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    // Loading is derived from data presence: the list is reset on close, so
+    // an open dialog with no data (and no error) is necessarily fetching.
+    const loading = isOpen && publicDecks === null && error === null;
+    const decks = publicDecks ?? [];
 
     useEffect(() => {
         if (!isOpen) return;
 
-        setError(null);
-        setLoading(true);
+        let cancelled = false;
         getPublicDecks()
-            .then((decks) => setPublicDecks(decks as PublicDeckOption[]))
-            .catch((err) => {
-                setError(err instanceof Error ? err.message : "Failed to load library");
+            .then((decks) => {
+                if (!cancelled) setPublicDecks(decks as PublicDeckOption[]);
             })
-            .finally(() => setLoading(false));
+            .catch((err) => {
+                if (!cancelled) {
+                    setError(err instanceof Error ? err.message : "Failed to load library");
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
     }, [isOpen]);
+
+    const handleClose = () => {
+        // Reset so the next open starts clean and refetches the library.
+        setPublicDecks(null);
+        setError(null);
+        onClose();
+    };
 
     const handleReplace = async (publicDeck: PublicDeckOption) => {
         if (!sourceDeck) return;
@@ -75,7 +91,7 @@ export function ReplaceInLibraryDialog({
                 count: result.cardCount,
             });
             onSuccess?.(successMessage);
-            onClose();
+            handleClose();
             alert(successMessage);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to replace deck");
@@ -85,7 +101,7 @@ export function ReplaceInLibraryDialog({
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
             <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -106,13 +122,13 @@ export function ReplaceInLibraryDialog({
                     <div className="flex justify-center py-8">
                         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                     </div>
-                ) : publicDecks.length === 0 ? (
+                ) : decks.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-6">
                         {t("dashboard.noPublicDecks")}
                     </p>
                 ) : (
                     <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {publicDecks.map((publicDeck) => (
+                        {decks.map((publicDeck) => (
                             <Button
                                 key={publicDeck.id}
                                 variant="outline"

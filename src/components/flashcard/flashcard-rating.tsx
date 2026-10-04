@@ -16,6 +16,8 @@ interface FlashcardRatingProps {
     onReveal: () => void;
     /** Callback to rate the card. */
     onRate: (level: CardLevel) => void;
+    /** FSRS next-interval preview per rating (e.g. "10 min", "3 days"). */
+    intervals?: Partial<Record<CardLevel, string>>;
 }
 
 /**
@@ -30,6 +32,7 @@ export function FlashcardRating({
     isRevealed,
     onReveal,
     onRate,
+    intervals,
 }: FlashcardRatingProps) {
     const { t } = useI18n();
 
@@ -63,9 +66,14 @@ export function FlashcardRating({
                                 key={rating.value}
                                 onClick={() => onRate(rating.value)}
                                 variant="outline"
-                                className={`h-16 rounded-xl border-2 transition-all font-medium ${RATING_STYLES[rating.value]}`}
+                                className={`h-16 rounded-xl border-2 transition-all font-medium flex-col gap-0.5 ${RATING_STYLES[rating.value]}`}
                             >
-                                {t(`ratings.${rating.value}`)}
+                                <span>{t(`ratings.${rating.value}`)}</span>
+                                {intervals?.[rating.value] && (
+                                    <span className="text-[11px] font-normal opacity-70">
+                                        {intervals[rating.value]}
+                                    </span>
+                                )}
                             </Button>
                         ))}
                     </motion.div>

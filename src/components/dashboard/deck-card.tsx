@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { Pencil, Check, X, Download, Trash2, ListTree, Globe } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { ReplaceInLibraryDialog } from "@/components/dashboard/replace-in-library-dialog";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
 import { downloadDeckJson } from "@/lib/deck-export";
+import { getDeckStudyStats } from "@/lib/spaced-repetition";
 
 interface DeckCardProps {
     deck: Deck;
@@ -28,6 +29,8 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
     const [showReplaceInLibrary, setShowReplaceInLibrary] = useState(false);
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const dueCount = useMemo(() => getDeckStudyStats(deck.cards).due, [deck.cards]);
 
     /**
      * Handles starting the rename process
@@ -172,8 +175,13 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                                             <Pencil className="w-3 h-3" />
                                         </Button>
                                     </div>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
                                         {t("dashboard.cardsCount", { count: deck.cards.length })}
+                                        {dueCount > 0 && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                                {t("reminders.dueCount", { count: dueCount })}
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
                             )}

@@ -96,6 +96,9 @@
    ```env
    DATABASE_URL="postgresql://user:password@host/db?sslmode=require"
    AUTH_SECRET="your_nextauth_secret_key"
+   # Optional — review reminders via ntfy.sh:
+   CRON_SECRET="a-long-random-string"          # protects /api/cron/reminders
+   NEXT_PUBLIC_APP_URL="https://your-app.vercel.app"  # tap-through link in notifications
    ```
 
 4. **Sync the Database Schema**:
@@ -141,6 +144,22 @@ You can also upload simple `.txt` files containing one card per line using the p
 How does photosynthesis work? | It converts carbon dioxide and water into oxygen and glucose.
 Wzór na pole koła? | Pole koła to $P = \pi r^2$. [img: https://example.com/circle.png]
 ```
+
+---
+
+## 🔔 Spaced Repetition & Review Reminders
+
+Reviews are scheduled with **FSRS** (via the official [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) package, FSRS-6 defaults). Each rating updates the card's stability/difficulty and next due date; rating buttons show Anki-style interval previews, and deck cards show a "due" badge.
+
+Push reminders go through **[ntfy.sh](https://ntfy.sh)** (no account needed):
+
+1. Open `/reminders` (bell icon) or **Settings → Review Reminders**.
+2. Install the free ntfy app ([iOS](https://apps.apple.com/us/app/ntfy/id1625396347) / Android), scan the QR code (`https://ntfy.sh/<your-private-topic>`), and tap **Subscribe**.
+3. Press **Send test**, then toggle reminders on.
+
+Authenticated users get one automatic notification per day (9:00 UTC via Vercel Cron in `vercel.json` → `/api/cron/reminders`, protected by `CRON_SECRET`). Guests can pair and send manual/test reminders from the browser; automatic daily sends require an account.
+
+After pulling these changes, sync the new columns (`pnpm drizzle-kit push`).
 
 ---
 

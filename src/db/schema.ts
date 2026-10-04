@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, uuid, primaryKey, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, uuid, primaryKey, integer, index, bigint, real } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import type { AdapterAccountType } from "next-auth/adapters";
 
@@ -15,6 +15,9 @@ export const users = pgTable("users", {
     password: text("password"), // Hashed password for credentials provider
     isAdmin: boolean("is_admin").default(false).notNull(), // Admin role for public deck management
     maxDecks: integer("max_decks").default(5).notNull(), // Maximum decks per user, configurable by admin
+    ntfyTopic: text("ntfy_topic").unique(), // Private ntfy.sh topic for review reminders (unguessable)
+    ntfyEnabled: boolean("ntfy_enabled").default(false).notNull(), // Whether daily reminders are sent
+    lastReminderSentAt: timestamp("last_reminder_sent_at", { mode: "date" }), // Throttle: at most one reminder per day
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
@@ -71,7 +74,18 @@ export const flashcards = pgTable("flashcards", {
     question: text("question").notNull(),
     answer: text("answer").notNull(),
     image: text("image"),
-    level: text("level").default("Nowe").notNull(), // CardLevel type
+    level: text("level").default("Nowe").notNull(), // CardLevel type (coarse label, kept for filters)
+    // FSRS memory state (flat fields, see src/lib/spaced-repetition.ts).
+    // NULL = new card, never reviewed.
+    fsrsDue: bigint("fsrs_due", { mode: "number" }), // Due timestamp (ms epoch)
+    fsrsStability: real("fsrs_stability"), // FSRS stability (S)
+    fsrsDifficulty: real("fsrs_difficulty"), // FSRS difficulty (D, 1-10)
+    fsrsReps: integer("fsrs_reps").default(0).notNull(), // Successful recalls
+    fsrsLapses: integer("fsrs_lapses").default(0).notNull(), // "Again" count
+    fsrsState: integer("fsrs_state").default(0).notNull(), // 0 New, 1 Learning, 2 Review, 3 Relearning
+    fsrsLearningSteps: integer("fsrs_learning_steps").default(0).notNull(), // Intraday learning-step progress
+    fsrsLastReview: bigint("fsrs_last_review", { mode: "number" }), // Last review timestamp (ms epoch)
+    fsrsScheduledDays: integer("fsrs_scheduled_days").default(0).notNull(), // Last scheduled interval
     sortOrder: integer("sort_order").default(0).notNull(),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),

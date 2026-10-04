@@ -37,6 +37,8 @@ interface FlashcardProps {
     onTTSToggle: () => void;
     /** Original question number in the deck (1-based import order). */
     questionNumber?: number;
+    /** FSRS next-interval preview per rating, shown under rating buttons. */
+    intervals?: Partial<Record<CardLevel, string>>;
 }
 
 /**
@@ -56,6 +58,7 @@ export function FlashcardComponent({
     ttsEnabled,
     onTTSToggle,
     questionNumber,
+    intervals,
 }: FlashcardProps) {
     const { t } = useI18n();
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -264,6 +267,7 @@ export function FlashcardComponent({
                 isRevealed={isRevealed}
                 onReveal={onReveal}
                 onRate={onRate}
+                intervals={intervals}
             />
 
             <FlashcardZoomModal

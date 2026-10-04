@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
@@ -28,6 +28,7 @@ import { StudySessionBreakModal } from "./study/study-session-break-modal";
 import { StudySessionEmptyState } from "./study/study-session-empty-state";
 import { ensureKatexStyles } from "@/lib/latex";
 import { getQuestionNumber } from "@/lib/flashcard-order";
+import { previewIntervals } from "@/lib/spaced-repetition";
 
 /**
  * The main study session component that orchestrates the flashcard learning experience.
@@ -118,6 +119,13 @@ export function StudySession() {
         updateCardLevel(currentCard.id, level);
         advanceAfterRating(currentCard.id, level, () => setShowRestartModal(true));
     }, [currentCard, updateCardLevel, advanceAfterRating]);
+
+    // FSRS next-interval preview for the current card (Anki-style hints
+    // under the rating buttons). Recomputed when the card changes.
+    const intervals = useMemo(
+        () => (currentCard ? previewIntervals(currentCard) : undefined),
+        [currentCard],
+    );
 
     // Keyboard shortcuts hook
     useSessionShortcuts(
@@ -265,6 +273,7 @@ export function StudySession() {
                                 onUpdateCard={updateCard}
                                 ttsEnabled={ttsEnabled}
                                 onTTSToggle={toggleTTS}
+                                intervals={intervals}
                             />
                         )}
                     </AnimatePresence>

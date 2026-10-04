@@ -8,7 +8,7 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 
 
 
-# LetMeCook Web - Technical Reference (GEMINI.md)
+# LetMeCook Web - Technical Reference
 
 ## 1. Project Overview
 **LetMeCook Web** is a high-performance Active Recall system built for local-first and cloud-sync learning.
@@ -18,42 +18,42 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 ## 2. Exact Versions (Source: package.json)
 - **Runtime**: Node.js `18.17+`
 - **Package Manager**: `pnpm@11.8.0`
-- **Framework**: Next.js `16.2.6`
-- **Library**: React `19.2.6`
+- **Framework**: Next.js `16.3.8`
+- **Library**: React `19.3.0`
 - **Language**: TypeScript `5.9.3`
 
 ### Production Dependencies
-- `@auth/drizzle-adapter`: `^1.11.1`
-- `@neondatabase/serverless`: `^1.0.2`
-- `@radix-ui/react-dialog`: `^1.1.15`
-- `@radix-ui/react-slot`: `^1.2.4`
-- `@types/katex`: `^0.16.8`
-- `bcryptjs`: `^3.0.3`
+- `@auth/drizzle-adapter`: `^1.11.3`
+- `@neondatabase/serverless`: `^1.2.0`
+- `@radix-ui/react-dialog`: `^1.1.23`
+- `@radix-ui/react-slot`: `^1.3.3`
+- `bcryptjs`: `^3.0.3` (ships its own types; `@types/bcryptjs` removed)
 - `class-variance-authority`: `^0.7.1`
 - `clsx`: `^2.1.1`
-- `drizzle-orm`: `^0.45.1` (resolved: `0.45.2`)
-- `framer-motion`: `^12.36.0`
-- `katex`: `^0.16.38`
-- `lucide-react`: `^0.563.0`
-- `next`: `16.2.6`
+- `drizzle-orm`: `^0.45.3`
+- `framer-motion`: `^14.0.0`
+- `katex`: `^0.19.0` (ships its own types; `@types/katex` removed)
+- `lucide-react`: `^1.51.0`
+- `next`: `16.3.8`
 - `next-auth`: `5.0.0-beta.30`
 - `next-themes`: `^0.4.6`
-- `react`: `19.2.6`
-- `react-dom`: `19.2.6`
-- `tailwind-merge`: `^3.5.0`
-- `zod`: `^4.3.6`
+- `qrcode.react`: `^4.2.0`
+- `react`: `19.3.0`
+- `react-dom`: `19.3.0`
+- `tailwind-merge`: `^3.7.0`
+- `ts-fsrs`: `^5.4.2`
+- `zod`: `^4.6.5`
 
 ### Dev Dependencies
-- `@tailwindcss/postcss`: `^4.2.1`
-- `@types/bcryptjs`: `^2.4.6`
-- `@types/node`: `^20.19.37`
-- `@types/react`: `19.2.14`
-- `@types/react-dom`: `19.2.3`
-- `dotenv`: `^17.3.1`
-- `drizzle-kit`: `^0.31.10`
-- `eslint`: `^9.39.4`
-- `eslint-config-next`: `16.2.6`
-- `tailwindcss`: `^4.2.1`
+- `@tailwindcss/postcss`: `^4.3.3`
+- `@types/node`: `^24.19.1`
+- `@types/react`: `19.3.0`
+- `@types/react-dom`: `19.3.0`
+- `dotenv`: `^18.0.5`
+- `drizzle-kit`: `^0.31.11`
+- `eslint`: `^9.39.5`
+- `eslint-config-next`: `16.3.8`
+- `tailwindcss`: `^4.3.3`
 - `tw-animate-css`: `^1.4.0`
 - `typescript`: `^5.9.3`
 
