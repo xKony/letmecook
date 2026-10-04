@@ -148,6 +148,7 @@ Defined in `.env.local` (referenced in `drizzle.config.ts` and `src/db/index.ts`
 - **Package Manager**: Always use `pnpm` instead of `npm` for scripts execution (e.g., `pnpm build`, `pnpm dev`, `pnpm lint`, `pnpm typecheck`). `npm install` is blocked by the `preinstall` guard.
 - **Next.js Best Practices**: Always review and strictly apply the principles in the `/next-best-practices` skill documentation (including RSC boundaries, async pattern migrations, dynamic functions, data patterns, and optimal image/font loading) whenever writing, reviewing, or modifying Next.js codebase files.
 - **Commit frequently**: land every completed, verified unit of work (feature, fix, docs) as its own concise conventional commit; never batch unrelated changes; never leave the tree dirty with mixed concerns.
+- **End-to-end browser verification (mandatory)**: never call UI or interactive work done from code reading alone. Start `pnpm dev`, drive the real app with the Chrome DevTools MCP server (`navigate_page`, `take_snapshot`, `click`, `evaluate_script`, `list_console_messages`), and exercise the exact user flow being fixed/added — including seeding `localStorage` (`letmecook_guest_state`, `letmecook_ntfy_topic`) when the flow needs existing data. Verify the success UI, a clean console, and the real side effect (e.g. poll `https://ntfy.sh/<topic>/json?poll=1` to confirm delivery). Stop the dev server and delete its log afterwards.
 
 ## Design Reference
 - Read `DESIGN-GUIDELINES.md` before any UI work (new components, restyling, color/motion changes).
