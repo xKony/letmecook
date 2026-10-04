@@ -81,7 +81,7 @@ Mutations for signed-in users live in `src/app/actions/` (auth, decks, cards, ad
 
 ## Quick start
 
-**Requirements:** Node.js 18.17+, pnpm 10.33+
+**Requirements:** Node.js 18.17+, pnpm 12+
 
 ```bash
 git clone https://github.com/xKony/letmecook.git
