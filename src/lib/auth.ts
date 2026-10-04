@@ -5,13 +5,16 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { loginSchema } from "@/lib/validations";
 import { getClientIP } from "@/lib/get-client-ip";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+
+const ADMIN_REFRESH_MS = 10 * 60_000;
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     adapter: DrizzleAdapter(db),
     session: {
-        strategy: "jwt", // Use JWT for serverless compatibility
+        strategy: "jwt",
     },
     pages: {
         signIn: "/login",
@@ -24,7 +27,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 password: { label: "Password", type: "password" },
             },
             async authorize(credentials) {
-                if (!credentials?.email || !credentials?.password) {
+                const parsed = loginSchema.safeParse({
+                    email: credentials?.email,
+                    password: credentials?.password,
+                });
+
+                if (!parsed.success) {
                     return null;
                 }
 
@@ -34,10 +42,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     return null;
                 }
 
-                const email = credentials.email as string;
-                const password = credentials.password as string;
+                const { email, password } = parsed.data;
 
-                // Find user by email
                 const user = await db.query.users.findFirst({
                     where: eq(users.email, email),
                 });
@@ -46,7 +52,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     return null;
                 }
 
-                // Verify password
                 const isValid = await bcrypt.compare(password, user.password);
 
                 if (!isValid) {
@@ -68,7 +73,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             if (user) {
                 token.id = user.id;
                 token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
+                token.isAdminCheckedAt = Date.now();
+                return token;
             }
+
+            if (token.id) {
+                const checkedAt = typeof token.isAdminCheckedAt === "number"
+                    ? token.isAdminCheckedAt
+                    : 0;
+
+                if (Date.now() - checkedAt > ADMIN_REFRESH_MS) {
+                    const dbUser = await db.query.users.findFirst({
+                        where: eq(users.id, token.id as string),
+                        columns: { isAdmin: true },
+                    });
+                    token.isAdmin = dbUser?.isAdmin ?? false;
+                    token.isAdminCheckedAt = Date.now();
+                }
+            }
+
             return token;
         },
         async session({ session, token }) {
@@ -80,4 +103,3 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         },
     },
 });
-

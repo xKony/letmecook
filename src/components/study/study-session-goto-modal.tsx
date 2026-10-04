@@ -70,7 +70,7 @@ export function StudySessionGotoModal({
                             onKeyDown={handleKeyDown}
                             placeholder={`1 - ${totalCards}`}
                             autoFocus
-                            className="flex-1 p-3 rounded-lg bg-background border border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                            className="flex-1 p-3 rounded-lg bg-background border border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-[color,background-color,border-color,box-shadow]"
                             aria-label={t("study.goToQuestion")}
                         />
                         <Button onClick={handleSubmit}>{t("common.go")}</Button>

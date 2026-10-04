@@ -113,9 +113,9 @@ function LoginForm() {
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full max-w-md"
             >
-                <div className="bg-card border border-border rounded-2xl p-8 shadow-xl">
+                <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-xl shadow-primary/5">
                     <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-foreground mb-2">
+                        <h1 className="text-[1.7rem] sm:text-3xl font-bold tracking-tight text-foreground mb-2">
                             🍳 LetMeCook
                         </h1>
                         <p className="text-muted-foreground">
@@ -131,7 +131,7 @@ function LoginForm() {
                                     type="text"
                                     name="name"
                                     placeholder="Name (optional)"
-                                    className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
                                 />
                             </div>
                         )}
@@ -143,7 +143,7 @@ function LoginForm() {
                                 name="email"
                                 placeholder="Email"
                                 required
-                                className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
                             />
                         </div>
 
@@ -155,7 +155,7 @@ function LoginForm() {
                                 placeholder="Password"
                                 required
                                 minLength={6}
-                                className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
                             />
                         </div>
 
@@ -165,7 +165,7 @@ function LoginForm() {
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
-                                    className="text-rose-400 text-sm text-center p-3 bg-rose-500/10 rounded-lg border border-rose-500/20"
+                                    className="text-destructive text-sm text-center p-3 bg-destructive/10 rounded-lg border border-destructive/20"
                                 >
                                     {error}
                                 </motion.div>
@@ -189,7 +189,7 @@ function LoginForm() {
                         <Button
                             type="submit"
                             disabled={isLoading || !!success}
-                            className="w-full py-6 rounded-xl font-semibold"
+                            className="w-full h-12 rounded-xl font-semibold text-base"
                         >
                             {isLoading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -210,7 +210,7 @@ function LoginForm() {
                                 setError(null);
                                 setSuccess(null);
                             }}
-                            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-lg hover:bg-muted/50"
                         >
                             {isLogin
                                 ? "Don't have an account? Sign up"
@@ -222,7 +222,7 @@ function LoginForm() {
                         <button
                             type="button"
                             onClick={() => router.push("/")}
-                            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-lg hover:bg-muted/50"
                         >
                             Continue as guest →
                         </button>

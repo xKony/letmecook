@@ -93,11 +93,11 @@ export function FlashcardComponent({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -50, opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="w-full max-w-2xl mx-auto"
+            className="w-full max-w-2xl mx-auto my-auto"
         >
             {/* Card Container */}
             <div
-                className="relative bg-card rounded-3xl border border-border shadow-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] dark:border-white/5 min-h-[400px] flex flex-col p-8 md:p-12"
+                className="relative bg-card/80 backdrop-blur-xl rounded-3xl border border-border shadow-2xl shadow-primary/10 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] dark:border-white/10 min-h-[min(25rem,52dvh)] flex flex-col p-5 sm:p-7 md:p-9 [@media(min-height:820px)]:md:p-12"
                 onTouchStart={onUpdateCard ? handleCardTouchStart : undefined}
                 onTouchMove={onUpdateCard ? handleCardTouchMove : undefined}
                 onTouchEnd={onUpdateCard ? handleCardTouchEnd : undefined}
@@ -145,7 +145,7 @@ export function FlashcardComponent({
                                 exit={{ opacity: 0 }}
                                 className="relative"
                             >
-                                <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight text-foreground">
+                                <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight text-balance text-foreground">
                                     <FlashcardContent
                                         text={card.question}
                                         isLarge={true}
@@ -197,7 +197,7 @@ export function FlashcardComponent({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 20 }}
                             transition={{ duration: 0.3, delay: 0.1 }}
-                            className="flex-1 flex items-center justify-center border-t border-border pt-6 relative group"
+                            className="answer-reveal-pulse flex-1 flex items-center justify-center border-t border-border pt-6 relative group"
                             onMouseEnter={() => showEditHintFor("answer")}
                             onMouseLeave={scheduleHideEditHint}
                         >
@@ -219,7 +219,7 @@ export function FlashcardComponent({
                                         exit={{ opacity: 0 }}
                                         className="relative w-full"
                                     >
-                                        <div aria-live="polite">
+                                        <div aria-live="polite" className="text-lg md:text-xl leading-relaxed text-foreground/95">
                                             <FlashcardContent
                                                 text={card.answer}
                                                 onImageZoom={openZoom}

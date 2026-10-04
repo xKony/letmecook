@@ -58,12 +58,12 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-export function AppProvider({ 
+export function AppProvider({
     children,
     initialDecks = [],
     initialMaxDecks = MAX_DECKS_PER_USER,
     initialSession = null
-}: { 
+}: {
     children: React.ReactNode,
     initialDecks?: Deck[],
     initialMaxDecks?: number,
@@ -83,7 +83,7 @@ export function AppProvider({
 
     // Auth state derived from session or initialSession
     const currentSession = session || initialSession;
-    
+
     // Derived values should be calculated during render, not in effects
     const isAuthenticated = useMemo(() => !!currentSession?.user, [currentSession]);
     const isGuest = useMemo(() => !isAuthenticated, [isAuthenticated]);
@@ -133,7 +133,7 @@ export function AppProvider({
     }, [isAuthenticated, initialDecks.length, dbDecks.length]);
 
     // Debounced save to localStorage for guests
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (isGuest && !authLoading) {
@@ -351,44 +351,77 @@ export function AppProvider({
     // Update a single card's level (FSRS review). Optimistic: compute the
     // next memory state locally so guest mode and UI update instantly;
     // the server action persists the same computation for auth users.
+    // On server failure the previous card snapshot is restored.
     const updateCardLevel = useCallback(async (cardId: string, level: CardLevel) => {
-        updateActiveDecks((decks) => decks.map((deck) => ({
-            ...deck,
-            cards: deck.cards.map((card) =>
-                card.id === cardId ? { ...card, level, ...reviewCard(card, level) } : card
-            ),
-            updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-        })));
+        const previous = decks
+            .flatMap((d) => d.cards)
+            .find((c) => c.id === cardId);
+
+        const applyReview = (nextLevel: CardLevel) => {
+            updateActiveDecks((decks) => decks.map((deck) => ({
+                ...deck,
+                cards: deck.cards.map((card) =>
+                    card.id === cardId ? { ...card, level: nextLevel, ...reviewCard(card, nextLevel) } : card
+                ),
+                updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
+            })));
+        };
+
+        const restoreCard = (snapshot: Flashcard) => {
+            updateActiveDecks((decks) => decks.map((deck) => ({
+                ...deck,
+                cards: deck.cards.map((card) =>
+                    card.id === cardId ? { ...snapshot } : card
+                ),
+            })));
+        };
+
+        applyReview(level);
 
         if (isAuthenticated) {
             try {
                 await updateDbCardLevel(cardId, level);
             } catch (error) {
                 console.error("Failed to update card level:", error);
+                if (previous) {
+                    restoreCard(previous);
+                }
+                alert("Failed to save card progress. Please try again.");
             }
         }
-    }, [isAuthenticated, updateActiveDecks]);
+    }, [decks, isAuthenticated, updateActiveDecks]);
 
     // Update a single card's question and answer
     const updateCard = useCallback(async (cardId: string, question: string, answer: string, image?: string) => {
         const imageValue = image?.trim() || undefined;
+        const previous = decks
+            .flatMap((d) => d.cards)
+            .find((c) => c.id === cardId);
 
-        updateActiveDecks((decks) => decks.map((deck) => ({
-            ...deck,
-            cards: deck.cards.map((card) =>
-                card.id === cardId ? { ...card, question, answer, image: imageValue } : card
-            ),
-            updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
-        })));
+        const applyContent = (nextQuestion: string, nextAnswer: string, nextImage?: string) => {
+            updateActiveDecks((decks) => decks.map((deck) => ({
+                ...deck,
+                cards: deck.cards.map((card) =>
+                    card.id === cardId ? { ...card, question: nextQuestion, answer: nextAnswer, image: nextImage } : card
+                ),
+                updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
+            })));
+        };
+
+        applyContent(question, answer, imageValue);
 
         if (isAuthenticated) {
             try {
                 await updateDbCard(cardId, question, answer, imageValue);
             } catch (error) {
                 console.error("Failed to update card:", error);
+                if (previous) {
+                    applyContent(previous.question, previous.answer, previous.image);
+                }
+                alert("Failed to save card changes. Please try again.");
             }
         }
-    }, [isAuthenticated, updateActiveDecks]);
+    }, [decks, isAuthenticated, updateActiveDecks]);
 
     const syncDeckCards = useCallback(async (deckId: string, cards: EditableCard[]) => {
         const buildFlashcards = (existingCards: Flashcard[]): Flashcard[] => {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
@@ -13,10 +13,11 @@ import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { BREAK_REMINDER_INTERVAL_SECONDS } from "@/lib/constants";
 
 // New custom hooks
-import { 
-    useStudySession, 
-    useSessionTimer, 
-    useSessionShortcuts 
+import {
+    useStudySession,
+    useSessionTimer,
+    useSessionSeconds,
+    useSessionShortcuts
 } from "@/hooks/use-study-session";
 
 // New sub-components
@@ -30,25 +31,40 @@ import { ensureKatexStyles } from "@/lib/latex";
 import { getQuestionNumber } from "@/lib/flashcard-order";
 import { previewIntervals } from "@/lib/spaced-repetition";
 
+interface SessionTimerTextProps {
+    subscribeToSeconds: (listener: () => void) => () => void;
+    getSeconds: () => number;
+    formatTime: (s: number) => string;
+}
+
+/**
+ * Leaf component that renders the live session duration so the whole session
+ * tree does not re-render every second.
+ */
+function SessionTimerText({ subscribeToSeconds, getSeconds, formatTime }: SessionTimerTextProps) {
+    const formattedTime = useSessionSeconds(subscribeToSeconds, getSeconds, formatTime);
+    return <span className="tabular-nums">{formattedTime}</span>;
+}
+
 /**
  * The main study session component that orchestrates the flashcard learning experience.
  * It manages the session state, timer, shortcuts, and various UI sub-components.
  */
 export function StudySession() {
-    const { 
-        currentDeck, 
-        closeDeck, 
-        resetCurrentDeck, 
-        updateCardLevel, 
-        updateCard, 
+    const {
+        currentDeck,
+        closeDeck,
+        resetCurrentDeck,
+        updateCardLevel,
+        updateCard,
     } = useApp();
-    const { t } = useI18n();
-    
-    const { 
-        enabled: ttsEnabled, 
-        speak, 
-        toggle: toggleTTS 
-    } = useTTS();
+    const { t, language } = useI18n();
+
+    const {
+        enabled: ttsEnabled,
+        speak,
+        toggle: toggleTTS
+    } = useTTS(language);
 
     // Core session logic hook
     const {
@@ -76,9 +92,10 @@ export function StudySession() {
         restart,
     } = useStudySession(currentDeck);
 
-    // Timer logic hook
+    // Timer logic hook (ticks live in a ref; leaf components subscribe)
     const {
-        seconds,
+        subscribeToSeconds,
+        getSeconds,
         showBreakModal,
         setShowBreakModal,
         formatTime,
@@ -94,11 +111,16 @@ export function StudySession() {
         ensureKatexStyles();
     }, []);
 
+    // Tracks the card whose question was last spoken so toggling TTS mid-card
+    // does not re-speak the same question
+    const lastSpokenCardIdRef = useRef<string | null>(null);
+
     // TTS effect for current card
     useEffect(() => {
-        if (currentCard && ttsEnabled) {
-            speak(currentCard.question);
-        }
+        if (!currentCard || !ttsEnabled) return;
+        if (lastSpokenCardIdRef.current === currentCard.id) return;
+        lastSpokenCardIdRef.current = currentCard.id;
+        speak(currentCard.question);
     }, [currentCard, ttsEnabled, speak]);
 
     /**
@@ -161,7 +183,9 @@ export function StudySession() {
     }
 
     return (
-        <div className="h-[100dvh] flex flex-col overflow-hidden p-4 md:p-8">
+        <div className="study-stage flex-1 min-h-0 flex flex-col overflow-hidden p-4 md:p-6 [@media(min-height:820px)]:md:p-8">
+            <div className="stage-orb-a" aria-hidden="true" />
+            <div className="stage-orb-b" aria-hidden="true" />
             {/* Confirmation Modals */}
             <ConfirmationModal
                 isOpen={showRestartModal}
@@ -227,7 +251,7 @@ export function StudySession() {
             <StudySessionBreakModal
                 isOpen={showBreakModal}
                 onClose={() => setShowBreakModal(false)}
-                formattedTime={formatTime(seconds)}
+                formattedTime={formatTime(getSeconds())}
                 onTakeBreak={() => {
                     setShowBreakModal(false);
                     closeDeck();
@@ -239,7 +263,13 @@ export function StudySession() {
             <StudySessionHeader
                 currentIndex={playIndex}
                 totalCards={playOrder.length}
-                formattedTime={formatTime(seconds)}
+                timeSlot={
+                    <SessionTimerText
+                        subscribeToSeconds={subscribeToSeconds}
+                        getSeconds={getSeconds}
+                        formatTime={formatTime}
+                    />
+                }
                 isShuffled={isShuffled}
                 activeFilter={activeFilter}
                 onClose={closeDeck}
@@ -256,38 +286,36 @@ export function StudySession() {
             />
 
             <main
-                className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col"
                 aria-label={t("study.cardArea")}
             >
-                <div className="min-h-full flex flex-col items-center justify-center py-4 pb-32 md:pb-4 w-full">
-                    <AnimatePresence mode="wait">
-                        {currentCard && (
-                            <FlashcardComponent
-                                key={currentCard.id}
-                                card={currentCard}
-                                deckName={currentDeck.name}
-                                questionNumber={getQuestionNumber(currentCard)}
-                                isRevealed={isRevealed}
-                                onReveal={onReveal}
-                                onRate={onRate}
-                                onUpdateCard={updateCard}
-                                ttsEnabled={ttsEnabled}
-                                onTTSToggle={toggleTTS}
-                                intervals={intervals}
-                            />
-                        )}
-                    </AnimatePresence>
-                </div>
+                <AnimatePresence mode="wait">
+                    {currentCard && (
+                        <FlashcardComponent
+                            key={currentCard.id}
+                            card={currentCard}
+                            deckName={currentDeck.name}
+                            questionNumber={getQuestionNumber(currentCard)}
+                            isRevealed={isRevealed}
+                            onReveal={onReveal}
+                            onRate={onRate}
+                            onUpdateCard={updateCard}
+                            ttsEnabled={ttsEnabled}
+                            onTTSToggle={toggleTTS}
+                            intervals={intervals}
+                        />
+                    )}
+                </AnimatePresence>
             </main>
 
             {/* Bottom Navigation */}
-            <footer className="fixed bottom-0 left-0 right-0 z-20 p-4 pointer-events-none md:relative md:pointer-events-auto md:bg-transparent md:mt-6">
-                <div className="max-w-2xl mx-auto flex justify-between gap-4 pointer-events-auto bg-gradient-to-t from-background via-background/95 to-transparent md:bg-transparent pt-2 -mt-2 md:pt-0 md:mt-0">
+            <footer className="relative z-20 mt-3 md:mt-4 shrink-0">
+                <div className="max-w-2xl mx-auto flex justify-between gap-4">
                     <Button
                         variant="outline"
                         onClick={handlePrev}
                         disabled={playIndex === 0}
-                        className="flex-1 md:flex-none md:w-32 h-12"
+                        className="flex-1 md:flex-none md:w-32 h-11 md:h-12"
                         aria-label={t("study.previous")}
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -296,7 +324,7 @@ export function StudySession() {
                     <Button
                         variant="outline"
                         onClick={() => handleNext(() => setShowRestartModal(true))}
-                        className="flex-1 md:flex-none md:w-32 h-12"
+                        className="flex-1 md:flex-none md:w-32 h-11 md:h-12"
                         aria-label={t("study.next")}
                     >
                         {t("study.next")}

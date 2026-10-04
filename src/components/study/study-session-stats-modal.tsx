@@ -139,7 +139,7 @@ export function StudySessionStatsModal({
                             <button
                                 key={level}
                                 onClick={() => onFilterSelect(level)}
-                                className={`w-full text-left p-3 rounded-xl transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive
+                                className={`w-full text-left p-3 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive
                                     ? `${LEVEL_COLORS[level].bg} ring-2 ring-offset-2 ring-offset-background ${LEVEL_COLORS[level].text.replace('text-', 'ring-')}`
                                     : 'hover:bg-muted/50'
                                     }`}

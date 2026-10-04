@@ -2,12 +2,14 @@
   "name": "letmecook-web",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@11.8.0+sha512.c1f5e7c4cb241c8f174b743851d82f42b802324afc8b0f116b96adb15aa06664948dde36960a3ba1079ba5b4b29dd0140135b94b5b5f5263592249d68e555f26",
+  "packageManager": "pnpm@11.22.0",
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
@@ -22,7 +24,7 @@
     "katex": "^0.19.0",
     "lucide-react": "^1.51.0",
     "next": "16.3.8",
-    "next-auth": "5.0.0-beta.30",
+    "next-auth": "5.0.0-beta.32",
     "next-themes": "^0.4.6",
     "qrcode.react": "^4.2.0",
     "react": "19.3.0",

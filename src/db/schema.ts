@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, uuid, primaryKey, integer, index, bigint, real } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, uuid, primaryKey, integer, index, uniqueIndex, bigint, real } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import type { AdapterAccountType } from "next-auth/adapters";
 
@@ -102,6 +102,7 @@ export const deckPermissions = pgTable("deck_permissions", {
 }, (table) => [
     index("deck_permissions_user_id_idx").on(table.userId),
     index("deck_permissions_deck_id_idx").on(table.deckId),
+    uniqueIndex("deck_permissions_deck_user_uidx").on(table.deckId, table.userId),
 ]);
 
 // ============================================

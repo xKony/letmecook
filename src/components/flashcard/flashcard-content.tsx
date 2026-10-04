@@ -65,7 +65,7 @@ export function FlashcardContent({
                             <img
                                 src={imageUrl}
                                 alt="Flashcard image"
-                                className={`rounded-lg cursor-zoom-in shadow-md hover:shadow-lg transition-all active:scale-[0.98] ${isLarge ? 'max-h-48' : 'max-h-32'}`}
+                                className={`rounded-lg cursor-zoom-in shadow-md hover:shadow-lg transition-[transform,box-shadow] active:scale-[0.98] ${isLarge ? 'max-h-48' : 'max-h-32'}`}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onImageZoom(imageUrl);

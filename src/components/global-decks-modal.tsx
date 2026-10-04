@@ -12,7 +12,7 @@ interface PublicDeck {
     id: string;
     name: string;
     flashcards: { question: string; answer: string }[];
-    owner: { name: string | null; email: string | null } | null;
+    owner: { name: string | null } | null;
 }
 
 export function GlobalDecksModal() {

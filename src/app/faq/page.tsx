@@ -48,6 +48,7 @@ type ContentDict = {
   notesLabel: string;
   notesPlaceholder: string;
   questionsLabel: string;
+  breakdownLabel: string;
   questionsPlaceholder: string;
   copyPromptBtn: string;
   copiedBtn: string;
@@ -68,24 +69,42 @@ export default function FAQPage() {
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
   const [questions, setQuestions] = useState("");
+  const [decompose, setDecompose] = useState(false);
 
   const getFormattedPrompt = () => {
     const template = t.promptTextTemplate;
-    let formatted = template;
 
     if (faqLang === "pl") {
-      formatted = formatted
-        .replace("{PRZEDMIOT}", subject.trim() || "{PRZEDMIOT}")
-        .replace("{DODATKOWE_NOTATKI}", notes.trim() || "{DODATKOWE_NOTATKI}")
+      const contextLines: string[] = [];
+      if (subject.trim()) contextLines.push(`Nazwa przedmiotu: ${subject.trim()}`);
+      if (notes.trim()) contextLines.push(`Dodatkowe uwagi do zestawu: ${notes.trim()}`);
+      const context = contextLines.length
+        ? `\nKontekst:\n${contextLines.join("\n")}\n`
+        : "";
+      const decomposeBlock = decompose
+        ? "\nObsługa złożoności: Gdy pytanie jest szerokie lub wieloczęściowe, podziel je na kilka węższych, samodzielnych pytań — po jednym na każdy kluczowy aspekt — i wygeneruj dla każdego osobną fiszkę, zachowując pierwotną kolejność listy źródłowej.\n"
+        : "";
+
+      return template
+        .replace("{KONTEKST}", context)
+        .replace("{ROZBIJ}", decomposeBlock)
         .replace("[TUTAJ WKLEJ SWOJE PYTANIA]", questions.trim() || "[TUTAJ WKLEJ SWOJE PYTANIA]");
-    } else {
-      formatted = formatted
-        .replace("{PRZEDMIOT}", subject.trim() || "{PRZEDMIOT}")
-        .replace("{DODATKOWE_NOTATKI}", notes.trim() || "{DODATKOWE_NOTATKI}")
-        .replace("[PASTE YOUR QUESTIONS HERE]", questions.trim() || "[PASTE YOUR QUESTIONS HERE]");
     }
 
-    return formatted;
+    const contextLines: string[] = [];
+    if (subject.trim()) contextLines.push(`Subject name: ${subject.trim()}`);
+    if (notes.trim()) contextLines.push(`Additional comments for the deck: ${notes.trim()}`);
+    const context = contextLines.length
+      ? `\nContext:\n${contextLines.join("\n")}\n`
+      : "";
+    const decomposeBlock = decompose
+      ? "\nComplexity handling: When a question is broad or multi-part, split it into several narrower, self-contained questions - one per key aspect - and generate a separate flashcard for each of them, keeping the original order of the source list.\n"
+      : "";
+
+    return template
+      .replace("{CONTEXT_BLOCK}", context)
+      .replace("{BREAKDOWN_BLOCK}", decomposeBlock)
+      .replace("[PASTE YOUR QUESTIONS HERE]", questions.trim() || "[PASTE YOUR QUESTIONS HERE]");
   };
 
   const toggleFaq = (id: string) => {
@@ -120,41 +139,38 @@ export default function FAQPage() {
       notesLabel: "Additional Comments (Optional)",
       notesPlaceholder: "e.g., Focus on Krebs cycle, skip section 4",
       questionsLabel: "Your Questions / Raw Notes",
+      breakdownLabel: "Break down complex questions into smaller ones",
       questionsPlaceholder: "Paste your questions here (one per line) or raw text...",
       promptTextTemplate: `Role: You are an Instructional Design Expert and a specialist in Active Recall methodology. Your task is to transform raw questions and source materials into a high-quality set of educational flashcards.
-
-Context (optional):
-Subject name: {PRZEDMIOT}
-Additional comments for the deck: {DODATKOWE_NOTATKI}
-
-(If the context fields are empty, ignore them and rely solely on universal rules of logic for the provided questions).
-
-Objective: Create a database of questions and answers based on the provided list of questions and the content of the attached materials. If a context is defined, take into account the specifics of the subject or additional guidelines.
+{CONTEXT_BLOCK}
+Objective: Create a set of question-and-answer flashcards based on the provided list of questions and the content of the attached materials. If a context is defined, take into account the specifics of the subject or additional guidelines.
 
 Execution Instructions (Step-by-Step):
-1. Analysis and Correction: Read each question from the list. Correct any linguistic, spelling, or punctuation errors. If a question is vague, rephrase it to be specific while maintaining the original intent.
+1. Analysis and Correction: Read each item from the input. Correct any linguistic, spelling, or punctuation errors. If a question is vague, rephrase it to be specific while maintaining the original intent. If parts of the input are raw notes rather than explicit questions, transform the key facts into clear, self-contained questions.
 2. Content Development: Answer each question, treating the content of the attached materials as the primary source of truth.
-3. Filling Gaps: If the presentation/document does not contain the answer, use your broad expert knowledge to provide a full, factually correct, and comprehensive response.
-4. Stylistics: Answers must be specific yet exhaustive (leaving no room for doubt). Use professional terminology.
-
+3. Filling Gaps: If the presentation/document does not contain the answer, use your broad expert knowledge to provide a factually correct and comprehensive response.
+4. Stylistics: Answers must be specific yet exhaustive - always provide the most complete, detailed response possible, leaving no room for doubt. Use professional terminology.
+5. Language: Write each answer in the same language as its source question.
+{BREAKDOWN_BLOCK}
 CRITICAL FORMATTING RULES (Constraint Checklist):
+- Preserve the original order of the list; every input item must produce at least one card.
 - Generate ONLY one code block labeled as "json".
 - The result must be a valid array of objects with keys: "question", "answer", and optionally "image".
+- Include an "image" key ONLY if the source material contains a genuine image URL; NEVER invent or guess image URLs.
 - Absolute ban on adding any introduction, acknowledgments, comments, or summaries before or after the JSON block.
 - Write mathematical/technical formulas in LaTeX format inside JSON strings (e.g., $E=mc^2$ or for blocks $$...$$).
 - Remember to properly format the JSON — in particular, double-escape characters in LaTeX commands (e.g., \\\\frac, \\\\pi).
-- The only allowed formatting inside string values (besides LaTeX equations) is indeed bold (**text**), italics (*text*), and newline characters (\\\\n) if needed. Do not use other formatting types like bullet points, numbered lists, or headers.
+- The only allowed formatting inside string values (besides LaTeX equations) is bold (**text**), italics (*text*), and newline characters (\\\\n) if needed. Do not use other formatting types like bullet points, numbered lists, or headers.
 
 Examples of expected output structure:
 [
   {
     "question": "What is the mitochondria?",
-    "answer": "The powerhouse of the cell, responsible for generating ATP.",
-    "image": "https://images.unsplash.com/photo.png"
+    "answer": "The powerhouse of the cell, responsible for generating ATP."
   },
   {
-    "question": "How to write a fraction $\\\\frac{a}{b}$ in LaTeX?",
-    "answer": "We use the \`\\\\frac{a}{b}\` command, which we write in JSON with a double backslash as \`$\\\\frac{a}{b}$\`."
+    "question": "How do you write a fraction $\\\\frac{a}{b}$ in LaTeX?",
+    "answer": "Use the $\\\\frac{a}{b}$ command; inside JSON strings every backslash must be doubled."
   }
 ]
 
@@ -375,41 +391,38 @@ QUESTIONS:
       notesLabel: "Dodatkowe uwagi (opcjonalnie)",
       notesPlaceholder: "np. Skup się na cyklu Krebsa, pomiń rozdział 4",
       questionsLabel: "Twoje pytania / Surowe notatki",
+      breakdownLabel: "Rozbij złożone pytania na mniejsze",
       questionsPlaceholder: "Wklej tutaj swoje pytania (jedno w linii) lub surowy tekst...",
       promptTextTemplate: `Rola: Jesteś ekspertem ds. projektowania instruktażowego (Instructional Design) oraz specjalistą od metodologii Active Recall. Twoim zadaniem jest przekształcenie surowych pytań i materiałów źródłowych w wysokiej jakości zestaw fiszek do nauki.
-
-Kontekst (opcjonalny):
-Nazwa przedmiotu: {PRZEDMIOT}
-Dodatkowe uwagi do zestawu: {DODATKOWE_NOTATKI}
-
-(Jeśli pola kontekstu są puste, zignoruj je i opieraj się wyłącznie na uniwersalnych zasadach logiki dla podanych pytań).
-
-Cel zadania: Stworzenie bazy pytań i odpowiedzi na podstawie dostarczonej listy pytań oraz treści załączonych materiałów. Jeśli zdefiniowano kontekst, uwzględnij specyfikę przedmiotu lub dodatkowe wytyczne.
+{KONTEKST}
+Cel zadania: Stworzenie zestawu fiszek pytanie–odpowiedź na podstawie dostarczonej listy pytań oraz treści załączonych materiałów. Jeśli zdefiniowano kontekst, uwzględnij specyfikę przedmiotu lub dodatkowe wytyczne.
 
 Instrukcje wykonawcze (Krok po kroku):
-1. Analiza i korekta: Przeczytaj każde pytanie z listy. Popraw błędy językowe, ortograficzne i interpunkcyjne. Jeśli pytanie jest niejasne, sformułuj je tak, aby było konkretne, zachowując pierwotny sens.
-2. Opracowanie merytoryczne: Odpowiedz na każde pytanie, traktując treść załączonych materiałów jako priorytetowe źródło prawdy. 
-3. Uzupełnienie luk: Jeśli prezentacja/dokument nie zawiera odpowiedzi, wykorzystaj swoją szeroką wiedzę ekspercką, aby udzielić pełnej, poprawnej merytorycznie i wyczerpującej odpowiedzi.
-4. Stylistyka: Odpowiedzi muszą być konkretne, ale wyczerpujące (bez niedomówień). Używaj profesjonalnej terminologii.
-
+1. Analiza i korekta: Przeczytaj każdy element wejścia. Popraw błędy językowe, ortograficzne i interpunkcyjne. Jeśli pytanie jest niejasne, sformułuj je tak, aby było konkretne, zachowując pierwotny sens. Jeśli część wejścia to surowe notatki, a nie jawne pytania, przekształć kluczowe fakty w jasne, samodzielne pytania.
+2. Opracowanie merytoryczne: Odpowiedz na każde pytanie, traktując treść załączonych materiałów jako priorytetowe źródło prawdy.
+3. Uzupełnienie luk: Jeśli prezentacja/dokument nie zawiera odpowiedzi, wykorzystaj swoją szeroką wiedzę ekspercką, aby udzielić poprawnej merytorycznie i wyczerpującej odpowiedzi.
+4. Stylistyka: Odpowiedzi muszą być konkretne, lecz wyczerpujące - zawsze podawaj najbardziej kompletną i szczegółową odpowiedź, bez niedomówień. Używaj profesjonalnej terminologii.
+5. Język: Każdą odpowiedź zapisz w tym samym języku, w którym napisane jest pytanie źródłowe.
+{ROZBIJ}
 KRYTYCZNE ZASADY FORMATOWANIA (Constraint Checklist):
+- Zachowaj pierwotną kolejność listy; każdy element wejścia musi dać co najmniej jedną fiszkę.
 - Wygeneruj wyłącznie jeden blok kodu oznaczony jako "json".
 - Wynik musi być poprawną tablicą obiektów z kluczami: "question", "answer" oraz opcjonalnie "image".
+- Klucz "image" dodawaj WYŁĄCZNIE wtedy, gdy materiały źródłowe zawierają prawdziwy adres URL obrazu; NIGDY nie wymyślaj ani nie zgaduj adresów URL.
 - Całkowity zakaz dodawania jakiegokolwiek wstępu, podziękowań, komentarzy czy podsumowań przed i po bloku JSON.
 - Wzory matematyczne/techniczne zapisuj w formacie LaTeX wewnątrz stringów JSON (np. $E=mc^2$ lub dla bloków $$...$$).
 - Pamiętaj o poprawnym formatowaniu JSON — w szczególności o podwójnym uciekaniu znaków w komendach LaTeX (np. \\\\frac, \\\\pi).
-- Jedyne dozwolone formatowanie tekstu wewnątrz wartości (poza równaniami LaTeX) to właśnie takie z pogrubieniami (**tekst**), kursywą (*tekst*) oraz znakami nowej linii (\\\\n) w razie potrzeby. Całkowity zakaz stosowania innych formatowań, w tym list punktowanych, numerowanych czy nagłówków.
+- Jedyne dozwolone formatowanie tekstu wewnątrz wartości (poza równaniami LaTeX) to pogrubienia (**tekst**), kursywa (*tekst*) oraz znaki nowej linii (\\\\n) w razie potrzeby. Całkowity zakaz stosowania innych formatowań, w tym list punktowanych, numerowanych czy nagłówków.
 
 Przykłady oczekiwanej struktury wyjściowej:
 [
   {
-    "question": "Wzór na pole koła o promieniu $r$?",
-    "answer": "Wzór to $P = \\\\pi r^2$.",
-    "image": "https://example.com/circle.png"
+    "question": "Co to jest mitochondrium?",
+    "answer": "Elektrownia komórki, odpowiedzialna za wytwarzanie ATP."
   },
   {
     "question": "Jak zapisać ułamek $\\\\frac{a}{b}$ w LaTeX?",
-    "answer": "Używamy polecenia \`\\\\frac{a}{b}\`, co w JSON zapisujemy z podwójnym backslashem jako \`$\\\\frac{a}{b}$\`."
+    "answer": "Użyj polecenia $\\\\frac{a}{b}$; wewnątrz stringów JSON każdy ukośnik trzeba podwoić."
   }
 ]
 
@@ -662,7 +675,7 @@ PYTANIA:
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder={t.subjectPlaceholder}
-                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/60"
+                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-[color,background-color,border-color,box-shadow] placeholder:text-muted-foreground/60"
               />
             </div>
             
@@ -676,7 +689,7 @@ PYTANIA:
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder={t.notesPlaceholder}
-                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/60"
+                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-[color,background-color,border-color,box-shadow] placeholder:text-muted-foreground/60"
               />
             </div>
           </div>
@@ -693,6 +706,19 @@ PYTANIA:
               rows={4}
               className="w-full text-sm p-3 bg-muted/30 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono resize-y placeholder:text-muted-foreground/60"
             />
+          </div>
+
+          <div className="flex items-center gap-2.5 mb-6">
+            <input
+              id="decompose-toggle"
+              type="checkbox"
+              checked={decompose}
+              onChange={(e) => setDecompose(e.target.checked)}
+              className="size-4 rounded border-border accent-primary cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            />
+            <label htmlFor="decompose-toggle" className="text-sm text-foreground/80 cursor-pointer select-none">
+              {t.breakdownLabel}
+            </label>
           </div>
 
           <div className="relative">
@@ -728,7 +754,7 @@ PYTANIA:
             <Button
               onClick={() => handleCopyPrompt(getFormattedPrompt())}
               variant={isCopied ? "default" : "secondary"}
-              className={`w-full sm:w-auto gap-2 transition-all order-1 sm:order-2 ${isCopied ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
+              className={`w-full sm:w-auto gap-2 transition-colors order-1 sm:order-2 ${isCopied ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
             >
               <AnimatePresence mode="wait" initial={false}>
                 {isCopied ? (
@@ -779,7 +805,7 @@ PYTANIA:
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: secIndex * 0.1 + itemIndex * 0.05 }}
-                    className={`border border-border rounded-xl overflow-hidden transition-all duration-300 ${isOpen ? "bg-card/80 border-primary/50 shadow-[0_0_15px_rgba(var(--primary),0.1)]" : "bg-card hover:border-primary/30"}`}
+                    className={`border border-border rounded-xl overflow-hidden transition-[background-color,border-color,box-shadow] duration-300 ${isOpen ? "bg-card/80 border-primary/50 shadow-lg shadow-primary/10" : "bg-card hover:border-primary/30"}`}
                   >
                     <button
                       onClick={() => toggleFaq(id)}

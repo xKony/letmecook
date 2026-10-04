@@ -14,9 +14,9 @@ export function GuestModeBanner() {
     }
 
     return (
-        <div className="animate-slide-down-in bg-amber-500/10 border-b border-amber-500/20 px-4 py-2">
+        <div className="animate-slide-down-in bg-amber-500/10 border-b border-amber-500/30 dark:border-amber-500/20 px-4 py-2">
             <div className="max-w-4xl mx-auto flex items-center justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-2 text-amber-200 text-sm">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-200 text-sm">
                     <HardDrive className="w-4 h-4" />
                     <span>
                         <strong>{t("banner.guestMode")}</strong> {t("banner.guestDescription")}
@@ -24,7 +24,7 @@ export function GuestModeBanner() {
                 </div>
                 <Link
                     href="/login"
-                    className="flex items-center gap-2 text-sm bg-primary/20 hover:bg-primary/30 text-primary-foreground px-3 py-1 rounded-lg transition-colors"
+                    className="flex items-center gap-2 text-sm bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1 rounded-lg transition-colors"
                 >
                     <Cloud className="w-4 h-4" />
                     <span>{t("banner.signInToSync")}</span>

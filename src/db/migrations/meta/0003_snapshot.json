@@ -1,6 +1,6 @@
 {
-  "id": "0ec7db94-a27f-4e9b-a8a8-fad3eedf8a81",
-  "prevId": "fcde4070-87e9-400e-b6aa-8862808d9a9d",
+  "id": "8c7a8d69-8778-4a09-a00c-ca0c808cb542",
+  "prevId": "0ec7db94-a27f-4e9b-a8a8-fad3eedf8a81",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -396,6 +396,13 @@
         },
         "fsrs_state": {
           "name": "fsrs_state",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "fsrs_learning_steps": {
+          "name": "fsrs_learning_steps",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,

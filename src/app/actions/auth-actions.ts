@@ -4,11 +4,14 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { signIn, auth } from "@/lib/auth";
-import { AuthError } from "next-auth";
+import { auth } from "@/lib/auth";
 import { getClientIP } from "@/lib/get-client-ip";
-import { checkRateLimit, getRateLimitState, RATE_LIMITS } from "@/lib/rate-limit";
-import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+    registerSchema,
+    changePasswordSchema,
+    changeNameSchema,
+} from "@/lib/validations";
 
 export async function registerUser(formData: FormData) {
     // Rate limiting
@@ -18,13 +21,17 @@ export async function registerUser(formData: FormData) {
         return { error: `Too many registration attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.` };
     }
 
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+    const validation = registerSchema.safeParse({
+        name: (formData.get("name") as string) || undefined,
+        email: formData.get("email"),
+        password: formData.get("password"),
+    });
 
-    if (!email || !password) {
-        return { error: "Email and password are required" };
+    if (!validation.success) {
+        return { error: validation.error.issues[0]?.message || "Invalid input" };
     }
+
+    const { name, email, password } = validation.data;
 
     // Check if user already exists
     const existingUser = await db.query.users.findFirst({
@@ -36,7 +43,7 @@ export async function registerUser(formData: FormData) {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
     try {
@@ -53,48 +60,6 @@ export async function registerUser(formData: FormData) {
     }
 }
 
-export async function loginUser(
-    formData: FormData
-): Promise<{ error?: string; success?: true }> {
-    const ip = await getClientIP();
-    const rateLimit = getRateLimitState(`login:${ip}`, RATE_LIMITS.login);
-    if (!rateLimit.success) {
-        return {
-            error: `Too many login attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.`,
-        };
-    }
-
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-
-    if (!email || !password) {
-        return { error: "Email and password are required" };
-    }
-
-    try {
-        const result = await signIn("credentials", {
-            email,
-            password,
-            redirect: false,
-        });
-
-        if (result?.error) {
-            return { error: "Invalid email or password" };
-        }
-
-        return { success: true };
-    } catch (error) {
-        if (isRedirectError(error)) {
-            throw error;
-        }
-        if (error instanceof AuthError) {
-            return { error: "Invalid email or password" };
-        }
-        console.error("Login error:", error);
-        return { error: "An unexpected error occurred. Please try again." };
-    }
-}
-
 export async function changePassword(currentPassword: string, newPassword: string) {
     const session = await auth();
 
@@ -108,12 +73,9 @@ export async function changePassword(currentPassword: string, newPassword: strin
         return { error: `Too many password change attempts. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.` };
     }
 
-    if (!currentPassword || !newPassword) {
-        return { error: "Both passwords are required" };
-    }
-
-    if (newPassword.length < 6) {
-        return { error: "New password must be at least 6 characters" };
+    const validation = changePasswordSchema.safeParse({ currentPassword, newPassword });
+    if (!validation.success) {
+        return { error: validation.error.issues[0]?.message || "Invalid input" };
     }
 
     try {
@@ -127,14 +89,14 @@ export async function changePassword(currentPassword: string, newPassword: strin
         }
 
         // Verify current password
-        const isValid = await bcrypt.compare(currentPassword, user.password);
+        const isValid = await bcrypt.compare(validation.data.currentPassword, user.password);
 
         if (!isValid) {
             return { error: "Current password is incorrect" };
         }
 
         // Hash new password
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const hashedPassword = await bcrypt.hash(validation.data.newPassword, 12);
 
         // Update password
         await db.update(users)
@@ -155,18 +117,14 @@ export async function changeName(newName: string) {
         return { error: "Not authenticated" };
     }
 
-    const trimmedName = newName.trim();
-    if (!trimmedName) {
-        return { error: "Name cannot be empty" };
-    }
-
-    if (trimmedName.length > 50) {
-        return { error: "Name must be 50 characters or less" };
+    const validation = changeNameSchema.safeParse({ name: newName });
+    if (!validation.success) {
+        return { error: validation.error.issues[0]?.message || "Invalid input" };
     }
 
     try {
         await db.update(users)
-            .set({ name: trimmedName })
+            .set({ name: validation.data.name })
             .where(eq(users.id, session.user.id));
 
         return { success: true };
@@ -175,4 +133,3 @@ export async function changeName(newName: string) {
         return { error: "Failed to change name" };
     }
 }
-
