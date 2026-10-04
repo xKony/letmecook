@@ -44,3 +44,6 @@ opencode.json
 
 # local review notes
 improvements.md
+
+# local dev server logs
+tmp-*.txt

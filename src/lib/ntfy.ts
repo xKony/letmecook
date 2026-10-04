@@ -14,8 +14,11 @@
  * 3. As a fallback the UI also offers an `ntfy://` deep-link button
  *    (Android) plus copy-topic / open-web-app buttons.
  *
- * Publishing: plain HTTP POST to `https://ntfy.sh/<topic>` with
- * Title / Priority / Tags / Click / Actions headers.
+ * Publishing: JSON `POST` to `https://ntfy.sh` (`{"topic", ...}` — see
+ * https://docs.ntfy.sh/publish/#publish-as-json). JSON keeps title/message
+ * in a UTF-8 body, so emoji and non-Latin text are safe. Plain header
+ * publishing (`Title: ...`) breaks in browsers: fetch rejects header values
+ * outside ISO-8859-1 ("String contains non ISO-8859-1 code point").
  */
 
 export const NTFY_SERVER = "https://ntfy.sh";
@@ -82,26 +85,34 @@ export function buildDueReminder(dueCount: number, deckName?: string, appUrl?: s
     };
 }
 
-/** Publish a message to a topic. Used by API routes (server-side). */
+const PRIORITY_IDS = { min: 1, low: 2, default: 3, high: 4, urgent: 5 } as const;
+
+/**
+ * Publish a message to a topic. Used by API routes (server-side) and by the
+ * guest pairing UI straight from the browser (client-side).
+ */
 export async function publishToTopic(topic: string, payload: ReminderPayload): Promise<void> {
     if (!isValidTopic(topic)) throw new Error("Invalid ntfy topic");
 
-    const headers: Record<string, string> = {
-        "Content-Type": "text/plain; charset=utf-8",
+    const body: Record<string, unknown> = {
+        topic,
+        message: payload.message,
     };
-    if (payload.title) headers["Title"] = payload.title;
-    if (payload.priority) headers["Priority"] = payload.priority;
-    if (payload.tags?.length) headers["Tags"] = payload.tags.join(",");
-    if (payload.clickUrl) headers["Click"] = payload.clickUrl;
+    if (payload.title) body.title = payload.title;
+    if (payload.priority) body.priority = PRIORITY_IDS[payload.priority];
+    if (payload.tags?.length) body.tags = payload.tags;
+    if (payload.clickUrl) body.click = payload.clickUrl;
     // Action button that opens the app right from the notification.
     if (payload.clickUrl) {
-        headers["Actions"] = `view, Open LetMeCook, ${payload.clickUrl}, clear=true`;
+        body.actions = [
+            { action: "view", label: "Open LetMeCook", url: payload.clickUrl, clear: true },
+        ];
     }
 
-    const res = await fetch(`${NTFY_SERVER}/${topic}`, {
+    const res = await fetch(NTFY_SERVER, {
         method: "POST",
-        headers,
-        body: payload.message,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
     });
 
     if (!res.ok) {
