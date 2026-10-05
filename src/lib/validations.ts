@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isAllowedImageUrl } from "@/lib/image-url";
+import { isAllowedImageUrl, IMAGE_DATA_URL_MAX_LENGTH } from "@/lib/image-url";
 
 // ============================================
 // Deck/Card Validation Schemas
@@ -15,16 +15,61 @@ export const LIMITS = {
     PASSWORD_MAX: 128,
     EMAIL_MAX: 255,
     NAME_MAX: 50,
+    /** Max inline pasted image (`data:` URL chars ≈ 800 KB binary). */
+    OCCLUSION_IMAGE_DATA_URL_MAX: IMAGE_DATA_URL_MAX_LENGTH,
+    /** Max masks per occlusion image (1 image = N cards). */
+    OCCLUSION_MASKS_MAX: 50,
+    /** Max prompt text per mask. */
+    OCCLUSION_LABEL_MAX: 200,
+    /** Post-compression binary cap enforced by the upload route. */
+    OCCLUSION_IMAGE_MAX_BYTES: 800_000,
+    /** Per-user image storage quota (Neon free tier is 0.5 GB/project). */
+    USER_IMAGE_QUOTA_BYTES: 200 * 1024 * 1024,
 } as const;
 
 const optionalImageSchema = z
     .string()
-    .max(2048)
+    .max(LIMITS.OCCLUSION_IMAGE_DATA_URL_MAX)
     .optional()
     .refine((val) => val === undefined || val === "" || isAllowedImageUrl(val), {
-        message: "Image URL must be a valid https URL",
+        message: "Image must be a valid https URL or a pasted image",
     })
     .transform((val) => (val && val.trim() ? val.trim() : undefined));
+
+// Image occlusion payload (masks are fractions 0..1 of image size)
+export const occlusionMaskSchema = z.object({
+    id: z.string().min(1).max(64),
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    w: z.number().gt(0).max(1),
+    h: z.number().gt(0).max(1),
+    label: z.string().max(LIMITS.OCCLUSION_LABEL_MAX).optional(),
+});
+
+export const occlusionDataSchema = z
+    .object({
+        imageId: z.string().uuid().optional(),
+        imageDataUrl: z
+            .string()
+            .max(LIMITS.OCCLUSION_IMAGE_DATA_URL_MAX)
+            .refine((val) => isAllowedImageUrl(val), {
+                message: "Occlusion image must be a valid pasted image",
+            })
+            .optional(),
+        masks: z
+            .array(occlusionMaskSchema)
+            .min(1)
+            .max(LIMITS.OCCLUSION_MASKS_MAX),
+        activeMaskId: z.string().min(1).max(64),
+        width: z.number().int().positive().max(8000).optional(),
+        height: z.number().int().positive().max(8000).optional(),
+    })
+    .refine((o) => !!o.imageId || !!o.imageDataUrl, {
+        message: "Occlusion needs an image",
+    })
+    .refine((o) => o.masks.some((m) => m.id === o.activeMaskId), {
+        message: "Active mask not found",
+    });
 
 // Single card schema
 export const cardSchema = z.object({
@@ -36,6 +81,7 @@ export const cardSchema = z.object({
         .string()
         .max(LIMITS.ANSWER_MAX, `Answer must be ${LIMITS.ANSWER_MAX} characters or less`),
     image: optionalImageSchema,
+    occlusion: occlusionDataSchema.optional(),
 });
 
 // Deck creation schema
@@ -89,7 +135,8 @@ export const syncCardSchema = z.object({
     answer: z
         .string()
         .max(LIMITS.ANSWER_MAX, `Answer must be ${LIMITS.ANSWER_MAX} characters or less`),
-    image: z.string().optional(),
+    image: z.string().max(LIMITS.OCCLUSION_IMAGE_DATA_URL_MAX).optional(),
+    occlusion: occlusionDataSchema.optional(),
     level: cardLevelSchema.optional(),
 });
 
@@ -172,3 +219,5 @@ export type CardInput = z.infer<typeof cardSchema>;
 export type UpdateCardInput = z.infer<typeof updateCardSchema>;
 export type AddCardInput = z.infer<typeof addCardSchema>;
 export type CardLevel = z.infer<typeof cardLevelSchema>;
+export type OcclusionMaskInput = z.infer<typeof occlusionMaskSchema>;
+export type OcclusionDataInput = z.infer<typeof occlusionDataSchema>;

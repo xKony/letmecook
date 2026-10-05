@@ -87,10 +87,43 @@ export const flashcards = pgTable("flashcards", {
     fsrsLastReview: bigint("fsrs_last_review", { mode: "number" }), // Last review timestamp (ms epoch)
     fsrsScheduledDays: integer("fsrs_scheduled_days").default(0).notNull(), // Last scheduled interval
     sortOrder: integer("sort_order").default(0).notNull(),
+    // Image-occlusion payload as JSON: { imageId?, imageDataUrl?, masks, activeMaskId }.
+    // NULL = regular text card. Image bytes live in `deck_images` (auth mode)
+    // or inline as a data URL (guest mode / exports).
+    occlusion: text("occlusion"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 }, (table) => [
     index("flashcards_deck_id_idx").on(table.deckId),
+]);
+
+// ============================================
+// Occlusion image store
+// ============================================
+
+// Compressed pasted images (WebP, client-side) for image-occlusion cards.
+// Content-addressed by SHA-256 per owner: pasting the same screenshot twice
+// (or generating N cards from 1 image) stores exactly one row. Bytes are
+// base64 text (Neon HTTP-driver friendly; +33% vs bytea, dwarfed by the
+// 5-10x win from WebP compression). Served on demand via /api/images/[id]
+// so deck fetches stay light. Per-user quota enforced on upload.
+export const deckImages = pgTable("deck_images", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerId: uuid("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    // Attached when the deck is saved; NULL for in-progress editor uploads.
+    // Deleted with the deck; orphan (NULL) rows are swept by the cron route.
+    deckId: uuid("deck_id").references(() => decks.id, { onDelete: "cascade" }),
+    hash: text("hash").notNull(), // SHA-256 hex of the binary payload
+    mime: text("mime").notNull(), // image/webp | image/png | image/jpeg
+    data: text("data").notNull(), // base64, no data: prefix
+    sizeBytes: integer("size_bytes").notNull(), // binary size (quota accounting)
+    width: integer("width"),
+    height: integer("height"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (table) => [
+    index("deck_images_owner_id_idx").on(table.ownerId),
+    index("deck_images_deck_id_idx").on(table.deckId),
+    uniqueIndex("deck_images_owner_hash_uidx").on(table.ownerId, table.hash),
 ]);
 
 export const deckPermissions = pgTable("deck_permissions", {
@@ -123,6 +156,7 @@ export const decksRelations = relations(decks, ({ one, many }) => ({
     }),
     flashcards: many(flashcards),
     permissions: many(deckPermissions),
+    images: many(deckImages),
 }));
 
 export const flashcardsRelations = relations(flashcards, ({ one }) => ({
@@ -143,6 +177,17 @@ export const deckPermissionsRelations = relations(deckPermissions, ({ one }) => 
     }),
 }));
 
+export const deckImagesRelations = relations(deckImages, ({ one }) => ({
+    owner: one(users, {
+        fields: [deckImages.ownerId],
+        references: [users.id],
+    }),
+    deck: one(decks, {
+        fields: [deckImages.deckId],
+        references: [decks.id],
+    }),
+}));
+
 // ============================================
 // Type Exports
 // ============================================
@@ -154,3 +199,5 @@ export type NewDeck = typeof decks.$inferInsert;
 export type Flashcard = typeof flashcards.$inferSelect;
 export type NewFlashcard = typeof flashcards.$inferInsert;
 export type DeckPermission = typeof deckPermissions.$inferSelect;
+export type DeckImage = typeof deckImages.$inferSelect;
+export type NewDeckImage = typeof deckImages.$inferInsert;

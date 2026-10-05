@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { Deck, CardLevel } from "@/lib/types";
 import { backfillLegacySortOrder, sortFlashcardsByOrder } from "@/lib/flashcard-order";
+import { parseOcclusionJson } from "@/lib/occlusion";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -23,6 +24,7 @@ export function transformDbDeck(dbDeck: {
         question: string;
         answer: string;
         image?: string | null;
+        occlusion?: string | null;
         level: string;
         sortOrder?: number;
         fsrsDue?: number | null;
@@ -51,6 +53,7 @@ export function transformDbDeck(dbDeck: {
             question: card.question,
             answer: card.answer,
             image: card.image || undefined,
+            occlusion: parseOcclusionJson(card.occlusion) ?? undefined,
             level: card.level as CardLevel,
             sortOrder: card.sortOrder,
             fsrsDue: card.fsrsDue ?? undefined,

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import type { Session } from "next-auth";
-import { GuestState, Deck, CardLevel, EditableCard, Flashcard } from "@/lib/types";
+import { GuestState, Deck, CardLevel, EditableCard, Flashcard, DeckCardInput } from "@/lib/types";
 import {
     loadGuestState,
     saveGuestState,
@@ -20,6 +20,7 @@ import { getMyDecks, getUserMaxDecks, createDeck as createDbDeck, deleteDeck as 
 import { updateCardLevel as updateDbCardLevel, updateCard as updateDbCard, resetDeckProgress as resetDbDeckProgress, syncDeckCards as syncDbDeckCards } from "@/app/actions/card-actions";
 import { transformDbDeck } from "@/lib/utils";
 import { normalizeDeckCards } from "@/lib/flashcard-order";
+import { prepareCardsForSave } from "@/lib/occlusion-image";
 
 interface AppContextType {
     // Auth state
@@ -42,7 +43,7 @@ interface AppContextType {
     handleSignOut: () => void;
 
     // Deck actions
-    addDeck: (name: string, content: string | { question: string; answer: string; image?: string }[]) => void;
+    addDeck: (name: string, content: string | DeckCardInput[]) => void;
     selectDeck: (deckId: string) => void;
     closeDeck: () => void;
     deleteDeck: (deckId: string) => void;
@@ -215,8 +216,8 @@ export function AppProvider({
     }, []);
 
     // Add a new deck
-    const addDeck = useCallback(async (name: string, content: string | { question: string; answer: string; image?: string }[]) => {
-        let parsedCards: { question: string; answer: string; image?: string }[] = [];
+    const addDeck = useCallback(async (name: string, content: string | DeckCardInput[]) => {
+        let parsedCards: DeckCardInput[] = [];
 
         if (typeof content === "string") {
             parsedCards = parseQuestionsFile(content);
@@ -227,9 +228,10 @@ export function AppProvider({
         if (parsedCards.length === 0) return;
 
         if (isAuthenticated) {
-            // Save to database
+            // Save to database (inline occlusion images upload first)
             try {
-                await createDbDeck(name, parsedCards);
+                const { cards, imageIds } = await prepareCardsForSave(parsedCards);
+                await createDbDeck(name, cards, imageIds);
                 await refreshDecks();
             } catch (error) {
                 console.error("Failed to create deck:", error);
@@ -428,6 +430,7 @@ export function AppProvider({
             const existingById = new Map(existingCards.map((c) => [c.id, c]));
             return cards.map((card, index) => {
                 const image = card.image?.trim() || undefined;
+                const occlusion = card.occlusion ?? undefined;
                 if (card.id && !card.id.startsWith("temp-") && existingById.has(card.id)) {
                     const existing = existingById.get(card.id)!;
                     return {
@@ -435,6 +438,7 @@ export function AppProvider({
                         question: card.question,
                         answer: card.answer,
                         image,
+                        occlusion,
                         sortOrder: index,
                     };
                 }
@@ -443,6 +447,7 @@ export function AppProvider({
                     question: card.question,
                     answer: card.answer,
                     image,
+                    occlusion,
                     level: "Nowe" as CardLevel,
                     sortOrder: index,
                 };
@@ -459,7 +464,8 @@ export function AppProvider({
 
         if (isAuthenticated) {
             try {
-                await syncDbDeckCards(deckId, cards);
+                const { cards: resolved, imageIds } = await prepareCardsForSave(cards);
+                await syncDbDeckCards(deckId, resolved, imageIds);
                 await refreshDecks();
             } catch (error) {
                 console.error("Failed to sync deck cards:", error);

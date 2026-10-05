@@ -6,6 +6,7 @@ export function deckToEditableCards(deck: Deck): EditableCard[] {
         question: card.question,
         answer: card.answer,
         image: card.image,
+        occlusion: card.occlusion ?? undefined,
         level: card.level,
     }));
 }
@@ -19,5 +20,6 @@ export function parsedToEditableCards(
         question: card.question,
         answer: card.answer,
         image: card.image,
+        occlusion: card.occlusion ?? undefined,
     }));
 }

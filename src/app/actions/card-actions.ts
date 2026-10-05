@@ -5,8 +5,10 @@ import { flashcards, decks, deckPermissions } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { syncDeckCardsSchema, addCardSchema, updateCardSchema, cardLevelSchema } from "@/lib/validations";
+import { syncDeckCardsSchema, addCardSchema, updateCardSchema, cardLevelSchema, type OcclusionDataInput } from "@/lib/validations";
 import { reviewCard } from "@/lib/spaced-repetition";
+import { serializeOcclusion } from "@/lib/occlusion";
+import { attachImagesToDeck } from "@/db/images";
 
 // ============================================
 // Helper: Check if user can edit deck's cards
@@ -187,7 +189,8 @@ function isTempCardId(id: string): boolean {
 
 export async function syncDeckCards(
     deckId: string,
-    cards: { id: string; question: string; answer: string; image?: string; level?: string }[]
+    cards: { id: string; question: string; answer: string; image?: string; occlusion?: OcclusionDataInput | null; level?: string }[],
+    imageIds?: string[]
 ) {
     const user = await requireAuth();
 
@@ -213,17 +216,22 @@ export async function syncDeckCards(
     const idsToDelete = [...existingIds].filter((id) => !payloadIds.has(id));
     const now = new Date();
 
-    const cardsToUpdate: { id: string; question: string; answer: string; image: string | null; sortOrder: number }[] = [];
-    const cardsToInsert: { deckId: string; question: string; answer: string; image: string | null; level: string; sortOrder: number }[] = [];
+    const cardsToUpdate: { id: string; question: string; answer: string; image: string | null; occlusion: string | null; sortOrder: number }[] = [];
+    const cardsToInsert: { deckId: string; question: string; answer: string; image: string | null; occlusion: string | null; level: string; sortOrder: number }[] = [];
 
     for (const [index, card] of validation.data.cards.entries()) {
         const image = card.image?.trim() || null;
+        // Inline data URLs are never stored server-side — the client uploads
+        // them first and passes the resulting imageId instead.
+        const occlusion = card.occlusion
+            ? serializeOcclusion({ ...card.occlusion, imageDataUrl: undefined })
+            : null;
         const cardId = card.id;
 
         if (cardId && !isTempCardId(cardId) && existingIds.has(cardId)) {
-            cardsToUpdate.push({ id: cardId, question: card.question, answer: card.answer, image, sortOrder: index });
+            cardsToUpdate.push({ id: cardId, question: card.question, answer: card.answer, image, occlusion, sortOrder: index });
         } else {
-            cardsToInsert.push({ deckId, question: card.question, answer: card.answer, image, level: "Nowe", sortOrder: index });
+            cardsToInsert.push({ deckId, question: card.question, answer: card.answer, image, occlusion, level: "Nowe", sortOrder: index });
         }
     }
 
@@ -249,6 +257,7 @@ export async function syncDeckCards(
                     question: card.question,
                     answer: card.answer,
                     image: card.image,
+                    occlusion: card.occlusion,
                     sortOrder: card.sortOrder,
                     updatedAt: now,
                 })
@@ -265,6 +274,8 @@ export async function syncDeckCards(
     } else {
         await db.batch(operations as [BatchQuery, ...BatchQuery[]]);
     }
+
+    await attachImagesToDeck(user.id, deckId, imageIds ?? []);
 
     revalidatePath("/");
 }

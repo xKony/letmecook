@@ -1,6 +1,7 @@
 import { GuestState, Deck, Flashcard, CardLevel, ParsedFlashcard } from "./types";
 import { sanitizeImageUrl } from "./image-url";
 import { normalizeDeckCards } from "./flashcard-order";
+import { normalizeOcclusion } from "./occlusion";
 
 const STORAGE_KEY = "letmecook_guest_state";
 const LEGACY_KEY = "letmecook_app_state"; // Old profile-based storage
@@ -31,7 +32,10 @@ function isValidCard(card: unknown): card is Flashcard {
         typeof c.answer === "string" &&
         typeof c.level === "string" &&
         VALID_LEVELS.has(c.level as CardLevel) &&
-        (c.image === undefined || typeof c.image === "string")
+        (c.image === undefined || typeof c.image === "string") &&
+        (c.occlusion === undefined ||
+            c.occlusion === null ||
+            normalizeOcclusion(c.occlusion) !== undefined)
     );
 }
 
@@ -102,7 +106,10 @@ export function loadGuestState(): GuestState {
                 return {
                     decks: parsed.decks.map((deck) => ({
                         ...deck,
-                        cards: normalizeDeckCards(deck.cards),
+                        cards: normalizeDeckCards(deck.cards).map((card) => ({
+                            ...card,
+                            occlusion: normalizeOcclusion(card.occlusion) ?? undefined,
+                        })),
                     })),
                 };
             }
@@ -171,11 +178,15 @@ export function parseQuestionsFile(content: string): ParsedFlashcard[] {
                 const q = item.question ?? item.Question ?? item.q ?? item.Q ?? item.front ?? item.Front ?? item.text ?? item.Text ?? item.prompt ?? item.Prompt ?? "";
                 const a = item.answer ?? item.Answer ?? item.a ?? item.A ?? item.back ?? item.Back ?? item.definition ?? item.Definition ?? item.response ?? item.Response ?? "";
                 const img = item.image ?? item.Image ?? item.img ?? item.Img ?? undefined;
-                
+                const occlusion = normalizeOcclusion(
+                    item.occlusion ?? item.Occlusion ?? undefined
+                ) ?? undefined;
+
                 return {
                     question: String(q),
                     answer: String(a),
                     image: sanitizeImageUrl(img ? String(img) : undefined),
+                    ...(occlusion ? { occlusion } : {}),
                 };
             }).filter((card) => card.question.trim());
         };

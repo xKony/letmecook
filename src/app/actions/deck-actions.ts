@@ -5,7 +5,9 @@ import { decks, flashcards, deckPermissions, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { eq, and, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { createDeckSchema, updateDeckSchema } from "@/lib/validations";
+import { createDeckSchema, updateDeckSchema, type OcclusionDataInput } from "@/lib/validations";
+import { serializeOcclusion } from "@/lib/occlusion";
+import { attachImagesToDeck } from "@/db/images";
 import { cache } from "react";
 
 // ============================================
@@ -110,7 +112,7 @@ export const getUserMaxDecks = cache(async function (): Promise<number> {
  * @param cards Array of questions and answers
  * @returns The created deck
  */
-export async function createDeck(name: string, cards: { question: string; answer: string }[]) {
+export async function createDeck(name: string, cards: { question: string; answer: string; image?: string; occlusion?: OcclusionDataInput | null }[], imageIds?: string[]) {
     console.log(`[CREATE_DECK] Starting creation for deck: "${name}" with ${cards.length} cards`);
     const user = await requireAuth();
 
@@ -154,12 +156,18 @@ export async function createDeck(name: string, cards: { question: string; answer
                         question: card.question,
                         answer: card.answer,
                         image: card.image,
+                        occlusion: card.occlusion
+                            ? serializeOcclusion({ ...card.occlusion, imageDataUrl: undefined })
+                            : null,
                         level: "Nowe",
                         sortOrder: index,
                     }))
                 );
                 console.log(`[CREATE_DECK] Inserted ${validation.data.cards.length} flashcards`);
             }
+
+            // 3. Attach uploaded occlusion images to the new deck
+            await attachImagesToDeck(user.id, deck.id, imageIds ?? []);
         } catch (insertError) {
             console.error("[CREATE_DECK] Flashcard insertion failed, rolling back deck...", insertError);
             // Manual Rollback: Delete the deck we just created
