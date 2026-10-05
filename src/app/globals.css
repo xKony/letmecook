@@ -369,4 +369,28 @@
     animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
   }
+
+  .occlusion-active-mask {
+    animation: none !important;
+  }
+}
+
+/* Pulsing outline marking the mask currently asked about */
+.occlusion-active-mask {
+  animation: occlusion-mask-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes occlusion-mask-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px var(--occlusion-mask-glow, #f97316),
+      0 0 18px 2px color-mix(in oklab, var(--occlusion-mask-glow, #f97316) 55%, transparent);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 3px var(--occlusion-mask-glow, #f97316),
+      0 0 30px 8px color-mix(in oklab, var(--occlusion-mask-glow, #f97316) 75%, transparent);
+  }
 }

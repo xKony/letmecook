@@ -109,7 +109,7 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
 
     const handleExport = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        downloadDeckJson(deck);
+        void downloadDeckJson(deck);
         setIsContextMenuOpen(false);
     }, [deck]);
 

@@ -3,12 +3,17 @@ import { db } from "@/db";
 import { decks, flashcards, users } from "@/db/schema";
 import { and, count, eq, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
 import { buildDueReminder, getAppUrl, isValidTopic, publishToTopic } from "@/lib/ntfy";
+import { deleteOrphanImages } from "@/db/images";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // At most one reminder per user per 20h (allows daily cron drift).
 const REMINDER_COOLDOWN_MS = 20 * 60 * 60 * 1000;
+
+// Unattached occlusion-image uploads (abandoned editor sessions) older
+// than this are deleted to protect the Neon storage quota.
+const ORPHAN_IMAGE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 function isAuthorized(req: Request): boolean {
     const secret = process.env.CRON_SECRET;
@@ -96,5 +101,13 @@ export async function GET(req: Request) {
         }
     }
 
-    return NextResponse.json({ sent, skippedNoDue, skippedRecent, errors });
+    return NextResponse.json({
+        sent,
+        skippedNoDue,
+        skippedRecent,
+        errors,
+        orphanImagesDeleted: await deleteOrphanImages(ORPHAN_IMAGE_MAX_AGE_MS).catch(
+            () => -1
+        ),
+    });
 }

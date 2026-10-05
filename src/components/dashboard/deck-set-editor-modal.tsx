@@ -9,12 +9,13 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Loader2 } from "lucide-react";
+import { Plus, Search, Loader2, Image as ImageIcon } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useI18n } from "@/lib/i18n-context";
 import { useDeckEditorSession } from "@/lib/deck-editor-session-context";
 import { EditableCard } from "@/lib/types";
 import { FlashcardZoomModal } from "@/components/flashcard/flashcard-zoom-modal";
+import { OcclusionEditorModal } from "@/components/occlusion/occlusion-editor-modal";
 import { generateId } from "@/lib/storage";
 import { DeckEditorCardRow } from "@/components/dashboard/deck-editor-card-row";
 import { DeckEditorPreviewPanel } from "@/components/dashboard/deck-editor-preview-panel";
@@ -28,6 +29,7 @@ export function DeckSetEditorModal() {
     const [preview, setPreview] = useState<PreviewTarget>(null);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [occlusionOpen, setOcclusionOpen] = useState(false);
 
     const isOpen = session !== null;
     const mode = session?.mode ?? "edit";
@@ -115,6 +117,14 @@ export function DeckSetEditorModal() {
         setZoomedImage(url);
     }, []);
 
+    const handleOcclusionGenerate = useCallback(
+        (newCards: EditableCard[]) => {
+            updateSessionCards((prev) => [...prev, ...newCards]);
+            setOcclusionOpen(false);
+        },
+        [updateSessionCards]
+    );
+
     const handlePrimaryAction = async () => {
         const validCards = cards.filter((card) => card.question.trim());
         if (validCards.length === 0) return;
@@ -132,10 +142,11 @@ export function DeckSetEditorModal() {
             if (mode === "import") {
                 await addDeck(
                     importDeckName.trim() || deckName,
-                    validCards.map(({ question, answer, image }) => ({
+                    validCards.map(({ question, answer, image, occlusion }) => ({
                         question,
                         answer,
                         image: image?.trim() || undefined,
+                        occlusion: occlusion ?? undefined,
                     }))
                 );
                 closeEditor();
@@ -237,6 +248,15 @@ export function DeckSetEditorModal() {
                                         <Plus className="w-4 h-4" />
                                         {t("deckEditor.addCard")}
                                     </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setOcclusionOpen(true)}
+                                        className="w-full gap-2 mt-2"
+                                    >
+                                        <ImageIcon className="w-4 h-4" />
+                                        {t("occlusion.openEditor")}
+                                    </Button>
                                 </div>
                             </div>
 
@@ -275,6 +295,12 @@ export function DeckSetEditorModal() {
             <FlashcardZoomModal
                 zoomedImage={zoomedImage}
                 onClose={() => setZoomedImage(null)}
+            />
+
+            <OcclusionEditorModal
+                open={occlusionOpen}
+                onClose={() => setOcclusionOpen(false)}
+                onGenerate={handleOcclusionGenerate}
             />
         </>
     );
