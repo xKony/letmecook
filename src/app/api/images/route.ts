@@ -111,7 +111,21 @@ export async function POST(req: Request) {
             width: isValidDimension(width) ? width : null,
             height: isValidDimension(height) ? height : null,
         })
+        // Concurrent uploads of the same image (e.g. "1 image = N cards"
+        // saved at once) can both pass the dedup check above — the unique
+        // index wins and we fall back to the winner's row.
+        .onConflictDoNothing({ target: [deckImages.ownerId, deckImages.hash] })
         .returning({ id: deckImages.id });
 
-    return NextResponse.json({ id: image.id, deduped: false });
+    if (image) {
+        return NextResponse.json({ id: image.id, deduped: false });
+    }
+    const winner = await db.query.deckImages.findFirst({
+        where: and(eq(deckImages.ownerId, userId), eq(deckImages.hash, hash)),
+        columns: { id: true },
+    });
+    if (winner) {
+        return NextResponse.json({ id: winner.id, deduped: true });
+    }
+    return NextResponse.json({ error: "Image upload failed." }, { status: 500 });
 }

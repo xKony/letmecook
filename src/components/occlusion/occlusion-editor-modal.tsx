@@ -61,6 +61,10 @@ export function OcclusionEditorModal({ open, onClose, onGenerate }: OcclusionEdi
 
     const stageRef = useRef<HTMLDivElement>(null);
     const drawStartRef = useRef<{ x: number; y: number } | null>(null);
+    // Source of truth for the in-progress rectangle (state mirrors it for
+    // paint). A ref is required because pointerup may run before React
+    // re-renders with the latest draft state.
+    const draftRectRef = useRef<DraftRect | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const reset = useCallback(() => {
@@ -134,8 +138,13 @@ export function OcclusionEditorModal({ open, onClose, onGenerate }: OcclusionEdi
             const point = toFractions(e.clientX, e.clientY);
             if (!point) return;
             drawStartRef.current = point;
-            stageRef.current?.setPointerCapture(e.pointerId);
-            setDraft({ x: point.x, y: point.y, w: 0, h: 0 });
+            try {
+                stageRef.current?.setPointerCapture(e.pointerId);
+            } catch {
+                // Synthetic pointers (tests) or old browsers — drawing still works.
+            }
+            draftRectRef.current = { x: point.x, y: point.y, w: 0, h: 0 };
+            setDraft(draftRectRef.current);
         },
         [image, busy, toFractions]
     );
@@ -146,19 +155,21 @@ export function OcclusionEditorModal({ open, onClose, onGenerate }: OcclusionEdi
             if (!start) return;
             const point = toFractions(e.clientX, e.clientY);
             if (!point) return;
-            setDraft({
+            draftRectRef.current = {
                 x: Math.min(start.x, point.x),
                 y: Math.min(start.y, point.y),
                 w: Math.abs(point.x - start.x),
                 h: Math.abs(point.y - start.y),
-            });
+            };
+            setDraft(draftRectRef.current);
         },
         [toFractions]
     );
 
     const handlePointerUp = useCallback(() => {
-        const rect = draft;
+        const rect = draftRectRef.current;
         drawStartRef.current = null;
+        draftRectRef.current = null;
         setDraft(null);
         if (!rect || rect.w < MIN_MASK_EDGE || rect.h < MIN_MASK_EDGE) return;
         const id = `mask-${generateId()}`;
@@ -166,7 +177,7 @@ export function OcclusionEditorModal({ open, onClose, onGenerate }: OcclusionEdi
         if (!clean) return;
         setMasks((prev) => [...prev, clean]);
         setSelectedId(id);
-    }, [draft]);
+    }, []);
 
     const updateMaskLabel = useCallback((id: string, label: string) => {
         setMasks((prev) =>
@@ -265,6 +276,7 @@ export function OcclusionEditorModal({ open, onClose, onGenerate }: OcclusionEdi
                                 onPointerUp={handlePointerUp}
                                 onPointerCancel={() => {
                                     drawStartRef.current = null;
+                                    draftRectRef.current = null;
                                     setDraft(null);
                                 }}
                                 className="relative rounded-xl overflow-hidden border border-border touch-none select-none cursor-crosshair bg-muted/30"
