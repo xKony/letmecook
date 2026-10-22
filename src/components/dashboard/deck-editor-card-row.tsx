@@ -38,6 +38,11 @@ export const DeckEditorCardRow = memo(function DeckEditorCardRow({
                     {t("deckEditor.cardNumber", { number: cardIndex + 1 })}
                 </span>
                 <div className="flex-1 min-w-0 space-y-2">
+                    {card.occlusion && (
+                        <span className="inline-block text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 border border-orange-500/30">
+                            {t("occlusion.badge")} • {card.occlusion.masks.length}
+                        </span>
+                    )}
                     <div
                         className="text-sm leading-relaxed cursor-default rounded px-1.5 py-1 -mx-1.5 hover:bg-muted/60 transition-colors"
                         onMouseEnter={() => onPreviewHover(card.id, "question")}

@@ -5,7 +5,10 @@ import { flashcards, decks, deckPermissions } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { addCardSchema, updateCardSchema, cardLevelSchema, syncDeckCardsSchema } from "@/lib/validations";
+import { syncDeckCardsSchema, addCardSchema, updateCardSchema, cardLevelSchema, type OcclusionDataInput } from "@/lib/validations";
+import { reviewCard } from "@/lib/spaced-repetition";
+import { serializeOcclusion } from "@/lib/occlusion";
+import { attachImagesToDeck } from "@/db/images";
 
 // ============================================
 // Helper: Check if user can edit deck's cards
@@ -33,13 +36,37 @@ async function canEditDeck(deckId: string, userId: string): Promise<boolean> {
 /**
  * Fetch the card's deck and the user's permission role in a single joined query.
  * Returns null if the card (or its deck) does not exist.
+ * Also returns the card's FSRS memory snapshot for scheduling the next review.
  */
-async function getCardEditContext(cardId: string, userId: string): Promise<{ deckId: string; canEdit: boolean } | null> {
+async function getCardEditContext(cardId: string, userId: string): Promise<{
+    deckId: string;
+    canEdit: boolean;
+    fsrs: {
+        fsrsDue: number | null;
+        fsrsStability: number | null;
+        fsrsDifficulty: number | null;
+        fsrsReps: number | null;
+        fsrsLapses: number | null;
+        fsrsState: number | null;
+        fsrsLearningSteps: number | null;
+        fsrsLastReview: number | null;
+        fsrsScheduledDays: number | null;
+    };
+} | null> {
     const [row] = await db
         .select({
             deckId: flashcards.deckId,
             ownerId: decks.ownerId,
             role: deckPermissions.role,
+            fsrsDue: flashcards.fsrsDue,
+            fsrsStability: flashcards.fsrsStability,
+            fsrsDifficulty: flashcards.fsrsDifficulty,
+            fsrsReps: flashcards.fsrsReps,
+            fsrsLapses: flashcards.fsrsLapses,
+            fsrsState: flashcards.fsrsState,
+            fsrsLearningSteps: flashcards.fsrsLearningSteps,
+            fsrsLastReview: flashcards.fsrsLastReview,
+            fsrsScheduledDays: flashcards.fsrsScheduledDays,
         })
         .from(flashcards)
         .innerJoin(decks, eq(flashcards.deckId, decks.id))
@@ -54,6 +81,17 @@ async function getCardEditContext(cardId: string, userId: string): Promise<{ dec
     return {
         deckId: row.deckId,
         canEdit: row.ownerId === userId || row.role === "editor",
+        fsrs: {
+            fsrsDue: row.fsrsDue,
+            fsrsStability: row.fsrsStability,
+            fsrsDifficulty: row.fsrsDifficulty,
+            fsrsReps: row.fsrsReps,
+            fsrsLapses: row.fsrsLapses,
+            fsrsState: row.fsrsState,
+            fsrsLearningSteps: row.fsrsLearningSteps,
+            fsrsLastReview: row.fsrsLastReview,
+            fsrsScheduledDays: row.fsrsScheduledDays,
+        },
     };
 }
 
@@ -83,10 +121,16 @@ export async function updateCardLevel(cardId: string, level: string) {
         throw new Error("Permission denied");
     }
 
+    // FSRS scheduling: compute next memory state from the rating.
+    // The coarse `level` label is kept in sync for filters/stats.
+    // Also touch the deck so its `updatedAt` reflects review activity.
+    const memory = reviewCard(context.fsrs, levelValidation.data, Date.now());
+
     await Promise.all([
         db.update(flashcards)
             .set({
                 level: levelValidation.data,
+                ...memory,
                 updatedAt: new Date(),
             })
             .where(eq(flashcards.id, cardId)),
@@ -145,7 +189,8 @@ function isTempCardId(id: string): boolean {
 
 export async function syncDeckCards(
     deckId: string,
-    cards: { id: string; question: string; answer: string; image?: string; level?: string }[]
+    cards: { id: string; question: string; answer: string; image?: string; occlusion?: OcclusionDataInput | null; level?: string }[],
+    imageIds?: string[]
 ) {
     const user = await requireAuth();
 
@@ -171,17 +216,22 @@ export async function syncDeckCards(
     const idsToDelete = [...existingIds].filter((id) => !payloadIds.has(id));
     const now = new Date();
 
-    const cardsToUpdate: { id: string; question: string; answer: string; image: string | null; sortOrder: number }[] = [];
-    const cardsToInsert: { deckId: string; question: string; answer: string; image: string | null; level: string; sortOrder: number }[] = [];
+    const cardsToUpdate: { id: string; question: string; answer: string; image: string | null; occlusion: string | null; sortOrder: number }[] = [];
+    const cardsToInsert: { deckId: string; question: string; answer: string; image: string | null; occlusion: string | null; level: string; sortOrder: number }[] = [];
 
     for (const [index, card] of validation.data.cards.entries()) {
         const image = card.image?.trim() || null;
+        // Inline data URLs are never stored server-side — the client uploads
+        // them first and passes the resulting imageId instead.
+        const occlusion = card.occlusion
+            ? serializeOcclusion({ ...card.occlusion, imageDataUrl: undefined })
+            : null;
         const cardId = card.id;
 
         if (cardId && !isTempCardId(cardId) && existingIds.has(cardId)) {
-            cardsToUpdate.push({ id: cardId, question: card.question, answer: card.answer, image, sortOrder: index });
+            cardsToUpdate.push({ id: cardId, question: card.question, answer: card.answer, image, occlusion, sortOrder: index });
         } else {
-            cardsToInsert.push({ deckId, question: card.question, answer: card.answer, image, level: "Nowe", sortOrder: index });
+            cardsToInsert.push({ deckId, question: card.question, answer: card.answer, image, occlusion, level: "Nowe", sortOrder: index });
         }
     }
 
@@ -207,6 +257,7 @@ export async function syncDeckCards(
                     question: card.question,
                     answer: card.answer,
                     image: card.image,
+                    occlusion: card.occlusion,
                     sortOrder: card.sortOrder,
                     updatedAt: now,
                 })
@@ -223,6 +274,8 @@ export async function syncDeckCards(
     } else {
         await db.batch(operations as [BatchQuery, ...BatchQuery[]]);
     }
+
+    await attachImagesToDeck(user.id, deckId, imageIds ?? []);
 
     revalidatePath("/");
 }
@@ -302,6 +355,15 @@ export async function resetDeckProgress(deckId: string) {
     await db.update(flashcards)
         .set({
             level: "Nowe",
+            fsrsDue: null,
+            fsrsStability: null,
+            fsrsDifficulty: null,
+            fsrsReps: 0,
+            fsrsLapses: 0,
+            fsrsState: 0,
+            fsrsLearningSteps: 0,
+            fsrsLastReview: null,
+            fsrsScheduledDays: 0,
             updatedAt: new Date(),
         })
         .where(eq(flashcards.deckId, deckId));

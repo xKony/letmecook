@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import type { Session } from "next-auth";
-import { GuestState, Deck, CardLevel, EditableCard, Flashcard } from "@/lib/types";
+import { GuestState, Deck, CardLevel, EditableCard, Flashcard, DeckCardInput } from "@/lib/types";
 import {
     loadGuestState,
     saveGuestState,
@@ -13,12 +13,14 @@ import {
     generateId,
 } from "@/lib/storage";
 import { LOCALSTORAGE_SAVE_DEBOUNCE_MS, MAX_DECKS_PER_USER } from "@/lib/constants";
+import { reviewCard } from "@/lib/spaced-repetition";
 
 // Server actions for authenticated users
 import { getMyDecks, getUserMaxDecks, createDeck as createDbDeck, deleteDeck as deleteDbDeck, updateDeck as updateDbDeck } from "@/app/actions/deck-actions";
 import { updateCardLevel as updateDbCardLevel, updateCard as updateDbCard, resetDeckProgress as resetDbDeckProgress, syncDeckCards as syncDbDeckCards } from "@/app/actions/card-actions";
 import { transformDbDeck } from "@/lib/utils";
 import { normalizeDeckCards } from "@/lib/flashcard-order";
+import { prepareCardsForSave } from "@/lib/occlusion-image";
 
 interface AppContextType {
     // Auth state
@@ -41,7 +43,7 @@ interface AppContextType {
     handleSignOut: () => void;
 
     // Deck actions
-    addDeck: (name: string, content: string | { question: string; answer: string; image?: string }[]) => void;
+    addDeck: (name: string, content: string | DeckCardInput[]) => void;
     selectDeck: (deckId: string) => void;
     closeDeck: () => void;
     deleteDeck: (deckId: string) => void;
@@ -75,7 +77,7 @@ export function AppProvider({
     const [dbDecks, setDbDecks] = useState<Deck[]>(initialDecks);
     const [maxDecks, setMaxDecks] = useState(initialMaxDecks);
     
-    const [guestState, setGuestState] = useState<GuestState>({ decks: [] });
+    const [guestState, setGuestState] = useState<GuestState>(() => loadGuestState());
     const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false); // Start as NOT loading if we have server data
     const hasInitializedAuthData = useRef(false);
@@ -96,6 +98,20 @@ export function AppProvider({
     // Use a ref for authLoading to avoid unnecessary re-renders if we already have initial data
     const authLoading = status === "loading" && !initialSession;
 
+    // Reload guest state when transitioning into guest mode at runtime (e.g.
+    // session expired without a full page reload). This render-phase
+    // adjustment replaces a synchronous setState-in-effect (see
+    // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
+    // The initial mount is already covered by the lazy useState initializer above.
+    const guestMode = isGuest && !authLoading;
+    const [wasGuestMode, setWasGuestMode] = useState(guestMode);
+    if (wasGuestMode !== guestMode) {
+        setWasGuestMode(guestMode);
+        if (guestMode) {
+            setGuestState(loadGuestState());
+        }
+    }
+
     // Sync with database if session changes and we don't have data yet
     useEffect(() => {
         if (isAuthenticated && !hasInitializedAuthData.current && dbDecks.length === 0 && !initialDecks.length) {
@@ -114,12 +130,8 @@ export function AppProvider({
                 }
             };
             loadData();
-        } else if (isGuest && !authLoading) {
-            // Always load guest state from local storage on mount
-            const loaded = loadGuestState();
-            setGuestState(loaded);
         }
-    }, [isAuthenticated, isGuest, authLoading, initialDecks.length, dbDecks.length]);
+    }, [isAuthenticated, initialDecks.length, dbDecks.length]);
 
     // Debounced save to localStorage for guests
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -204,8 +216,8 @@ export function AppProvider({
     }, []);
 
     // Add a new deck
-    const addDeck = useCallback(async (name: string, content: string | { question: string; answer: string; image?: string }[]) => {
-        let parsedCards: { question: string; answer: string; image?: string }[] = [];
+    const addDeck = useCallback(async (name: string, content: string | DeckCardInput[]) => {
+        let parsedCards: DeckCardInput[] = [];
 
         if (typeof content === "string") {
             parsedCards = parseQuestionsFile(content);
@@ -216,9 +228,10 @@ export function AppProvider({
         if (parsedCards.length === 0) return;
 
         if (isAuthenticated) {
-            // Save to database
+            // Save to database (inline occlusion images upload first)
             try {
-                await createDbDeck(name, parsedCards);
+                const { cards, imageIds } = await prepareCardsForSave(parsedCards);
+                await createDbDeck(name, cards, imageIds);
                 await refreshDecks();
             } catch (error) {
                 console.error("Failed to create deck:", error);
@@ -305,7 +318,23 @@ export function AppProvider({
                 // Immediately update local state
                 setDbDecks((prev) => prev.map((d) =>
                     d.id === currentDeckId
-                        ? { ...d, cards: d.cards.map((c) => ({ ...c, level: "Nowe" as CardLevel })), updatedAt: Date.now() }
+                        ? {
+                            ...d,
+                            cards: d.cards.map((c) => ({
+                                ...c,
+                                level: "Nowe" as CardLevel,
+                                fsrsDue: undefined,
+                                fsrsStability: undefined,
+                                fsrsDifficulty: undefined,
+                                fsrsReps: 0,
+                                fsrsLapses: 0,
+                                fsrsState: 0,
+                                fsrsLearningSteps: 0,
+                                fsrsLastReview: undefined,
+                                fsrsScheduledDays: 0,
+                            })),
+                            updatedAt: Date.now(),
+                        }
                         : d
                 ));
             } catch (error) {
@@ -321,30 +350,43 @@ export function AppProvider({
         }
     }, [currentDeckId, isAuthenticated]);
 
+    // Update a single card's level (FSRS review). Optimistic: compute the
+    // next memory state locally so guest mode and UI update instantly;
+    // the server action persists the same computation for auth users.
+    // On server failure the previous card snapshot is restored.
     const updateCardLevel = useCallback(async (cardId: string, level: CardLevel) => {
-        const previousLevel = decks
+        const previous = decks
             .flatMap((d) => d.cards)
-            .find((c) => c.id === cardId)?.level;
+            .find((c) => c.id === cardId);
 
-        const applyLevel = (nextLevel: CardLevel) => {
+        const applyReview = (nextLevel: CardLevel) => {
             updateActiveDecks((decks) => decks.map((deck) => ({
                 ...deck,
                 cards: deck.cards.map((card) =>
-                    card.id === cardId ? { ...card, level: nextLevel } : card
+                    card.id === cardId ? { ...card, level: nextLevel, ...reviewCard(card, nextLevel) } : card
                 ),
                 updatedAt: deck.cards.some((c) => c.id === cardId) ? Date.now() : deck.updatedAt,
             })));
         };
 
-        applyLevel(level);
+        const restoreCard = (snapshot: Flashcard) => {
+            updateActiveDecks((decks) => decks.map((deck) => ({
+                ...deck,
+                cards: deck.cards.map((card) =>
+                    card.id === cardId ? { ...snapshot } : card
+                ),
+            })));
+        };
+
+        applyReview(level);
 
         if (isAuthenticated) {
             try {
                 await updateDbCardLevel(cardId, level);
             } catch (error) {
                 console.error("Failed to update card level:", error);
-                if (previousLevel) {
-                    applyLevel(previousLevel);
+                if (previous) {
+                    restoreCard(previous);
                 }
                 alert("Failed to save card progress. Please try again.");
             }
@@ -388,6 +430,7 @@ export function AppProvider({
             const existingById = new Map(existingCards.map((c) => [c.id, c]));
             return cards.map((card, index) => {
                 const image = card.image?.trim() || undefined;
+                const occlusion = card.occlusion ?? undefined;
                 if (card.id && !card.id.startsWith("temp-") && existingById.has(card.id)) {
                     const existing = existingById.get(card.id)!;
                     return {
@@ -395,6 +438,7 @@ export function AppProvider({
                         question: card.question,
                         answer: card.answer,
                         image,
+                        occlusion,
                         sortOrder: index,
                     };
                 }
@@ -403,6 +447,7 @@ export function AppProvider({
                     question: card.question,
                     answer: card.answer,
                     image,
+                    occlusion,
                     level: "Nowe" as CardLevel,
                     sortOrder: index,
                 };
@@ -419,7 +464,8 @@ export function AppProvider({
 
         if (isAuthenticated) {
             try {
-                await syncDbDeckCards(deckId, cards);
+                const { cards: resolved, imageIds } = await prepareCardsForSave(cards);
+                await syncDbDeckCards(deckId, resolved, imageIds);
                 await refreshDecks();
             } catch (error) {
                 console.error("Failed to sync deck cards:", error);

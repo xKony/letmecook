@@ -47,6 +47,9 @@
 }
 
 :root {
+  /* Declared so browsers (notably Chrome Android auto-dark) respect the
+     intended scheme instead of force-darkening light surfaces */
+  color-scheme: light;
   --radius: 0.625rem;
   --background: oklch(0.982 0.005 285);
   --foreground: oklch(0.145 0 0);
@@ -82,6 +85,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.16 0.014 285);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0.018 285);
@@ -120,8 +124,22 @@
     @apply border-border outline-ring/50;
   }
 
+  /* Mobile feel: no gray tap flash, native text inflation off */
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
   body {
     @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
   }
 }
 
@@ -238,6 +256,14 @@
   }
 }
 
+/* Wide display math scrolls horizontally inside cards instead of overflowing on phones */
+.katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.25rem;
+}
+
 /* Study stage ambient glow ("desk lamp" orbs behind the flashcard) */
 .study-stage {
   position: relative;
@@ -342,5 +368,29 @@
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  .occlusion-active-mask {
+    animation: none !important;
+  }
+}
+
+/* Pulsing outline marking the mask currently asked about */
+.occlusion-active-mask {
+  animation: occlusion-mask-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes occlusion-mask-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px var(--occlusion-mask-glow, #f97316),
+      0 0 18px 2px color-mix(in oklab, var(--occlusion-mask-glow, #f97316) 55%, transparent);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 3px var(--occlusion-mask-glow, #f97316),
+      0 0 30px 8px color-mix(in oklab, var(--occlusion-mask-glow, #f97316) 75%, transparent);
   }
 }

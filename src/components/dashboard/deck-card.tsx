@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Pencil, Check, X, Download, Trash2, ListTree, Globe } from "lucide-react";
 import {
     motion,
@@ -17,6 +17,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { Deck } from "@/lib/types";
 import { DASHBOARD_LONG_PRESS_MS } from "@/lib/constants";
 import { downloadDeckJson } from "@/lib/deck-export";
+import { getDeckStudyStats } from "@/lib/spaced-repetition";
 
 interface DeckCardProps {
     deck: Deck;
@@ -64,6 +65,8 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
         [spotlightX, spotlightY]
     );
 
+    const dueCount = useMemo(() => getDeckStudyStats(deck.cards).due, [deck.cards]);
+
     /**
      * Handles starting the rename process
      */
@@ -106,7 +109,7 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
 
     const handleExport = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        downloadDeckJson(deck);
+        void downloadDeckJson(deck);
         setIsContextMenuOpen(false);
     }, [deck]);
 
@@ -209,20 +212,25 @@ export function DeckCard({ deck, onSelect, onDelete, onEditSet }: DeckCardProps)
                                             variant="ghost"
                                             size="icon"
                                             onClick={startEditing}
-                                            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-6 w-6"
+                                            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-8 w-8 md:h-9 md:w-9"
                                             aria-label={t("common.rename")}
                                         >
-                                            <Pencil className="w-3 h-3" />
+                                            <Pencil className="w-3.5 h-3.5" />
                                         </Button>
                                     </div>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
                                         {t("dashboard.cardsCount", { count: deck.cards.length })}
+                                        {dueCount > 0 && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                                {t("reminders.dueCount", { count: dueCount })}
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
                             )}
                     </div>
                     {!isEditing && (
-                        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                        <div className="flex items-center gap-2 sm:gap-1 flex-shrink-0 ml-1 sm:ml-2">
                             {isAdmin && (
                                 <Button
                                     variant="ghost"

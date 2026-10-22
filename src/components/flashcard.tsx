@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard as FlashcardType, CardLevel } from "@/lib/types";
+import { isOcclusionCard } from "@/lib/occlusion";
+import { OcclusionCardView } from "@/components/occlusion/occlusion-card-view";
 import { useI18n } from "@/lib/i18n-context";
 import { Pencil } from "lucide-react";
 
@@ -37,6 +39,8 @@ interface FlashcardProps {
     onTTSToggle: () => void;
     /** Original question number in the deck (1-based import order). */
     questionNumber?: number;
+    /** FSRS next-interval preview per rating, shown under rating buttons. */
+    intervals?: Partial<Record<CardLevel, string>>;
 }
 
 /**
@@ -56,9 +60,18 @@ export function FlashcardComponent({
     ttsEnabled,
     onTTSToggle,
     questionNumber,
+    intervals,
 }: FlashcardProps) {
     const { t } = useI18n();
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+    // Image-occlusion cards render the masked image instead of text.
+    // The label doubles as question + answer text, so the text blocks below
+    // are replaced/suppressed for these cards (TTS still speaks the label).
+    const occlusionData = isOcclusionCard(card) ? (card.occlusion ?? undefined) : undefined;
+    const occlusionMaskNumber = occlusionData
+        ? occlusionData.masks.findIndex((m) => m.id === occlusionData.activeMaskId) + 1
+        : 0;
 
     const { openZoom, closeZoom } = useFlashcardImageZoom(zoomedImage, setZoomedImage);
     const {
@@ -142,13 +155,22 @@ export function FlashcardComponent({
                                 exit={{ opacity: 0 }}
                                 className="relative"
                             >
-                                <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight text-foreground">
-                                    <FlashcardContent
-                                        text={card.question}
-                                        isLarge={true}
-                                        onImageZoom={openZoom}
+                                {occlusionData ? (
+                                    <OcclusionCardView
+                                        card={card}
+                                        maskNumber={occlusionMaskNumber}
+                                        isRevealed={isRevealed}
+                                        onReveal={onReveal}
                                     />
-                                </h2>
+                                ) : (
+                                    <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight text-balance text-foreground">
+                                        <FlashcardContent
+                                            text={card.question}
+                                            isLarge={true}
+                                            onImageZoom={openZoom}
+                                        />
+                                    </h2>
+                                )}
                                 {/* Edit button - Desktop hover (outside text, symmetric layout) */}
                                 <AnimatePresence>
                                     {showEditHint === "question" && onUpdateCard && (
@@ -172,8 +194,8 @@ export function FlashcardComponent({
                     </AnimatePresence>
                 </motion.div>
 
-                {/* Dedicated Card Image */}
-                {card.image && (
+                {/* Dedicated Card Image (text cards only — occlusion renders its own) */}
+                {card.image && !occlusionData && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -186,9 +208,9 @@ export function FlashcardComponent({
                     </motion.div>
                 )}
 
-                {/* Answer */}
+                {/* Answer (text cards only — the occlusion label is already shown above) */}
                 <AnimatePresence>
-                    {isRevealed && (
+                    {isRevealed && !occlusionData && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -216,7 +238,7 @@ export function FlashcardComponent({
                                         exit={{ opacity: 0 }}
                                         className="relative w-full"
                                     >
-                                        <div aria-live="polite">
+                                        <div aria-live="polite" className="text-lg md:text-xl leading-relaxed text-foreground/95">
                                             <FlashcardContent
                                                 text={card.answer}
                                                 onImageZoom={openZoom}
@@ -264,6 +286,7 @@ export function FlashcardComponent({
                 isRevealed={isRevealed}
                 onReveal={onReveal}
                 onRate={onRate}
+                intervals={intervals}
             />
 
             <FlashcardZoomModal

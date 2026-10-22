@@ -113,9 +113,9 @@ function LoginForm() {
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full max-w-md"
             >
-                <div className="bg-card border border-border rounded-2xl p-8 shadow-xl shadow-primary/5">
+                <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-xl shadow-primary/5">
                     <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-foreground mb-2">
+                        <h1 className="text-[1.7rem] sm:text-3xl font-bold tracking-tight text-foreground mb-2">
                             🍳 LetMeCook
                         </h1>
                         <p className="text-muted-foreground">
@@ -189,7 +189,7 @@ function LoginForm() {
                         <Button
                             type="submit"
                             disabled={isLoading || !!success}
-                            className="w-full py-6 rounded-xl font-semibold"
+                            className="w-full h-12 rounded-xl font-semibold text-base"
                         >
                             {isLoading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -210,7 +210,7 @@ function LoginForm() {
                                 setError(null);
                                 setSuccess(null);
                             }}
-                            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-lg hover:bg-muted/50"
                         >
                             {isLogin
                                 ? "Don't have an account? Sign up"
@@ -222,7 +222,7 @@ function LoginForm() {
                         <button
                             type="button"
                             onClick={() => router.push("/")}
-                            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-lg hover:bg-muted/50"
                         >
                             Continue as guest →
                         </button>

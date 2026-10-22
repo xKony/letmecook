@@ -8,13 +8,11 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 
 <!-- BEGIN:pnpm-agent-rules -->
 
-# pnpm: minimumReleaseAge is TEMPORARILY lowered
+# pnpm
 
 This repo uses pnpm only (enforced via the `preinstall` script). Package manager settings live in `pnpm-workspace.yaml`.
 
-`minimumReleaseAge: 480` (8h) in `pnpm-workspace.yaml` was set on 2026-08-21 only because Next.js 16.3.2 had been released hours earlier and pnpm's default policy (24h) rejected it.
-
-**TODO for a future agent:** once some time has passed since the last Next.js release (i.e., no dependency you need to install is younger than ~1 day), change `minimumReleaseAge` back to the pnpm default of `1440` (24h) — or remove the line entirely to inherit the default. Do this during a quiet maintenance pass, not mid-feature.
+`minimumReleaseAge` uses the pnpm default (24h). On 2026-08-22 it was restored to the default after a temporary 8h lowering (set 2026-08-21 to accept the just-released Next.js 16.3.2). If a brand-new dependency must be installed within ~24h of its release, temporarily lower it again — and restore the default in a follow-up quiet pass.
 
 <!-- END:pnpm-agent-rules -->
 
@@ -27,12 +25,45 @@ This repo uses pnpm only (enforced via the `preinstall` script). Package manager
 
 ## 2. Exact Versions (Source: package.json)
 - **Runtime**: Node.js `18.17+` (CI runs on Node 22)
-- **Package Manager**: `pnpm@11.22.0`
-- **Framework**: Next.js `16.3.2`
-- **Library**: React `19.2.8`
+- **Package Manager**: `pnpm@12.9.1`
+- **Framework**: Next.js `16.3.8`
+- **Library**: React `19.3.0`
 - **Language**: TypeScript `5.9.3`
 
-For the full dependency list, see `package.json`. Note: `@types/katex` and `@types/bcryptjs` were removed — katex ≥0.18 and bcryptjs ≥3 ship their own types.
+### Production Dependencies
+- `@auth/drizzle-adapter`: `^1.11.3`
+- `@neondatabase/serverless`: `^1.2.0`
+- `@radix-ui/react-dialog`: `^1.1.23`
+- `@radix-ui/react-slot`: `^1.3.3`
+- `bcryptjs`: `^3.0.3` (ships its own types; `@types/bcryptjs` removed)
+- `class-variance-authority`: `^0.7.1`
+- `clsx`: `^2.1.1`
+- `drizzle-orm`: `^0.45.3`
+- `framer-motion`: `^14.0.0`
+- `katex`: `^0.19.0` (ships its own types; `@types/katex` removed)
+- `lucide-react`: `^1.51.0`
+- `next`: `16.3.8`
+- `next-auth`: `5.0.0-beta.32`
+- `next-themes`: `^0.4.6`
+- `qrcode.react`: `^4.2.0`
+- `react`: `19.3.0`
+- `react-dom`: `19.3.0`
+- `tailwind-merge`: `^3.7.0`
+- `ts-fsrs`: `^5.4.2`
+- `zod`: `^4.6.5`
+
+### Dev Dependencies
+- `@tailwindcss/postcss`: `^4.3.3`
+- `@types/node`: `^24.19.1`
+- `@types/react`: `19.3.0`
+- `@types/react-dom`: `19.3.0`
+- `dotenv`: `^18.0.5`
+- `drizzle-kit`: `^0.31.11`
+- `eslint`: `^9.39.5`
+- `eslint-config-next`: `16.3.8`
+- `tailwindcss`: `^4.3.3`
+- `tw-animate-css`: `^1.4.0`
+- `typescript`: `^5.9.3`
 
 ## 3. Project Structure
 - `src/app/`: Next.js App Router root.
@@ -91,7 +122,7 @@ Defined in `.env.local` (referenced in `drizzle.config.ts` and `src/db/index.ts`
 - `AUTH_SECRET`: NextAuth.js encryption secret (Required for Auth Mode).
 
 ## 7. Key Configuration
-- **pnpm**: Pinned via `packageManager` in `package.json` (`pnpm@11.22.0`). Dependency overrides, build-script approvals (`allowBuilds`), and the `minimumReleaseAge` supply-chain policy live in `pnpm-workspace.yaml`. pnpm-only is enforced via the `preinstall` script.
+- **pnpm**: Pinned via `packageManager` in `package.json` (`pnpm@12.9.1`). Dependency overrides and build-script approvals (`allowBuilds`) live in `pnpm-workspace.yaml`. pnpm-only is enforced via the `preinstall` script.
 - **Tailwind v4**: Configured via `@import "tailwindcss"` in `globals.css` with inline theme extensions.
 - **TypeScript**: Strict mode enabled, `paths` alias `@/*` -> `./src/*`.
 - **Drizzle**: PostgreSQL dialect with schema located at `src/db/schema.ts`.
@@ -117,6 +148,7 @@ Defined in `.env.local` (referenced in `drizzle.config.ts` and `src/db/index.ts`
 - **Package Manager**: Always use `pnpm` instead of `npm` for scripts execution (e.g., `pnpm build`, `pnpm dev`, `pnpm lint`, `pnpm typecheck`). `npm install` is blocked by the `preinstall` guard.
 - **Next.js Best Practices**: Always review and strictly apply the principles in the `/next-best-practices` skill documentation (including RSC boundaries, async pattern migrations, dynamic functions, data patterns, and optimal image/font loading) whenever writing, reviewing, or modifying Next.js codebase files.
 - **Commit frequently**: land every completed, verified unit of work (feature, fix, docs) as its own concise conventional commit; never batch unrelated changes; never leave the tree dirty with mixed concerns.
+- **End-to-end browser verification (mandatory)**: never call UI or interactive work done from code reading alone. Start `pnpm dev`, drive the real app with the Chrome DevTools MCP server (`navigate_page`, `take_snapshot`, `click`, `evaluate_script`, `list_console_messages`), and exercise the exact user flow being fixed/added — including seeding `localStorage` (`letmecook_guest_state`, `letmecook_ntfy_topic`) when the flow needs existing data. Verify the success UI, a clean console, and the real side effect (e.g. poll `https://ntfy.sh/<topic>/json?poll=1` to confirm delivery). Stop the dev server and delete its log afterwards.
 
 ## Design Reference
 - Read `DESIGN-GUIDELINES.md` before any UI work (new components, restyling, color/motion changes).

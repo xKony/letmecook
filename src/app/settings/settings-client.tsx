@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Lock, ArrowLeft, Loader2, CheckCircle, AlertCircle, User } from "lucide-react";
 import { changePassword, changeName } from "@/app/actions/auth-actions";
 import { useApp } from "@/lib/app-context";
+import { NtfySetup } from "@/components/reminders/ntfy-setup";
 import { signOut } from "next-auth/react";
 
 export function SettingsClient() {
@@ -85,12 +86,12 @@ export function SettingsClient() {
             <div className="max-w-xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
+                    <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10" onClick={() => router.push("/")}>
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold">Account Settings</h1>
-                        <p className="text-muted-foreground">{authUser?.email}</p>
+                        <h1 className="text-[1.4rem] sm:text-2xl font-bold tracking-tight">Account Settings</h1>
+                        <p className="text-sm sm:text-base text-muted-foreground">{authUser?.email}</p>
                     </div>
                 </div>
 
@@ -151,7 +152,7 @@ export function SettingsClient() {
                         <Button
                             type="submit"
                             disabled={isNameLoading || newName === authUser?.name}
-                            className="w-full rounded-xl"
+                            className="w-full h-11 sm:h-9 rounded-xl"
                         >
                             {isNameLoading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -244,7 +245,7 @@ export function SettingsClient() {
                         <Button
                             type="submit"
                             disabled={isPasswordLoading}
-                            className="w-full rounded-xl"
+                            className="w-full h-11 sm:h-9 rounded-xl"
                         >
                             {isPasswordLoading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -255,11 +256,14 @@ export function SettingsClient() {
                     </form>
                 </motion.div>
 
+                {/* Review Reminders */}
+                <NtfySetup />
+
                 {/* Sign Out Button */}
                 <Button
                     variant="outline"
                     onClick={() => signOut({ callbackUrl: "/" })}
-                    className="w-full rounded-xl"
+                    className="w-full h-11 sm:h-9 rounded-xl"
                 >
                     Sign Out
                 </Button>
